@@ -4,6 +4,7 @@ Django settings for teralinkx project.
 import dj_database_url
 from pathlib import Path
 import os
+import sys
 from dotenv import load_dotenv
 from django.conf import settings
 from rest_framework.request import Request
@@ -15,8 +16,11 @@ load_dotenv()
 # Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Apps directory to Python path
+sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
+
 #Development settings
-DEBUG = False #os.environ.get('DJANGO_DEBUG', 'False') == 'True'
+DEBUG = True #os.environ.get('DJANGO_DEBUG', 'False') == 'True'
 
 # Security
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-fallback-key-for-dev-only')
@@ -59,7 +63,17 @@ INSTALLED_APPS = [
     'django_celery_beat',
     
     # Local
-    'core',
+    # 'core',
+    'users',
+    'locations',
+    'packages',
+    'analytics',
+    'finance',
+    'security',
+    'notifications',
+    'sync',
+    'ads',
+    
 ]
 
 # Middleware
@@ -93,7 +107,7 @@ if not DEBUG:
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_COOKIE_NAME = 'sessionid'
 SESSION_COOKIE_AGE = 1209600  # 2 weeks in seconds
-SESSION_COOKIE_SECURE = True  # Set to True in production with HTTPS
+SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'None'
 SESSION_SAVE_EVERY_REQUEST = True
@@ -118,20 +132,20 @@ TEMPLATES = [
 ]
 
 # Databasedocker
-DATABASES = {
-    'default': dj_database_url.config(
-        default='postgres://teralinkx:justboot@db:5432/teralinkx',
-        conn_max_age=600,  # persistent connections
-        ssl_require=False  # set True in production if needed
-    )
-}
-# #default database sqlite3
 # DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',  # Database engine
-#         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),  # Path to the database file
-#     }
+#     'default': dj_database_url.config(
+#         default='postgres://teralinkx:justboot@db:5432/teralinkx',
+#         conn_max_age=600,  # persistent connections
+#         ssl_require=False  # set True in production if needed
+#     )
 # }
+#default database sqlite3
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',  # Database engine
+        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),  # Path to the database file
+    }
+}
 
 # # localdatabase
 # DATABASES = {

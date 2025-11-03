@@ -19,7 +19,7 @@ Brotli==1.1.0
 cachetools==6.2.0
 celery==5.4.0
 certifi==2024.2.2
-cffi==1.16.0
+#cffi==1.16.0
 channels==4.1.0
 charset-normalizer==3.3.2
 click==8.1.7
@@ -50,10 +50,10 @@ frozenlist==1.4.1
 gitdb==4.0.12
 GitPython==3.1.45
 gprof2dot==2025.4.14
-greenlet==3.0.3
+#greenlet==3.0.3
 gunicorn==23.0.0
 h11==0.14.0
-httptools==0.6.1
+#httptools==0.6.1
 humanize==4.9.0
 hyperlink==21.0.0
 idna==3.7
@@ -126,7 +126,7 @@ tzlocal==5.2
 urllib3==2.2.1
 userpath==1.9.2
 uvicorn==0.29.0
-uvloop==0.20.0
+#uvloop==0.20.0
 vine==5.1.0
 watchdog==6.0.0
 watchfiles==0.23.0
