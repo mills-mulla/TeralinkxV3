@@ -1,0 +1,13 @@
+#config.yml
+tunnel: 6f679ca9-f5e2-483f-8b98-aff826026046
+credentials-file: /etc/cloudflared/6f679ca9-f5e2-483f-8b98-aff826026046.json
+
+# ingress:
+#   - hostname: teralinkxwaves.uk
+#     service: http://nginx:80
+#   - service: http_status:404
+
+ingress:
+  - hostname: teralinkxwaves.uk
+    service: http://web:8000
+  - service: http_status:404

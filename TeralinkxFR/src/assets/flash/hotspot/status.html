@@ -1,0 +1,94 @@
+<html>
+<head>
+    $(if refresh-timeout)
+    <meta http-equiv="refresh" content="$(refresh-timeout-secs)">
+    $(endif)
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />   
+    <meta http-equiv="pragma" content="no-cache">
+    <meta http-equiv="expires" content="-1">
+    <title>Internet Hotspot - Status</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+        $(if advert-pending == 'yes')
+        var popup = '';
+        function focusAdvert() {
+            if (window.focus) popup.focus();
+        }
+        function openAdvert() {
+            popup = open('$(link-advert)', 'hotspot_advert', '');
+            setTimeout("focusAdvert()", 1000);
+        }
+        $(endif)
+
+        function openLogout() {
+            if (window.name != 'hotspot_status') return true;
+            open('$(link-logout)', 'hotspot_logout', 'toolbar=0,location=0,directories=0,status=0,menubars=0,resizable=1,width=280,height=250');
+            window.close();
+            return false;
+        }
+    </script>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4" $(if advert-pending == 'yes') onLoad="openAdvert()" $(endif)>
+    <div class="bg-white shadow-lg rounded-lg w-full max-w-md p-6">
+        <h1 class="text-2xl font-semibold text-gray-800 text-center mb-4">
+            $(if login-by == 'trial') 
+                Hi, trial user!
+            $(elif login-by != 'mac') 
+                Hi, $(username)!
+            $(endif)
+        </h1>
+
+        <form action="$(link-logout)" name="logout" onSubmit="return openLogout()" class="space-y-4">
+            <table class="w-full text-left border-collapse">
+                <tbody>
+                    <tr class="border-b">
+                        <td class="py-2 font-medium text-gray-700">IP Address</td>
+                        <td class="py-2 text-gray-600">$(ip)</td>
+                    </tr>
+                    <tr class="border-b">
+                        <td class="py-2 font-medium text-gray-700">Bytes Up / Down</td>
+                        <td class="py-2 text-gray-600">$(bytes-in-nice) / $(bytes-out-nice)</td>
+                    </tr>
+                    $(if session-time-left)
+                    <tr class="border-b">
+                        <td class="py-2 font-medium text-gray-700">Connected / Left</td>
+                        <td class="py-2 text-gray-600">$(uptime) / $(session-time-left)</td>
+                    </tr>
+                    $(else)
+                    <tr class="border-b">
+                        <td class="py-2 font-medium text-gray-700">Connected</td>
+                        <td class="py-2 text-gray-600">$(uptime)</td>
+                    </tr>
+                    $(endif)
+                    
+                    $(if blocked == 'yes')
+                    <tr class="border-b">
+                        <td class="py-2 font-medium text-gray-700">Status</td>
+                        <td class="py-2">
+                            <a href="$(link-advert)" target="hotspot_advert" class="text-blue-600 hover:underline">Advertisement required</a>
+                        </td>
+                    </tr>
+                    $(elif refresh-timeout)
+                    <tr class="border-b">
+                        <td class="py-2 font-medium text-gray-700">Status Refresh</td>
+                        <td class="py-2 text-gray-600">$(refresh-timeout)</td>
+                    </tr>
+                    $(endif)
+                </tbody>
+            </table>
+
+            $(if login-by-mac != 'yes')
+            <div class="flex justify-center">
+                <input type="submit" value="Log Out" 
+                    class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-6 rounded-lg shadow transition-colors cursor-pointer">
+            </div>
+            $(endif)
+        </form>
+    </div>
+</body>
+</html>
