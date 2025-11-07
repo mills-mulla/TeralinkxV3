@@ -1,6 +1,6 @@
 import random
 import string
-from .router.ros_api.api import Api, RouterOSTrapError
+from core.router.ros_api.api import Api, RouterOSTrapError
 
 def generate_voucher(prefix, length):
     if length <= len(prefix):

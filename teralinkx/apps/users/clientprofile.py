@@ -1,6 +1,6 @@
 from rest_framework import generics, permissions
-from ..models import ClientH
-from ..serializers.userprofile_serializer import ClientProfileSerializer
+from core.models import ClientH
+from core.serializers.userprofile_serializer import ClientProfileSerializer
 
 class UpdateClientProfileView(generics.UpdateAPIView):
     queryset = ClientH.objects.all()

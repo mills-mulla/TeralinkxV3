@@ -9,13 +9,13 @@ from rest_framework.response import Response
 from rest_framework import status
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
-from  .services.notification_service import create_and_notify
+from core.services.notification_service import create_and_notify
 from .models import *
 from .daraja import QueueHelper 
-from .router.ros_api.api import Api
-from .generate import activate_voucher
-from .views.moitoring import get_user_by_name
-from .views.chekout_confirmation import perform_auto_login
+from core.router.ros_api.api import Api
+from packages.generate import activate_voucher
+from analytics.moitoring import get_user_by_name
+from .chekout_confirmation import perform_auto_login
 
 logger = logging.getLogger(__name__)
 

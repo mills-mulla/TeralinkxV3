@@ -1,9 +1,12 @@
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
-from .models import DispatchVoucher,DHCPLease,ActiveUser,ClientH
-from .router.ros_api.api import Api, RouterOSTrapError
+from packages.models import DispatchVoucher
+from analytics.models import DHCPLease,ActiveSession
+from users.models import ClientH
+from core.router.ros_api.api import Api, RouterOSTrapError
 from django.db.models import Q
+import time
 
 
 TeralinkxWaves = '192.168.88.1'
@@ -53,10 +56,6 @@ class Connect(APIView):
             return Response({'error': 'Failed to perform auto-login', 'details': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
       
-import time
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
 
 class Reconnect(APIView):
     def post(self, request):
@@ -110,9 +109,9 @@ class Disconnect(APIView):
 
        
         try:
-            active_entry = ActiveUser.objects.get(mac_address=bound_mac)
+            active_entry = ActiveSession.objects.get(mac_address=bound_mac)
             active_id = active_entry.idA
-        except ActiveUser.DoesNotExist:
+        except ActiveSession.DoesNotExist:
             return Response({'error': 'MAC address not found in active users. User is not connected to the network.'}, status=status.HTTP_404_NOT_FOUND)
       
         try:

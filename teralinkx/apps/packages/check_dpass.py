@@ -1,8 +1,11 @@
 # File: views/check_dpass.py
+############################
+############################
+#update tho check trial and  daily free net time eligibility
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.utils import timezone
-from ..models import DispatchVoucher, ExpiredVoucher
+from ..models import DispatchVoucher
 
 class CheckDpassStatus(APIView):
     def post(self, request):

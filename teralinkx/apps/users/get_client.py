@@ -1,6 +1,6 @@
 from rest_framework.views import APIView
 from django.http import JsonResponse
-from ..models import ClientH, alternateSessions
+from core.models import ClientH, alternateSessions
 
 class GetClientView(APIView):
     def post(self, request):

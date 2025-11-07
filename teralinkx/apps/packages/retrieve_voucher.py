@@ -1,7 +1,7 @@
 # File: views/retrieve_voucher.py
 from rest_framework.views import APIView
 from django.http import JsonResponse
-from ..models import DispatchVoucher
+from .models import DispatchVoucher
 
 
 class RetrieveVoucher(APIView):

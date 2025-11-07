@@ -1,7 +1,7 @@
 # File: views/dispatch_voucher.py
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from ..models import DispatchVoucher
+from .models import DispatchVoucher
 
 class DispatchVoucherAPIView(APIView):
     def post(self, request):

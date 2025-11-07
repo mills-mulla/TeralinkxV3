@@ -2,8 +2,8 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from ..models import DispatchVoucher
-from ..serializers.dispatch_serializer import DispatchSerializer
+from .models import DispatchVoucher
+from core.serializers.dispatch_serializer import DispatchSerializer
 import logging
 # Setup logging
 logging.basicConfig(

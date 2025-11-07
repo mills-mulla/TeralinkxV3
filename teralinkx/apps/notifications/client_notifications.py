@@ -1,6 +1,6 @@
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
-from ..models import Notification
+from .models import Notification
 import logging
 
 logger = logging.getLogger(__name__)

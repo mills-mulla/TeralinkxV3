@@ -1,9 +1,9 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from ..serializers.client_serializer import ClientSerializer
-from ..services.client_service import ClientService
-from ..services.dhcp import DHCPManager
+from core.serializers.client_serializer import ClientSerializer
+from core.services.client_service import ClientService
+from core.services.dhcp import DHCPManager
 from rest_framework.permissions import AllowAny
 
 
