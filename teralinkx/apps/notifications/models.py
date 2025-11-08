@@ -3,7 +3,7 @@ from django.utils import timezone
 from django.contrib.auth import get_user_model
 import uuid
 
-from apps.core.models import TimeStampedModel
+from core.models import TimeStampedModel
 
 User = get_user_model()
 

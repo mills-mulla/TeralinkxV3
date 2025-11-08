@@ -4,8 +4,9 @@ from django.utils import timezone
 from datetime import timedelta
 import uuid
 from django.contrib.auth import get_user_model
+from django.core.validators import MinValueValidator, MaxValueValidator
 
-from apps.core.models import TimeStampedModel
+from core.models import TimeStampedModel
 
 User = get_user_model()
 
@@ -211,3 +212,161 @@ class SecurityLog(TimeStampedModel):
         ordering = ['-created_at']
         verbose_name = "Security Log"
         verbose_name_plural = "Security Logs"
+
+
+class ISPEquipment(TimeStampedModel):
+    """Network Equipment Model for ISP Operations"""
+    
+    EQUIPMENT_TYPES = [
+        ('core_router', 'Core Router'),
+        ('access_router', 'Access Router'),
+        ('bras', 'BRAS/BNG'),
+        ('olt', 'OLT'),
+        ('switch', 'Switch'),
+        ('wireless_ap', 'Wireless AP'),
+        ('firewall', 'Firewall'),
+        ('dns_server', 'DNS Server'),
+        ('radius_server', 'RADIUS Server'),
+        ('nms', 'Network Management Server'),
+    ]
+    
+    VENDORS = [
+        ('mikrotik', 'MikroTik'),
+        ('cisco', 'Cisco'),
+        ('juniper', 'Juniper'),
+        ('huawei', 'Huawei'),
+        ('zte', 'ZTE'),
+        ('ubiquiti', 'Ubiquiti'),
+        ('cambium', 'Cambium'),
+        ('mimosa', 'Mimosa'),
+        ('ruckus', 'Ruckus'),
+        ('other', 'Other'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('production', 'Production'),
+        ('maintenance', 'Maintenance'),
+        ('backup', 'Backup/Spare'),
+        ('offline', 'Offline'),
+        ('decommissioned', 'Decommissioned'),
+    ]
+    
+    # Core Identification
+    name = models.CharField(max_length=100, unique=True, help_text="Device hostname")
+    equipment_type = models.CharField(max_length=20, choices=EQUIPMENT_TYPES)
+    vendor = models.CharField(max_length=20, choices=VENDORS)
+    model = models.CharField(max_length=100, help_text="Model name")
+    
+    # Network Configuration
+    management_ip = models.GenericIPAddressField(unique=True, help_text="Management IP")
+    public_ip = models.GenericIPAddressField(blank=True, null=True, help_text="Public facing IP")
+    ssh_port = models.IntegerField(default=22, validators=[MinValueValidator(1), MaxValueValidator(65535)])
+    api_port = models.IntegerField(default=8728, validators=[MinValueValidator(1), MaxValueValidator(65535)])
+    
+    # Authentication
+    username = models.CharField(max_length=50)
+    password = models.CharField(max_length=255)
+    enable_password = models.CharField(max_length=255, blank=True)
+    
+    # ISP Location & POP
+    pop = models.ForeignKey(
+        'locations.Location', 
+        on_delete=models.CASCADE,
+        related_name='network_equipment',
+        help_text="Point of Presence"
+    )
+    rack_position = models.CharField(max_length=20, blank=True, help_text="e.g., RACK-1-U12")
+    
+    # ISP Specific Fields
+    role = models.CharField(
+        max_length=20,
+        choices=[
+            ('core', 'Core Network'),
+            ('aggregation', 'Aggregation'),
+            ('access', 'Access Network'),
+            ('backhaul', 'Backhaul'),
+            ('customer_facing', 'Customer Facing'),
+            ('management', 'Management'),
+        ],
+        default='access'
+    )
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='production')
+    
+    # Capacity & Usage
+    max_capacity = models.IntegerField(default=0, help_text="Max user capacity")
+    current_users = models.IntegerField(default=0, help_text="Current active users")
+    uplink_speed = models.CharField(max_length=20, blank=True, help_text="e.g., 1G, 10G")
+    
+    # Maintenance
+    last_backup = models.DateTimeField(null=True, blank=True)
+    firmware_version = models.CharField(max_length=50, blank=True)
+    notes = models.TextField(blank=True)
+    
+    class Meta:
+        verbose_name = "ISP Equipment"
+        verbose_name_plural = "ISP Equipment"
+        ordering = ['pop', 'role', 'name']
+        indexes = [
+            models.Index(fields=['pop', 'status']),
+            models.Index(fields=['equipment_type', 'role']),
+            models.Index(fields=['management_ip']),
+            models.Index(fields=['status']),
+        ]
+    
+    def __str__(self):
+        return f"{self.name} ({self.pop.name})"
+    
+    @property
+    def is_core_device(self):
+        return self.role == 'core'
+    
+    @property
+    def is_access_device(self):
+        return self.role == 'access'
+    
+    @property
+    def utilization_percentage(self):
+        """Calculate user utilization percentage"""
+        if self.max_capacity > 0:
+            return (self.current_users / self.max_capacity) * 100
+        return 0
+    
+    @property
+    def needs_attention(self):
+        """Check if device needs attention"""
+        high_utilization = self.utilization_percentage > 85
+        return self.status in ['maintenance', 'offline'] or high_utilization
+
+
+class ISPEquipmentLog(TimeStampedModel):
+    """ISP Equipment Management Log"""
+    
+    ACTION_TYPES = [
+        ('config_backup', 'Configuration Backup'),
+        ('config_change', 'Configuration Change'),
+        ('firmware_update', 'Firmware Update'),
+        ('maintenance', 'Maintenance'),
+        ('reboot', 'Device Reboot'),
+        ('troubleshoot', 'Troubleshooting'),
+        ('user_sync', 'User Database Sync'),
+        ('hotspot_config', 'Hotspot Configuration'),
+    ]
+    
+    equipment = models.ForeignKey(
+        ISPEquipment, 
+        on_delete=models.CASCADE,
+        related_name='logs'
+    )
+    action = models.CharField(max_length=20, choices=ACTION_TYPES)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    description = models.TextField()
+    successful = models.BooleanField(default=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "ISP Equipment Log"
+        verbose_name_plural = "ISP Equipment Logs"
+    
+    def __str__(self):
+        status = "✓" if self.successful else "✗"
+        return f"{status} {self.get_action_display()} - {self.equipment.name}"

@@ -3,7 +3,7 @@ from django.utils import timezone
 from django.contrib.auth import get_user_model
 import uuid
 
-from apps.core.models import TimeStampedModel
+from core.models import TimeStampedModel
 
 User = get_user_model()
 
@@ -117,7 +117,7 @@ class LocationSyncLog(TimeStampedModel):
         
         # Log sync completion
         if success:
-            from apps.security.models import SecurityLog
+            from security.models import SecurityLog
             SecurityLog.objects.create(
                 action_type='sync_completed',
                 action_category='system',
@@ -133,7 +133,7 @@ class LocationSyncLog(TimeStampedModel):
                 }
             )
         else:
-            from apps.security.models import SecurityLog
+            from security.models import SecurityLog
             SecurityLog.objects.create(
                 action_type='sync_failed',
                 action_category='system',

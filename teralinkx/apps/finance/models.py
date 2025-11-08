@@ -5,7 +5,7 @@ from datetime import timedelta
 from decimal import Decimal
 from django.contrib.auth import get_user_model
 
-from apps.core.models import TimeStampedModel, StatusTrackedModel
+from core.models import TimeStampedModel, StatusTrackedModel
 
 User = get_user_model()
 

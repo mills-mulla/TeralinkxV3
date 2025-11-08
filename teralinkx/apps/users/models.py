@@ -4,119 +4,263 @@ from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
 from django.contrib.auth import get_user_model
+import uuid
 
-from apps.core.models import TimeStampedModel
+from core.models import TimeStampedModel
 
 User = get_user_model()
 
+
 class ClientH(TimeStampedModel):
-    """Enhanced user management for V3"""
+    """
+    Enterprise client management system with session-based device tracking.
+    
+    This model represents a client account with enhanced features for ISP management,
+    including financial tracking, location management, and device session handling.
+    """
+    
     ACCOUNT_TIERS = [
         ('basic', 'Basic'),
-        ('premium', 'Premium'),
+        ('premium', 'Premium'), 
         ('business', 'Business'),
         ('enterprise', 'Enterprise'),
     ]
     
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='client_profile')
-    account = models.CharField(max_length=15, unique=True)
-    
-    # Personalization
-    display_name = models.CharField(max_length=100, blank=True)
-    phone_number = models.CharField(max_length=20, blank=True)
-    date_of_birth = models.DateField(null=True, blank=True)
-    
-    # Account Tier & Status
-    account_tier = models.CharField(max_length=20, choices=ACCOUNT_TIERS, default='basic')
-    status = models.CharField(max_length=20, choices=[
+    STATUS_CHOICES = [
         ('active', 'Active'),
         ('suspended', 'Suspended'),
         ('inactive', 'Inactive'),
         ('banned', 'Banned'),
-    ], default='active')
+    ]
+    
+    # Core Identity
+    user = models.OneToOneField(
+        User, 
+        on_delete=models.CASCADE, 
+        related_name='client_profile',
+        help_text="Django User account linked to this client"
+    )
+    account = models.CharField(
+        max_length=15, 
+        unique=True,
+        help_text="Unique client account identifier"
+    )
+    
+    # Personalization
+    display_name = models.CharField(
+        max_length=100, 
+        blank=True,
+        help_text="User-friendly display name"
+    )
+    phone_number = models.CharField(
+        max_length=20, 
+        blank=True,
+        help_text="Primary contact phone number"
+    )
+    
+    # Account Management
+    account_tier = models.CharField(
+        max_length=20, 
+        choices=ACCOUNT_TIERS, 
+        default='basic',
+        help_text="Service tier determining features and limits"
+    )
+    status = models.CharField(
+        max_length=20, 
+        choices=STATUS_CHOICES, 
+        default='active',
+        help_text="Current account status"
+    )
     
     # Financials
-    balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    credit_limit = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    total_spent = models.DecimalField(max_digits=15, decimal_places=2, default=0)
-    lifetime_data_used = models.BigIntegerField(default=0)
+    balance = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=0,
+        help_text="Current account balance"
+    )
+    credit_limit = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        default=0,
+        help_text="Maximum credit allowance"
+    )
+    total_spent = models.DecimalField(
+        max_digits=15, 
+        decimal_places=2, 
+        default=0,
+        help_text="Lifetime total spending"
+    )
+    lifetime_data_used = models.BigIntegerField(
+        default=0,
+        help_text="Total data consumed in bytes"
+    )
     
-    # Location & Presence
-    home_location = models.ForeignKey('locations.Location', on_delete=models.PROTECT, related_name='home_users')
-    current_location = models.ForeignKey('locations.Location', on_delete=models.SET_NULL, null=True, blank=True, related_name='current_users')
-    last_location_update = models.DateTimeField(null=True, blank=True)
+    # Location & Roaming
+    home_location = models.ForeignKey(
+        'locations.Location', 
+        on_delete=models.PROTECT, 
+        related_name='home_users',
+        help_text="Primary registered location"
+    )
+    current_location = models.ForeignKey(
+        'locations.Location', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='current_users',
+        help_text="Current active location"
+    )
+    last_location_update = models.DateTimeField(
+        null=True, 
+        blank=True,
+        help_text="When location was last updated"
+    )
     
     # Security
-    failed_login_attempts = models.IntegerField(default=0)
-    account_locked_until = models.DateTimeField(null=True, blank=True)
-    two_factor_enabled = models.BooleanField(default=False)
-    security_notifications = models.BooleanField(default=True)
+    failed_login_attempts = models.IntegerField(
+        default=0,
+        help_text="Count of consecutive failed login attempts"
+    )
+    two_factor_enabled = models.BooleanField(
+        default=False,
+        help_text="Whether 2FA is enabled for this account"
+    )
     
     # Preferences
-    language = models.CharField(max_length=10, default='en')
-    timezone = models.CharField(max_length=50, default='UTC')
-    marketing_emails = models.BooleanField(default=False)
-    auto_renew = models.BooleanField(default=False)
+    auto_renew = models.BooleanField(
+        default=False,
+        help_text="Auto-renew packages when expired"
+    )
     
     # Network Information
-    current_ip_address = models.GenericIPAddressField(blank=True, null=True)
-    current_mac_address = models.CharField(max_length=17, blank=True, null=True)
-    active_voucher = models.CharField(max_length=50, blank=True, null=True)
-    voucher_expiry = models.DateTimeField(blank=True, null=True)
+    active_voucher = models.CharField(
+        max_length=50, 
+        blank=True,
+        help_text="Currently active voucher code"
+    )
+    voucher_expiry = models.DateTimeField(
+        null=True, 
+        blank=True,
+        help_text="Expiration time of active voucher"
+    )
     
     # Metadata
-    last_login = models.DateTimeField(auto_now=True)
-    last_balance_update = models.DateTimeField(auto_now=True)
-    profile_image = models.ImageField(upload_to='profile_images/', blank=True, null=True)
-    
+    last_login = models.DateTimeField(
+        auto_now=True,
+        help_text="Last login time across all devices"
+    )
+    last_balance_update = models.DateTimeField(
+        auto_now=True,
+        help_text="When balance was last updated"
+    )
+    profile_image = models.ImageField(
+        upload_to='profile_images/', 
+        blank=True, 
+        null=True,
+        help_text="User profile picture"
+    )
+
     def __str__(self):
+        """String representation of the client"""
         return f"{self.display_name or self.user.username} ({self.account})"
     
     @property
     def is_eligible_for_credit(self):
-        """Check if user is eligible for credit purchases"""
+        """Check if user is eligible for credit purchases based on tier"""
         return self.account_tier in ['premium', 'business', 'enterprise'] and self.credit_limit > 0
     
     @property
     def available_credit(self):
-        """Get available credit"""
+        """Calculate available credit (balance + credit limit)"""
         return max(0, self.credit_limit + self.balance)
     
-    def update_location(self, new_location, mac_address=None, ip_address=None):
-        """Update user's current location with network info"""
-        old_location = self.current_location
-        self.current_location = new_location
+    @property
+    def current_ip_address(self):
+        """Get current IP from the most recent active session"""
+        recent_session = self.active_sessions.order_by('-last_activity').first()
+        return recent_session.ip_address if recent_session else None
+    
+    @property
+    def current_mac_address(self):
+        """Get MAC address from the most recent active session"""
+        recent_session = self.active_sessions.order_by('-last_activity').first()
+        return recent_session.device.mac_address if recent_session else None
+    
+    @property
+    def active_sessions(self):
+        """Get all currently active sessions"""
+        return self.sessions.filter(is_active=True)
+    
+    @property
+    def connected_devices(self):
+        """Get all currently connected devices (with active sessions)"""
+        # Get device IDs from active sessions using the new device field
+        from analytics.models import ActiveSession
+        
+        device_ids = ActiveSession.objects.filter(
+            user=self, 
+            is_authenticated=True,
+            device__isnull=False,
+            terminated_at__isnull=True  # Only active sessions
+        ).values_list('device_id', flat=True)
+    
+        return self.devices.filter(id__in=device_ids)
+    
+    def update_network_presence(self, device_mac, ip_address, location):
+        """
+        Update network presence for a specific device.
+        
+        Args:
+            device_mac (str): MAC address of the device
+            ip_address (str): Current IP address
+            location (Location): Current location object
+            
+        Returns:
+            tuple: (device, session) objects
+        """
+        # Get or create the device
+        device, device_created = UserDevice.objects.get_or_create(
+            mac_address=device_mac,
+            defaults={
+                'user': self,
+                'device_name': f"{self.display_name}'s Device",
+                'device_type': 'other'
+            }
+        )
+        
+        # Update device presence
+        device.update_presence(ip_address=ip_address, location=location)
+        
+        # Create or update session
+        session, session_created = UserSession.objects.get_or_create(
+            user=self,
+            device=device,
+            is_active=True,
+            defaults={
+                'session_id': uuid.uuid4(),
+                'ip_address': ip_address,
+                'location': location
+            }
+        )
+        
+        if not session_created:
+            session.ip_address = ip_address
+            session.location = location
+            session.save()
+        
+        # Update client's current location
+        self.current_location = location
         self.last_location_update = timezone.now()
-        
-        if mac_address:
-            self.current_mac_address = mac_address
-        if ip_address:
-            self.current_ip_address = ip_address
-        
-        # Handle roaming logic
-        if old_location and new_location and old_location != new_location:
-            # Log roaming event
-            from apps.security.models import SecurityLog
-            SecurityLog.objects.create(
-                user=self,
-                action_type='roaming_started',
-                description=f"User started roaming from {old_location} to {new_location}",
-                severity='low',
-                details={
-                    'from_location': str(old_location),
-                    'to_location': str(new_location),
-                    'mac_address': mac_address,
-                    'ip_address': ip_address
-                }
-            )
-        
         self.save()
+        
+        return device, session
     
     def get_active_voucher(self):
-        """Get currently active voucher"""
+        """Get currently active voucher object if available"""
         if self.active_voucher:
             try:
-                from apps.packages.models import DispatchVoucher
+                from packages.models import DispatchVoucher
                 return DispatchVoucher.objects.get(
                     voucher_code=self.active_voucher,
                     status='active'
@@ -126,11 +270,11 @@ class ClientH(TimeStampedModel):
         return None
     
     def get_active_devices(self):
-        """Get all active devices"""
+        """Get all active devices (not suspended)"""
         return self.devices.filter(status='active')
     
     def can_add_device(self):
-        """Check if user can add more devices"""
+        """Check if user can add more devices based on account tier limits"""
         active_devices = self.get_active_devices().count()
         max_devices = self.get_max_allowed_devices()
         return active_devices < max_devices
@@ -145,6 +289,36 @@ class ClientH(TimeStampedModel):
         }
         return tier_limits.get(self.account_tier, 3)
     
+    def terminate_all_sessions(self, reason="System logout"):
+        """Terminate all active sessions for this client"""
+        sessions_terminated = self.active_sessions.update(is_active=False)
+        
+        # Log the action
+        from security.models import SecurityLog
+        SecurityLog.objects.create(
+            user=self,
+            action_type='sessions_terminated',
+            description=f"All active sessions terminated: {reason}",
+            severity='medium',
+            details={
+                'sessions_terminated': sessions_terminated,
+                'reason': reason
+            }
+        )
+        
+        return sessions_terminated
+    
+    def get_session_statistics(self):
+        """Get comprehensive session statistics"""
+        active_sessions = self.active_sessions
+        return {
+            'total_active_sessions': active_sessions.count(),
+            'unique_locations': active_sessions.values('location').distinct().count(),
+            'unique_devices': active_sessions.values('device').distinct().count(),
+            'oldest_session': active_sessions.order_by('login_time').first(),
+            'newest_session': active_sessions.order_by('-login_time').first(),
+        }
+
     class Meta:
         indexes = [
             models.Index(fields=['account']),
@@ -158,17 +332,24 @@ class ClientH(TimeStampedModel):
         verbose_name = "Client"
         verbose_name_plural = "Clients"
 
+
 class UserDevice(TimeStampedModel):
-    """Enterprise-grade device management with security features"""
+    """
+    Device management system for tracking client devices.
+    
+    This model represents physical devices owned by clients, storing permanent
+    device identity and configuration information.
+    """
+    
     DEVICE_TYPES = [
         ('phone', 'Smartphone'),
         ('laptop', 'Laptop'),
         ('tablet', 'Tablet'),
-        ('desktop', 'Desktop Computer'),
+        ('desktop', 'Desktop'),
         ('iot', 'IoT Device'),
         ('gaming', 'Gaming Console'),
         ('tv', 'Smart TV'),
-        ('other', 'Other Device'),
+        ('other', 'Other'),
     ]
     
     DEVICE_PLATFORMS = [
@@ -180,96 +361,137 @@ class UserDevice(TimeStampedModel):
         ('other', 'Other OS'),
     ]
     
-    STATUS_ACTIVE = 'active'
-    STATUS_INACTIVE = 'inactive'
-    STATUS_SUSPENDED = 'suspended'
     STATUS_CHOICES = [
-        (STATUS_ACTIVE, 'Active'),
-        (STATUS_INACTIVE, 'Inactive'),
-        (STATUS_SUSPENDED, 'Suspended'),
+        ('active', 'Active'),
+        ('inactive', 'Inactive'),
+        ('suspended', 'Suspended'),
     ]
     
-    user = models.ForeignKey(ClientH, on_delete=models.CASCADE, related_name='devices')
-    mac_address = models.CharField(max_length=17, unique=True)
+    # Core Identity
+    user = models.ForeignKey(
+        ClientH, 
+        on_delete=models.CASCADE, 
+        related_name='devices',
+        help_text="Client account that owns this device"
+    )
+    mac_address = models.CharField(
+        max_length=17, 
+        unique=True,
+        help_text="Unique hardware MAC address"
+    )
+    device_name = models.CharField(
+        max_length=100,
+        help_text="User-friendly device name"
+    )
+    device_type = models.CharField(
+        max_length=20, 
+        choices=DEVICE_TYPES, 
+        default='other',
+        help_text="Type of device"
+    )
+    device_platform = models.CharField(
+        max_length=20, 
+        choices=DEVICE_PLATFORMS, 
+        default='other',
+        help_text="Operating system platform"
+    )
+    device_model = models.CharField(
+        max_length=100, 
+        blank=True,
+        help_text="Device model information"
+    )
+    device_manufacturer = models.CharField(
+        max_length=100, 
+        blank=True,
+        help_text="Device manufacturer"
+    )
     
-    # Device Identity
-    device_name = models.CharField(max_length=100, help_text="User-friendly device name")
-    device_type = models.CharField(max_length=20, choices=DEVICE_TYPES, default='other')
-    device_platform = models.CharField(max_length=20, choices=DEVICE_PLATFORMS, default='other')
-    device_model = models.CharField(max_length=100, blank=True)
-    device_manufacturer = models.CharField(max_length=100, blank=True)
-    
-    # Network Information
-    ip_address = models.GenericIPAddressField(blank=True, null=True)
-    bound_ip = models.CharField(max_length=15, null=True, blank=True)
-    dhcp_lease = models.ForeignKey('analytics.DHCPLease', on_delete=models.SET_NULL, null=True, blank=True)
-    
-    # Security & Trust
-    is_primary = models.BooleanField(default=False)
-    is_trusted = models.BooleanField(default=False)
-    trust_level = models.IntegerField(default=1, choices=[(1, 'Low'), (2, 'Medium'), (3, 'High')])
-    requires_approval = models.BooleanField(default=False)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_ACTIVE)
+    # Security & Status
+    is_trusted = models.BooleanField(
+        default=False,
+        help_text="Whether device is trusted for auto-connection"
+    )
+    status = models.CharField(
+        max_length=20, 
+        choices=STATUS_CHOICES, 
+        default='active',
+        help_text="Current device status"
+    )
     
     # Activity Tracking
-    first_seen = models.DateTimeField(auto_now_add=True)
-    last_seen = models.DateTimeField(null=True, blank=True)
-    last_seen_ip = models.GenericIPAddressField(null=True, blank=True)
-    last_seen_location = models.ForeignKey('locations.Location', on_delete=models.SET_NULL, null=True, blank=True)
-    total_connections = models.IntegerField(default=0)
-    
-    # Usage Statistics
-    total_data_used = models.BigIntegerField(default=0)
-    average_session_duration = models.DurationField(null=True, blank=True)
-    favorite_location = models.ForeignKey('locations.Location', on_delete=models.SET_NULL, null=True, blank=True, related_name='favorite_devices')
+    last_seen = models.DateTimeField(
+        null=True, 
+        blank=True,
+        help_text="Last time device was seen online"
+    )
+    last_seen_location = models.ForeignKey(
+        'locations.Location', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        help_text="Last known location of device"
+    )
+    total_connections = models.IntegerField(
+        default=0,
+        help_text="Total number of connections made"
+    )
+    favorite_location = models.ForeignKey(
+        'locations.Location', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='favorite_devices',
+        help_text="Most frequently used location"
+    )
     
     # Configuration
-    auto_connect = models.BooleanField(default=True)
-    quality_of_service = models.CharField(max_length=20, choices=[
-        ('standard', 'Standard'),
-        ('premium', 'Premium'),
-        ('gaming', 'Gaming'),
-        ('streaming', 'Streaming'),
-    ], default='standard')
-    
-    # Metadata
-    user_agent = models.TextField(blank=True)
-    client_identifier = models.CharField(max_length=255, blank=True)
-    notes = models.TextField(blank=True, help_text="Administrator notes about this device")
-    
+    auto_connect = models.BooleanField(
+        default=True,
+        help_text="Automatically connect when in range"
+    )
+
     def __str__(self):
-        return f"{self.device_name} ({self.mac_address}) - {self.user.account}"
+        """String representation of the device"""
+        return f"{self.device_name} ({self.mac_address})"
     
     @property
     def is_online(self):
-        """Check if device is currently online"""
+        """Check if device is currently online based on last seen time"""
         if not self.last_seen:
             return False
         return timezone.now() - self.last_seen < timedelta(minutes=5)
     
     @property
-    def is_suspicious(self):
-        """Check if device shows suspicious activity"""
-        return False
+    def current_session(self):
+        """Get current active session for this device"""
+        return self.sessions.filter(is_active=True).first()
     
     def update_presence(self, ip_address=None, location=None):
-        """Update device presence information"""
+        """
+        Update device presence information and create activity log.
+        
+        Args:
+            ip_address (str, optional): Current IP address
+            location (Location, optional): Current location
+        """
         self.last_seen = timezone.now()
         self.total_connections += 1
         
         if ip_address:
-            self.last_seen_ip = ip_address
+            # Note: IP is now stored in sessions, but we keep last known for quick access
+            pass
+            
         if location:
             self.last_seen_location = location
             
         self.save()
         
         # Log device activity
-        from apps.security.models import SecurityLog
+        from security.models import SecurityLog
         SecurityLog.objects.create(
             user=self.user,
             action_type='device_connected',
-            description=f"Device {self.device_name} connected from {ip_address}",
+            description=f"Device {self.device_name} connected",
             severity='low',
             details={
                 'device_id': str(self.id),
@@ -279,13 +501,16 @@ class UserDevice(TimeStampedModel):
             }
         )
     
-    def block_device(self, reason="Security concern", blocked_by=None):
+    def block_device(self, reason="Security concern"):
         """Block this device from network access"""
         old_status = self.status
-        self.status = self.STATUS_SUSPENDED
+        self.status = 'suspended'
         self.save()
         
-        from apps.security.models import SecurityLog
+        # Terminate any active sessions
+        self.sessions.filter(is_active=True).update(is_active=False)
+        
+        from security.models import SecurityLog
         SecurityLog.objects.create(
             user=self.user,
             action_type='device_blocked',
@@ -297,16 +522,16 @@ class UserDevice(TimeStampedModel):
                 'old_status': old_status,
                 'new_status': self.status,
                 'reason': reason,
-                'blocked_by': str(blocked_by) if blocked_by else 'system'
             }
         )
     
-    def unblock_device(self, reason="User request", unblocked_by=None):
-        """Unblock this device"""
-        self.status = self.STATUS_ACTIVE
+    def unblock_device(self, reason="User request"):
+        """Unblock this device and allow network access"""
+        old_status = self.status
+        self.status = 'active'
         self.save()
         
-        from apps.security.models import SecurityLog
+        from security.models import SecurityLog
         SecurityLog.objects.create(
             user=self.user,
             action_type='device_unblocked',
@@ -315,30 +540,173 @@ class UserDevice(TimeStampedModel):
             details={
                 'device_id': str(self.id),
                 'mac_address': self.mac_address,
+                'old_status': old_status,
+                'new_status': self.status,
                 'reason': reason,
-                'unblocked_by': str(unblocked_by) if unblocked_by else 'system'
             }
         )
     
-    def get_connection_stats(self, days=30):
-        """Get connection statistics for given period"""
-        stats = {
-            'total_sessions': 0,
-            'average_duration': timedelta(0),
-            'peak_usage_time': 'N/A',
-            'frequent_locations': []
+    def get_connection_statistics(self, days=30):
+        """
+        Get connection statistics for the device over a specified period.
+        
+        Args:
+            days (int): Number of days to analyze
+            
+        Returns:
+            dict: Connection statistics
+        """
+        from_date = timezone.now() - timedelta(days=days)
+        sessions = self.sessions.filter(login_time__gte=from_date)
+        
+        return {
+            'total_sessions': sessions.count(),
+            'average_duration': self._calculate_average_duration(sessions),
+            'unique_locations': sessions.values('location').distinct().count(),
+            'most_frequent_location': self._get_most_frequent_location(sessions),
         }
-        return stats
     
+    def _calculate_average_duration(self, sessions):
+        """Calculate average session duration"""
+        if not sessions:
+            return timedelta(0)
+        
+        total_duration = sum(
+            (s.last_activity - s.login_time for s in sessions if s.last_activity),
+            timedelta(0)
+        )
+        return total_duration / len(sessions)
+    
+    def _get_most_frequent_location(self, sessions):
+        """Get the most frequently used location"""
+        from django.db.models import Count
+        location_count = sessions.values('location').annotate(count=Count('location')).order_by('-count').first()
+        return location_count['location'] if location_count else None
+
     class Meta:
         indexes = [
             models.Index(fields=['user', 'status']),
             models.Index(fields=['mac_address']),
             models.Index(fields=['last_seen']),
-            models.Index(fields=['is_primary']),
-            models.Index(fields=['is_trusted']),
             models.Index(fields=['device_type']),
+            models.Index(fields=['device_platform']),
+            models.Index(fields=['favorite_location']),
         ]
-        ordering = ['-is_primary', '-last_seen']
+        ordering = ['-last_seen']
         verbose_name = "User Device"
         verbose_name_plural = "User Devices"
+
+
+class UserSession(TimeStampedModel):
+    """
+    Session management system for tracking active device connections.
+    
+    This model represents temporary connection sessions for devices,
+    tracking real-time network presence and activity.
+    """
+    
+    user = models.ForeignKey(
+        ClientH, 
+        on_delete=models.CASCADE, 
+        related_name='sessions',
+        help_text="Client account for this session"
+    )
+    device = models.ForeignKey(
+        UserDevice, 
+        on_delete=models.CASCADE, 
+        related_name='sessions',
+        help_text="Device associated with this session"
+    )
+    session_id = models.CharField(
+        max_length=100, 
+        unique=True,
+        help_text="Unique session identifier"
+    )
+    ip_address = models.GenericIPAddressField(
+        help_text="Current IP address for this session"
+    )
+    location = models.ForeignKey(
+        'locations.Location', 
+        on_delete=models.SET_NULL, 
+        null=True,
+        help_text="Current location for this session"
+    )
+    login_time = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When the session started"
+    )
+    last_activity = models.DateTimeField(
+        auto_now=True,
+        help_text="Last activity timestamp"
+    )
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Whether the session is currently active"
+    )
+
+    def __str__(self):
+        """String representation of the session"""
+        return f"{self.user.account} - {self.device.device_name} - {self.session_id[:8]}"
+    
+    @property
+    def duration(self):
+        """Calculate current session duration"""
+        if not self.is_active:
+            return self.last_activity - self.login_time
+        return timezone.now() - self.login_time
+    
+    @property
+    def is_expired(self):
+        """Check if session has expired (more than 24 hours)"""
+        return self.duration > timedelta(hours=24)
+    
+    def refresh_activity(self):
+        """Update last activity timestamp"""
+        self.last_activity = timezone.now()
+        self.save()
+    
+    def terminate(self, reason="User logout"):
+        """Terminate this session"""
+        self.is_active = False
+        self.save()
+        
+        # Log session termination
+        from security.models import SecurityLog
+        SecurityLog.objects.create(
+            user=self.user,
+            action_type='session_terminated',
+            description=f"Session terminated for {self.device.device_name}: {reason}",
+            severity='low',
+            details={
+                'session_id': self.session_id,
+                'device_id': str(self.device.id),
+                'duration': str(self.duration),
+                'reason': reason
+            }
+        )
+    
+    def get_session_summary(self):
+        """Get comprehensive session summary"""
+        return {
+            'session_id': self.session_id,
+            'device': str(self.device),
+            'duration': str(self.duration),
+            'location': str(self.location) if self.location else 'Unknown',
+            'ip_address': self.ip_address,
+            'is_active': self.is_active,
+            'login_time': self.login_time,
+            'last_activity': self.last_activity,
+        }
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['user', 'is_active']),
+            models.Index(fields=['device', 'is_active']),
+            models.Index(fields=['session_id']),
+            models.Index(fields=['login_time']),
+            models.Index(fields=['last_activity']),
+            models.Index(fields=['is_active']),
+        ]
+        ordering = ['-last_activity']
+        verbose_name = "User Session"
+        verbose_name_plural = "User Sessions"

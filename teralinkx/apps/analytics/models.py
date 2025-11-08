@@ -4,12 +4,20 @@ from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
 
-from apps.core.models import TimeStampedModel
+from core.models import TimeStampedModel
 
 class ActiveSession(TimeStampedModel):
     """Enhanced active session management"""
     session_id = models.CharField(max_length=100, unique=True)
     user = models.ForeignKey('users.ClientH', on_delete=models.CASCADE, related_name='active_sessions')
+    device = models.ForeignKey(  # ADD THIS FIELD
+        'users.UserDevice', 
+        on_delete=models.CASCADE, 
+        related_name='active_sessions',
+        null=True, 
+        blank=True,
+        help_text="Device associated with this active session"
+    )
     voucher = models.ForeignKey('packages.DispatchVoucher', on_delete=models.CASCADE, null=True, blank=True)
     location = models.ForeignKey('locations.Location', on_delete=models.CASCADE)
     is_roaming = models.BooleanField(default=False)
@@ -82,6 +90,7 @@ class ActiveSession(TimeStampedModel):
             models.Index(fields=['location']),
             models.Index(fields=['is_authenticated']),
             models.Index(fields=['start_time']),
+            models.Index(fields=['device']),  # ADD THIS INDEX
         ]
         verbose_name = "Active Session"
         verbose_name_plural = "Active Sessions"
@@ -234,4 +243,23 @@ class DHCPLease(TimeStampedModel):
     expires_after = models.DurationField(null=True, blank=True)
     last_seen = models.DateTimeField(null=True, blank=True)
     age = models.DurationField(null=True, blank=True)
-    active_address = models
+    active_address = models.GenericIPAddressField(blank=True, null=True)  # COMPLETED THIS LINE
+    
+    def __str__(self):
+        return f"{self.mac_address} - {self.address}"
+    
+    @property
+    def is_active(self):
+        """Check if lease is currently active"""
+        return self.status.lower() == 'bound'
+    
+    @property
+    def expires_at(self):
+        """Calculate when lease expires"""
+        if self.last_seen and self.expires_after:
+            return self.last_seen + self.expires_after
+        return None
+    
+    class Meta:
+        verbose_name = "DHCP Lease"
+        verbose_name_plural = "DHCP Leases"

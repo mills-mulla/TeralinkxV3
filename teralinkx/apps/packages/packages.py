@@ -1,21 +1,33 @@
-# File: views/package.py
+# File: package.py
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from ..models import Package
-from ..serializers.package_serializer import PackageSerializer
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from .models import PackageType
+from core.serializers.package_serializer import PackageTypeSerializer
 
 class PackageAPIView(APIView):
-    def post(self, request):
-        package_data = request.data
-        new_package = Package.objects.create(
-            package=package_data.get('package'),
-            price=package_data.get('price'),
-            package_desc=package_data.get('package_desc'),
-            package_duration=package_data.get('package_duration')
-        )
-        return Response({'message': 'Package created successfully'})
-
+    permission_classes = [IsAuthenticated]  # Regular users can view
+    
     def get(self, request):
-        packages = Package.objects.all()
-        serializer = PackageSerializer(packages, many=True)
-        return Response(serializer.data)
+        """Get all packages - accessible to authenticated users"""
+        packages = PackageType.objects.filter(is_active=True, is_public=True)
+        serializer = PackageTypeSerializer(packages, many=True)
+        return Response({
+            'count': packages.count(),
+            'packages': serializer.data
+        })
+
+class PackageCreateAPIView(APIView):
+    permission_classes = [IsAdminUser]  # Only admins can create
+    
+    def post(self, request):
+        """Create new package - ADMIN ONLY"""
+        serializer = PackageTypeSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                'message': 'Package created successfully',
+                'data': serializer.data
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

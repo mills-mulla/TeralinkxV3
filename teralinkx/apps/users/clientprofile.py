@@ -1,5 +1,5 @@
 from rest_framework import generics, permissions
-from core.models import ClientH
+from users.models import ClientH  # Updated import
 from core.serializers.userprofile_serializer import ClientProfileSerializer
 
 class UpdateClientProfileView(generics.UpdateAPIView):
@@ -8,4 +8,5 @@ class UpdateClientProfileView(generics.UpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
-        return self.request.user.clienth
+        # Updated to use correct related_name
+        return self.request.user.client_profile

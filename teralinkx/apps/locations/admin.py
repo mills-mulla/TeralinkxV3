@@ -1,74 +1,155 @@
+# apps/locations/admin.py
 from django.contrib import admin
-from django.utils import timezone
-from .models import Location, RoamingPolicy
+from django.utils.html import format_html
+from .models import Location
 
 @admin.register(Location)
 class LocationAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'location_type', 'pricing_tier', 'is_online', 'current_user_count', 'max_concurrent_users')
-    list_filter = ('location_type', 'pricing_tier', 'is_online', 'created_at')
-    search_fields = ('id', 'name', 'address')
-    readonly_fields = ('created_at', 'updated_at', 'current_user_count', 'last_health_check')
+    list_display = [
+        'code', 
+        'name', 
+        'location_type', 
+        'city', 
+        'is_active',
+        'max_concurrent_users',
+        'roaming_status',
+        'created_display'
+    ]
+    
+    list_filter = [
+        'location_type',
+        'is_active',
+        'allow_roaming_in',
+        'allow_roaming_out',
+        'city'
+    ]
+    
+    search_fields = [
+        'code',
+        'name', 
+        'city',
+        'address',
+        'nas_identifier'
+    ]
+    
+    readonly_fields = [
+        'created_display',
+        'modified_display',
+        'roaming_locations_list'
+    ]
+    
     fieldsets = (
-        ('Basic Information', {
-            'fields': ('id', 'name', 'location_type', 'timezone')
+        ('Core Information', {
+            'fields': (
+                'code', 
+                'name', 
+                'location_type',
+                'is_active'
+            )
         }),
-        ('Address & Coordinates', {
-            'fields': ('address', 'coordinates')
+        ('Physical Location', {
+            'fields': (
+                'address',
+                'city',
+                'coordinates'
+            )
         }),
         ('Network Configuration', {
-            'fields': ('network_config',),
+            'fields': (
+                'router_ip',
+                'nas_identifier',
+                'max_concurrent_users'
+            )
+        }),
+        ('Roaming Settings', {
+            'fields': (
+                'allow_roaming_in',
+                'allow_roaming_out', 
+                'roaming_price_multiplier',
+                'roaming_locations_list'
+            )
+        }),
+        ('Metadata', {
+            'fields': (
+                'created_display',
+                'modified_display'
+            ),
             'classes': ('collapse',)
-        }),
-        ('Business Configuration', {
-            'fields': ('business_hours', 'pricing_tier')
-        }),
-        ('Status & Capacity', {
-            'fields': ('max_concurrent_users', 'current_user_count', 'is_online', 'last_health_check')
-        }),
-        ('Timestamps', {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
+        })
     )
     
-    def get_available_packages(self, obj):
-        packages = obj.get_available_packages()
-        return ", ".join([p.name for p in packages[:3]]) + ("..." if packages.count() > 3 else "")
-    get_available_packages.short_description = 'Available Packages'
-
-@admin.register(RoamingPolicy)
-class RoamingPolicyAdmin(admin.ModelAdmin):
-    list_display = ('home_location', 'visiting_location', 'allowed', 'requires_approval', 'speed_limit_mbps', 'billing_rate_multiplier', 'is_active', 'priority')
-    list_filter = ('allowed', 'requires_approval', 'auto_approve', 'is_active', 'home_location', 'visiting_location')
-    search_fields = ('home_location__name', 'visiting_location__name')
-    readonly_fields = ('created_at', 'updated_at')
+    actions = [
+        'activate_locations',
+        'deactivate_locations',
+        'enable_roaming',
+        'disable_roaming'
+    ]
     
-    fieldsets = (
-        ('Policy Definition', {
-            'fields': ('home_location', 'visiting_location', 'priority', 'is_active')
-        }),
-        ('Access Rules', {
-            'fields': ('allowed', 'requires_approval', 'auto_approve')
-        }),
-        ('Service Limitations', {
-            'fields': ('speed_limit_mbps', 'session_time_limit', 'daily_data_limit_mb')
-        }),
-        ('Pricing', {
-            'fields': ('billing_rate_multiplier', 'surcharge_fixed')
-        }),
-        ('Timestamps', {
-            'fields': ('created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
-    )
+    def created_display(self, obj):
+        """Format created_at date"""
+        return obj.created_at.strftime("%Y-%m-%d %H:%M:%S")
+    created_display.short_description = 'Created'
     
-    def has_add_permission(self, request):
-        # Prevent creating policies with same home and visiting locations
-        return True
+    def modified_display(self, obj):
+        """Format modified_at date"""
+        return obj.modified_at.strftime("%Y-%m-%d %H:%M:%S")
+    modified_display.short_description = 'Last Modified'
     
-    def save_model(self, request, obj, form, change):
-        if obj.home_location == obj.visiting_location:
-            from django.contrib import messages
-            messages.error(request, "Home and visiting locations cannot be the same")
-            return
-        super().save_model(request, obj, form, change)
+    def roaming_status(self, obj):
+        """Display roaming status with colored indicators"""
+        if obj.allow_roaming_in and obj.allow_roaming_out:
+            color = 'green'
+            text = 'Full Roaming'
+        elif obj.allow_roaming_in:
+            color = 'orange'
+            text = 'Incoming Only'
+        elif obj.allow_roaming_out:
+            color = 'blue' 
+            text = 'Outgoing Only'
+        else:
+            color = 'red'
+            text = 'No Roaming'
+        
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{}</span>',
+            color,
+            text
+        )
+    roaming_status.short_description = 'Roaming Status'
+    
+    def roaming_locations_list(self, obj):
+        """Display list of available roaming locations"""
+        roaming_locs = obj.get_roaming_locations()
+        if not roaming_locs:
+            return "No roaming locations available"
+        
+        locations_list = []
+        for loc in roaming_locs:
+            locations_list.append(f"• {loc.name} ({loc.code}) - {loc.get_location_type_display()}")
+        
+        return format_html("<br>".join(locations_list))
+    roaming_locations_list.short_description = 'Available Roaming Locations'
+    
+    def activate_locations(self, request, queryset):
+        """Admin action to activate selected locations"""
+        updated = queryset.update(is_active=True)
+        self.message_user(request, f'{updated} locations activated successfully.')
+    activate_locations.short_description = "Activate selected locations"
+    
+    def deactivate_locations(self, request, queryset):
+        """Admin action to deactivate selected locations"""
+        updated = queryset.update(is_active=False)
+        self.message_user(request, f'{updated} locations deactivated successfully.')
+    deactivate_locations.short_description = "Deactivate selected locations"
+    
+    def enable_roaming(self, request, queryset):
+        """Admin action to enable roaming for selected locations"""
+        updated = queryset.update(allow_roaming_in=True, allow_roaming_out=True)
+        self.message_user(request, f'Roaming enabled for {updated} locations.')
+    enable_roaming.short_description = "Enable roaming for selected locations"
+    
+    def disable_roaming(self, request, queryset):
+        """Admin action to disable roaming for selected locations"""
+        updated = queryset.update(allow_roaming_in=False, allow_roaming_out=False)
+        self.message_user(request, f'Roaming disabled for {updated} locations.')
+    disable_roaming.short_description = "Disable roaming for selected locations"

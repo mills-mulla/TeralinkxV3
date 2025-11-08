@@ -3,7 +3,7 @@ from django.utils import timezone
 from django.utils.html import format_html
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import ClientH, UserDevice
+from .models import ClientH, UserDevice, UserSession  # Added UserSession
 
 class ClientHInline(admin.StackedInline):
     """Inline admin for ClientH profile"""
@@ -19,17 +19,17 @@ class ClientHInline(admin.StackedInline):
             'fields': ('home_location', 'current_location', 'last_location_update')
         }),
         ('Security Settings', {
-            'fields': ('two_factor_enabled', 'security_notifications', 'failed_login_attempts')
+            'fields': ('two_factor_enabled', 'failed_login_attempts')  # Removed security_notifications
         }),
         ('Preferences', {
-            'fields': ('language', 'timezone', 'marketing_emails', 'auto_renew')
+            'fields': ('auto_renew',)  # Removed language, timezone, marketing_emails
         }),
     )
 
 class UserAdmin(BaseUserAdmin):
     """Enhanced User admin with ClientH profile"""
     inlines = (ClientHInline,)
-    list_display = ('username', 'email', 'get_account', 'get_account_tier', 'get_status', 'is_staff', 'last_login')
+    list_display = ('username', 'email', 'get_account', 'get_account_tier', 'get_status', 'is_staff', 'last_login', 'get_active_sessions')
     list_select_related = ('client_profile',)
     
     def get_account(self, instance):
@@ -59,6 +59,12 @@ class UserAdmin(BaseUserAdmin):
         return 'N/A'
     get_status.short_description = 'Status'
     
+    def get_active_sessions(self, instance):
+        if hasattr(instance, 'client_profile'):
+            return instance.client_profile.active_sessions.count()
+        return 0
+    get_active_sessions.short_description = 'Active Sessions'
+    
     def get_inline_instances(self, request, obj=None):
         if not obj:
             return list()
@@ -66,15 +72,15 @@ class UserAdmin(BaseUserAdmin):
 
 @admin.register(ClientH)
 class ClientHAdmin(admin.ModelAdmin):
-    list_display = ('account', 'user', 'display_name', 'account_tier_badge', 'status_badge', 'balance', 'available_credit', 'home_location', 'is_online')
+    list_display = ('account', 'user', 'display_name', 'account_tier_badge', 'status_badge', 'balance', 'available_credit', 'active_sessions_count', 'connected_devices_count', 'home_location')
     list_filter = ('account_tier', 'status', 'home_location', 'two_factor_enabled', 'created_at')
     search_fields = ('account', 'user__username', 'user__email', 'display_name', 'phone_number')
-    readonly_fields = ('created_at', 'updated_at', 'last_login', 'last_balance_update', 'last_location_update', 'available_credit', 'is_eligible_for_credit')
+    readonly_fields = ('created_at', 'updated_at', 'last_login', 'last_balance_update', 'last_location_update', 'available_credit', 'is_eligible_for_credit', 'current_ip_address', 'current_mac_address')
     raw_id_fields = ('user', 'home_location', 'current_location')
     
     fieldsets = (
         ('User Account', {
-            'fields': ('user', 'account', 'display_name', 'phone_number', 'date_of_birth', 'profile_image')
+            'fields': ('user', 'account', 'display_name', 'phone_number', 'profile_image')  # Removed date_of_birth
         }),
         ('Account Tier & Status', {
             'fields': ('account_tier', 'status')
@@ -86,18 +92,17 @@ class ClientHAdmin(admin.ModelAdmin):
             'fields': ('home_location', 'current_location', 'last_location_update')
         }),
         ('Security Settings', {
-            'fields': (
-                'failed_login_attempts', 
-                'account_locked_until',
-                'two_factor_enabled', 
-                'security_notifications'
-            )
+            'fields': ('failed_login_attempts', 'two_factor_enabled')  # Removed account_locked_until, security_notifications
         }),
         ('Preferences', {
-            'fields': ('language', 'timezone', 'marketing_emails', 'auto_renew')
+            'fields': ('auto_renew',)  # Removed language, timezone, marketing_emails
         }),
         ('Network Information', {
-            'fields': ('current_ip_address', 'current_mac_address', 'active_voucher', 'voucher_expiry'),
+            'fields': ('active_voucher', 'voucher_expiry'),  # Removed current_ip_address, current_mac_address
+            'classes': ('collapse',)
+        }),
+        ('Current Session Info (Read-only)', {
+            'fields': ('current_ip_address', 'current_mac_address'),
             'classes': ('collapse',)
         }),
         ('Timestamps', {
@@ -138,35 +143,27 @@ class ClientHAdmin(admin.ModelAdmin):
         return f"KES {obj.available_credit:,.2f}"
     available_credit.short_description = 'Available Credit'
     
-    def is_online(self, obj):
-        """Check if user has recent activity"""
-        if obj.last_login:
-            return (timezone.now() - obj.last_login) < timedelta(minutes=30)
-        return False
-    is_online.boolean = True
-    is_online.short_description = 'Online'
+    def active_sessions_count(self, obj):
+        return obj.active_sessions.count()
+    active_sessions_count.short_description = 'Active Sessions'
+    
+    def connected_devices_count(self, obj):
+        return obj.connected_devices.count()
+    connected_devices_count.short_description = 'Connected Devices'
     
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('user', 'home_location', 'current_location')
     
-    def get_devices_count(self, obj):
-        return obj.devices.count()
-    get_devices_count.short_description = 'Devices'
-    
-    def get_active_devices_count(self, obj):
-        return obj.devices.filter(status='active').count()
-    get_active_devices_count.short_description = 'Active Devices'
-    
     def get_readonly_fields(self, request, obj=None):
         readonly_fields = list(self.readonly_fields)
-        if obj:  # editing an existing object
+        if obj:
             readonly_fields.extend(['user', 'account'])
         return readonly_fields
     
-    actions = ['activate_users', 'suspend_users', 'ban_users', 'reset_login_attempts']
+    actions = ['activate_users', 'suspend_users', 'ban_users', 'reset_login_attempts', 'terminate_all_sessions']
     
     def activate_users(self, request, queryset):
-        updated = queryset.update(status='active', account_locked_until=None, failed_login_attempts=0)
+        updated = queryset.update(status='active', failed_login_attempts=0)
         self.message_user(request, f'{updated} users activated successfully.')
     activate_users.short_description = "Activate selected users"
     
@@ -181,40 +178,39 @@ class ClientHAdmin(admin.ModelAdmin):
     ban_users.short_description = "Ban selected users"
     
     def reset_login_attempts(self, request, queryset):
-        updated = queryset.update(failed_login_attempts=0, account_locked_until=None)
+        updated = queryset.update(failed_login_attempts=0)
         self.message_user(request, f'{updated} users login attempts reset.')
     reset_login_attempts.short_description = "Reset login attempts"
+    
+    def terminate_all_sessions(self, request, queryset):
+        for client in queryset:
+            client.terminate_all_sessions("Admin action")
+        self.message_user(request, f'Sessions terminated for {queryset.count()} users.')
+    terminate_all_sessions.short_description = "Terminate all sessions"
 
 @admin.register(UserDevice)
 class UserDeviceAdmin(admin.ModelAdmin):
-    list_display = ('device_name', 'user', 'mac_address', 'device_type', 'status_badge', 'is_online', 'is_primary', 'is_trusted', 'last_seen')
-    list_filter = ('device_type', 'device_platform', 'status', 'is_primary', 'is_trusted', 'auto_connect', 'created_at')
+    list_display = ('device_name', 'user', 'mac_address', 'device_type', 'status_badge', 'is_online', 'is_trusted', 'current_session_info', 'last_seen')
+    list_filter = ('device_type', 'device_platform', 'status', 'is_trusted', 'auto_connect', 'created_at')
     search_fields = ('device_name', 'mac_address', 'user__account', 'user__user__username', 'device_model', 'device_manufacturer')
-    readonly_fields = ('created_at', 'updated_at', 'first_seen', 'last_seen', 'total_connections', 'is_online')
-    raw_id_fields = ('user', 'last_seen_location', 'favorite_location', 'dhcp_lease')
+    readonly_fields = ('created_at', 'updated_at', 'last_seen', 'total_connections', 'is_online', 'current_session')
+    raw_id_fields = ('user', 'last_seen_location', 'favorite_location')
     
     fieldsets = (
         ('Device Identity', {
             'fields': ('user', 'mac_address', 'device_name', 'device_type', 'device_platform', 'device_model', 'device_manufacturer')
         }),
-        ('Network Information', {
-            'fields': ('ip_address', 'bound_ip', 'dhcp_lease')
-        }),
         ('Security & Trust', {
-            'fields': ('is_primary', 'is_trusted', 'trust_level', 'requires_approval', 'status')
+            'fields': ('is_trusted', 'status')
         }),
         ('Activity Tracking', {
-            'fields': ('first_seen', 'last_seen', 'last_seen_ip', 'last_seen_location', 'total_connections')
-        }),
-        ('Usage Statistics', {
-            'fields': ('total_data_used', 'average_session_duration', 'favorite_location'),
-            'classes': ('collapse',)
+            'fields': ('last_seen', 'last_seen_location', 'total_connections', 'favorite_location')
         }),
         ('Configuration', {
-            'fields': ('auto_connect', 'quality_of_service')
+            'fields': ('auto_connect',)
         }),
-        ('Metadata', {
-            'fields': ('user_agent', 'client_identifier', 'notes'),
+        ('Current Session (Read-only)', {
+            'fields': ('current_session',),
             'classes': ('collapse',)
         }),
         ('Timestamps', {
@@ -241,24 +237,26 @@ class UserDeviceAdmin(admin.ModelAdmin):
     is_online.boolean = True
     is_online.short_description = 'Online'
     
+    def current_session_info(self, obj):
+        session = obj.current_session
+        if session:
+            return format_html(
+                '{}<br><small>IP: {}</small>',
+                session.location or 'Unknown',
+                session.ip_address
+            )
+        return 'No active session'
+    current_session_info.short_description = 'Current Session'
+    
     def get_queryset(self, request):
         return super().get_queryset(request).select_related(
             'user', 
             'user__user',
             'last_seen_location',
-            'favorite_location',
-            'dhcp_lease'
+            'favorite_location'
         )
     
-    def user_account(self, obj):
-        return obj.user.account
-    user_account.short_description = 'Account'
-    
-    def user_display_name(self, obj):
-        return obj.user.display_name or obj.user.user.username
-    user_display_name.short_description = 'User Name'
-    
-    actions = ['activate_devices', 'suspend_devices', 'mark_as_trusted', 'mark_as_untrusted', 'set_as_primary']
+    actions = ['activate_devices', 'suspend_devices', 'mark_as_trusted', 'mark_as_untrusted', 'terminate_sessions']
     
     def activate_devices(self, request, queryset):
         updated = queryset.update(status='active')
@@ -271,25 +269,58 @@ class UserDeviceAdmin(admin.ModelAdmin):
     suspend_devices.short_description = "Suspend selected devices"
     
     def mark_as_trusted(self, request, queryset):
-        updated = queryset.update(is_trusted=True, trust_level=3)
+        updated = queryset.update(is_trusted=True)
         self.message_user(request, f'{updated} devices marked as trusted.')
     mark_as_trusted.short_description = "Mark as trusted"
     
     def mark_as_untrusted(self, request, queryset):
-        updated = queryset.update(is_trusted=False, trust_level=1)
+        updated = queryset.update(is_trusted=False)
         self.message_user(request, f'{updated} devices marked as untrusted.')
     mark_as_untrusted.short_description = "Mark as untrusted"
     
-    def set_as_primary(self, request, queryset):
-        # First, unset primary for all devices of these users
-        from django.db.models import Q
-        user_ids = queryset.values_list('user_id', flat=True).distinct()
-        UserDevice.objects.filter(user_id__in=user_ids).update(is_primary=False)
-        
-        # Then set selected devices as primary
-        updated = queryset.update(is_primary=True)
-        self.message_user(request, f'{updated} devices set as primary.')
-    set_as_primary.short_description = "Set as primary device"
+    def terminate_sessions(self, request, queryset):
+        for device in queryset:
+            session = device.current_session
+            if session:
+                session.terminate("Admin action")
+        self.message_user(request, f'Sessions terminated for {queryset.count()} devices.')
+    terminate_sessions.short_description = "Terminate active sessions"
+
+@admin.register(UserSession)
+class UserSessionAdmin(admin.ModelAdmin):
+    list_display = ('session_id_short', 'user_account', 'device_name', 'ip_address', 'location', 'login_time', 'last_activity', 'duration', 'is_active_badge')
+    list_filter = ('is_active', 'location', 'login_time')
+    search_fields = ('session_id', 'user__account', 'device__device_name', 'ip_address')
+    readonly_fields = ('session_id', 'login_time', 'last_activity', 'duration')
+    
+    def session_id_short(self, obj):
+        return obj.session_id[:8] + '...'
+    session_id_short.short_description = 'Session ID'
+    
+    def user_account(self, obj):
+        return obj.user.account
+    user_account.short_description = 'Account'
+    
+    def device_name(self, obj):
+        return obj.device.device_name
+    device_name.short_description = 'Device'
+    
+    def duration(self, obj):
+        return obj.duration
+    duration.short_description = 'Duration'
+    
+    def is_active_badge(self, obj):
+        if obj.is_active:
+            return format_html('<span style="color: green;">● Active</span>')
+        return format_html('<span style="color: red;">● Inactive</span>')
+    is_active_badge.short_description = 'Status'
+    
+    actions = ['terminate_sessions']
+    
+    def terminate_sessions(self, request, queryset):
+        for session in queryset:
+            session.terminate("Admin action")
+        self.message_user(request, f'{queryset.count()} sessions terminated.')
 
 # Unregister the default User admin and register our custom one
 admin.site.unregister(User)

@@ -19,8 +19,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Apps directory to Python path
 sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
 
-#Development settings
-DEBUG = True #os.environ.get('DJANGO_DEBUG', 'False') == 'True'
+# Development settings
+DEBUG = True  # Force debug mode for development
 
 # Security
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-fallback-key-for-dev-only')
@@ -38,10 +38,8 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
     '192.168.8.8',
     '10.0.0.1',
-    
+    '0.0.0.0',  # Added for Docker compatibility
 ]
-# ALLOWED_HOSTS = ['*']
-# ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,192.168.88.108,192.168.88.15').split(',')
 
 # Apps
 INSTALLED_APPS = [
@@ -63,7 +61,7 @@ INSTALLED_APPS = [
     'django_celery_beat',
     
     # Local
-    # 'core',
+    'core',
     'users',
     'locations',
     'packages',
@@ -73,7 +71,6 @@ INSTALLED_APPS = [
     'notifications',
     'sync',
     'ads',
-    
 ]
 
 # Middleware
@@ -83,36 +80,42 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',  # Keep this enabled
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'silk.middleware.SilkyMiddleware',
 ]
 
-# Security settings
-if not DEBUG:
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-    SECURE_SSL_REDIRECT = True #False #True
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SECURE_HSTS_SECONDS = 31536000 # disables HSTS
-    SECURE_HSTS_PRELOAD = True
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_CONTENT_TYPE_NOSNIFF = True
-    SECURE_BROWSER_XSS_FILTER = True
-    X_FRAME_OPTIONS = 'DENY'
-    
-# Session settings
+# ========== DEVELOPMENT SECURITY SETTINGS ==========
+# Override all production security settings for development
+SECURE_PROXY_SSL_HEADER = None
+SECURE_SSL_REDIRECT = False
+SESSION_COOKIE_SECURE = False  # Allow HTTP in development
+CSRF_COOKIE_SECURE = False     # Allow HTTP in development
+SECURE_HSTS_SECONDS = 0        # Disable HSTS in development
+SECURE_HSTS_PRELOAD = False
+SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+SECURE_CONTENT_TYPE_NOSNIFF = True  # Keep this for security
+SECURE_BROWSER_XSS_FILTER = True    # Keep this for security
+X_FRAME_OPTIONS = 'DENY'            # Keep this for security
+
+# Session settings for development
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_COOKIE_NAME = 'sessionid'
 SESSION_COOKIE_AGE = 1209600  # 2 weeks in seconds
-SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
+SESSION_COOKIE_SECURE = False  # HTTP in development
 SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SAMESITE = 'None'
+SESSION_COOKIE_SAMESITE = 'Lax'  # Change from 'None' to 'Lax' for development
 SESSION_SAVE_EVERY_REQUEST = True
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
+# CSRF settings for development
+CSRF_COOKIE_SECURE = False      # HTTP in development
+CSRF_COOKIE_HTTPONLY = False    # Allow JavaScript access if needed
+CSRF_COOKIE_SAMESITE = 'Lax'    # Change from 'None' to 'Lax'
+CSRF_USE_SESSIONS = False       # Use cookies instead of sessions
+CSRF_FAILURE_VIEW = 'django.views.csrf.csrf_failure'
 
 # URLs & Templates
 ROOT_URLCONF = 'teralinkx.urls'
@@ -123,6 +126,7 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
@@ -131,36 +135,13 @@ TEMPLATES = [
     },
 ]
 
-# Databasedocker
-# DATABASES = {
-#     'default': dj_database_url.config(
-#         default='postgres://teralinkx:justboot@db:5432/teralinkx',
-#         conn_max_age=600,  # persistent connections
-#         ssl_require=False  # set True in production if needed
-#     )
-# }
-#default database sqlite3
+# Database - SQLite for development
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',  # Database engine
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),  # Path to the database file
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
     }
 }
-
-# # localdatabase
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': os.environ.get('DB_NAME', ''),
-#         'USER': os.environ.get('DB_USER', ''),
-#         'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-#         'HOST': os.environ.get('DB_HOST', 'localhost'),
-#         'PORT': os.environ.get('DB_PORT', '5432'),
-#         'OPTIONS': {
-#             'connect_timeout': 5,
-#         },
-#     }
-# }
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -188,12 +169,14 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.AllowAny', 
     ],
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',  # Enable browsable API in development
     )
 }
-####
+
 # JWT Configuration
 from datetime import timedelta
 SIMPLE_JWT = {
@@ -202,6 +185,7 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
 }
+
 # Internationalization
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Africa/Nairobi'
@@ -220,35 +204,43 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # Default primary key
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# CORS settings
-CSRF_COOKIE_SAMESITE = 'None'
+# ========== CORS SETTINGS FOR DEVELOPMENT ==========
 CORS_ALLOW_HEADERS = list(default_headers) + [
     "x-csrftoken",
     "authorization",
+    "content-type",
 ]
+
 CORS_ALLOW_CREDENTIALS = True
+
 CORS_ALLOWED_ORIGINS = [
-    'https://teralinkxwaves.uk',
-    'https://login.teralinkxwaves.uk',
-    'https://service.teralinkxwaves.uk',
+    'http://teralinkxwaves.uk',
+    'http://login.teralinkxwaves.uk',
+    'http://service.teralinkxwaves.uk',
     'http://teralinkxwaves.spot',
     'http://teralinkxwaves.co.ke',
     'http://localhost:8000',
     'http://127.0.0.1:8000',
     'http://localhost:5173',
     'http://127.0.0.1:5173',
+    'http://192.168.88.16:8200',
     'http://192.168.8.8:5173',
     'http://192.168.88.16',
-    'http://10.0.0.1'
-    
+    'http://10.0.0.1',
+    'http://0.0.0.0:8000',
 ]
+
+# For development, you can also allow all origins (be careful in production)
+CORS_ALLOW_ALL_ORIGINS = True  # Enable this for development only
+
 CORS_ALLOW_METHODS = [
     'DELETE', 'GET', 'OPTIONS', 'PATCH', 'POST', 'PUT',
 ]
+
 CSRF_TRUSTED_ORIGINS = [
-    'https://teralinkxwaves.uk',
-    'https://login.teralinkxwaves.uk',
-    'https://service.teralinkxwaves.uk',
+    'http://teralinkxwaves.uk',
+    'http://login.teralinkxwaves.uk',
+    'http://service.teralinkxwaves.uk',
     'http://teralinkxwaves.spot',
     'http://teralinkxwaves.co.ke',
     'http://localhost:8000',
@@ -256,53 +248,86 @@ CSRF_TRUSTED_ORIGINS = [
     'http://localhost:5173',
     'http://127.0.0.1:5173',
     'http://192.168.8.8:5173',
+    'http://192.168.88.16:8200',
     'http://192.168.88.16',
-    'http://10.0.0.1'
-    
+    'http://10.0.0.1',
+    'http://0.0.0.0:8000',
 ]
 
 # Cache
 CACHES = {
     "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": os.environ.get('REDIS_URL', 'redis://localhost:6379/0'),
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            "SOCKET_CONNECT_TIMEOUT": 5,
-            "SOCKET_TIMEOUT": 5,
-        }
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",  # Use local memory cache for development
+        "LOCATION": "unique-snowflake",
     }
 }
 
-# Celery
-CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://redis:6379/')
-CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://redis:6379/')
+# Alternative Redis cache for development (if you have Redis running)
+# CACHES = {
+#     "default": {
+#         "BACKEND": "django_redis.cache.RedisCache",
+#         "LOCATION": "redis://127.0.0.1:6379/1",
+#         "OPTIONS": {
+#             "CLIENT_CLASS": "django_redis.client.DefaultClient",
+#         }
+#     }
+# }
+
+# Celery - development settings
+CELERY_BROKER_URL = 'redis://localhost:6379/0'  # Local Redis
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers.DatabaseScheduler'
 
-# Email
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend' if not DEBUG else 'django.core.mail.backends.console.EmailBackend'
-EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
-EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
-EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'webmaster@localhost')
-#pusher
-PUSHER_APP_ID =  os.environ.get('PUSHERID', '')
+# Email - console backend for development
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_HOST = 'localhost'
+EMAIL_PORT = 25
+EMAIL_USE_TLS = False
+EMAIL_HOST_USER = ''
+EMAIL_HOST_PASSWORD = ''
+DEFAULT_FROM_EMAIL = 'webmaster@localhost'
+
+# Pusher - development settings (optional)
+PUSHER_APP_ID = os.environ.get('PUSHERID', '')
 PUSHER_KEY = os.environ.get('PUSHERKEY', '')
 PUSHER_SECRET = os.environ.get('PUSHERSCRT', '')
 PUSHER_CLUSTER = os.environ.get('PUSHERCLT', '')
-PUSHER_SSL = True
+PUSHER_SSL = False  # Disable SSL for development
 
-
-# Silk
+# Silk - enable in development
 SILKY_PYTHON_PROFILER = True
-SILKY_INTERCEPT_FUNC = lambda request: DEBUG  # Only profile in debug mode
+SILKY_INTERCEPT_FUNC = lambda request: DEBUG
 
 # Channels
 ASGI_APPLICATION = 'teralinkx.asgi.application'
 
+# Logging for development
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+} 

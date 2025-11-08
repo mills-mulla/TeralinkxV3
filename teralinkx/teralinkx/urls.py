@@ -23,8 +23,10 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('', include('django_prometheus.urls')),
     path('admin/', admin.site.urls),
-    path('api/',include('core.urls')),
-    path('suapi/',include('core.superuser.urls')),
+    path('api/',include('users.urls')),
+    path('api/',include('packages.urls')),
+    # path('api/',include('core.urls')),
+    # path('suapi/',include('core.superuser.urls')),
     path('__debug__/', include('debug_toolbar.urls')), 
    
 ]
