@@ -1,7 +1,31 @@
 # apps/packages/admin.py
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import PackageType, DispatchVoucher, AvailableVoucher
+from .models import (
+    PackageType, DispatchVoucher, AvailableVoucher, 
+    Coupon, CouponUsage, FeaturedPromotion,
+    PackageTypeLocation, FeaturedPromotionLocation  # Import the through models
+)
+
+# --------------------------------------------------------------------
+# INLINE ADMIN FOR THROUGH MODELS
+# --------------------------------------------------------------------
+
+class PackageTypeLocationInline(admin.TabularInline):
+    """Inline admin for PackageType locations through model"""
+    model = PackageTypeLocation
+    extra = 1
+    autocomplete_fields = ['location']
+
+class FeaturedPromotionLocationInline(admin.TabularInline):
+    """Inline admin for FeaturedPromotion locations through model"""
+    model = FeaturedPromotionLocation
+    extra = 1
+    autocomplete_fields = ['location']
+
+# --------------------------------------------------------------------
+# ADMIN CLASSES
+# --------------------------------------------------------------------
 
 @admin.register(PackageType)
 class PackageTypeAdmin(admin.ModelAdmin):
@@ -41,6 +65,7 @@ class PackageTypeAdmin(admin.ModelAdmin):
         'created_display'
     ]
     
+    # UPDATED: Removed 'locations' from fieldsets
     fieldsets = (
         ('Basic Information', {
             'fields': (
@@ -75,8 +100,7 @@ class PackageTypeAdmin(admin.ModelAdmin):
         }),
         ('Availability & Display', {
             'fields': (
-                'locations',
-                'is_active',
+                'is_active',        # REMOVED: 'locations',
                 'is_public',
                 'is_featured',
                 'display_order',
@@ -99,7 +123,11 @@ class PackageTypeAdmin(admin.ModelAdmin):
         })
     )
     
-    filter_horizontal = ['locations']
+    # UPDATED: Removed 'locations' from filter_horizontal
+    # filter_horizontal = []  # Don't include locations here
+    
+    # ADDED: Include the inline for locations
+    inlines = [PackageTypeLocationInline]
     
     actions = [
         'activate_packages',
@@ -544,3 +572,55 @@ class AvailableVoucherAdmin(admin.ModelAdmin):
             f'Voucher Report: Total: {total}, Used: {used}, Valid: {valid}'
         )
     generate_voucher_report.short_description = "Generate voucher report"
+
+
+# --------------------------------------------------------------------
+# ADDITIONAL ADMIN CLASSES FOR OTHER MODELS
+# --------------------------------------------------------------------
+
+@admin.register(Coupon)
+class CouponAdmin(admin.ModelAdmin):
+    list_display = ['code', 'name', 'coupon_type', 'discount_value', 'is_valid', 'total_uses']
+    list_filter = ['coupon_type', 'applicable_to', 'is_active']
+    search_fields = ['code', 'name', 'description']
+    filter_horizontal = ['applicable_packages']
+
+
+@admin.register(CouponUsage)
+class CouponUsageAdmin(admin.ModelAdmin):
+    list_display = ['coupon', 'user', 'package', 'discount_amount', 'created_at']
+    list_filter = ['created_at']
+    search_fields = ['coupon__code', 'user__username']
+    autocomplete_fields = ['coupon', 'user', 'package', 'voucher']
+
+
+@admin.register(FeaturedPromotion)
+class FeaturedPromotionAdmin(admin.ModelAdmin):
+    list_display = ['name', 'package', 'is_active', 'is_live', 'start_date', 'end_date']
+    list_filter = ['promotion_type', 'is_active', 'start_date']
+    search_fields = ['name', 'headline', 'package__name']
+    
+    # ADDED: Include the inline for locations
+    inlines = [FeaturedPromotionLocationInline]
+    
+    def is_live(self, obj):
+        return obj.is_live
+    is_live.boolean = True
+    is_live.short_description = 'Live Now'
+
+
+# --------------------------------------------------------------------
+# OPTIONAL: REGISTER THROUGH MODELS FOR DIRECT ADMIN ACCESS
+# --------------------------------------------------------------------
+
+@admin.register(PackageTypeLocation)
+class PackageTypeLocationAdmin(admin.ModelAdmin):
+    list_display = ['packagetype', 'location']
+    list_filter = ['packagetype', 'location']
+    autocomplete_fields = ['packagetype', 'location']
+
+@admin.register(FeaturedPromotionLocation)
+class FeaturedPromotionLocationAdmin(admin.ModelAdmin):
+    list_display = ['promotion', 'location']
+    list_filter = ['promotion', 'location']
+    autocomplete_fields = ['promotion', 'location']

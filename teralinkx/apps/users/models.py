@@ -164,7 +164,9 @@ class ClientH(TimeStampedModel):
     def __str__(self):
         """String representation of the client"""
         return f"{self.display_name or self.user.username} ({self.account})"
+
     
+
     @property
     def is_eligible_for_credit(self):
         """Check if user is eligible for credit purchases based on tier"""
@@ -195,17 +197,55 @@ class ClientH(TimeStampedModel):
     @property
     def connected_devices(self):
         """Get all currently connected devices (with active sessions)"""
-        # Get device IDs from active sessions using the new device field
-        from analytics.models import ActiveSession
-        
-        device_ids = ActiveSession.objects.filter(
-            user=self, 
-            is_authenticated=True,
-            device__isnull=False,
-            terminated_at__isnull=True  # Only active sessions
+        device_ids = self.sessions.filter(
+            is_active=True
         ).values_list('device_id', flat=True)
-    
+        
         return self.devices.filter(id__in=device_ids)
+    
+    @property
+    def devices_with_vouchers(self):
+        """Get devices with active vouchers"""
+        from django.db.models import Subquery, OuterRef, Exists
+        
+        # Find devices with active voucher sessions
+        active_voucher_sessions = UserSession.objects.filter(
+            device=OuterRef('pk'),
+            is_active=True,
+            active_voucher__isnull=False,
+            voucher_expires__gt=timezone.now()
+        )
+        
+        return self.devices.annotate(
+            has_active_voucher=Exists(active_voucher_sessions)
+        ).filter(has_active_voucher=True)
+    
+    def get_active_voucher_sessions(self):
+        """Get all active voucher sessions"""
+        return self.sessions.filter(
+            is_active=True,
+            active_voucher__isnull=False,
+            voucher_expires__gt=timezone.now()
+        )
+    
+    def can_add_device(self, device_mac=None):
+        """
+        Check if user can add more devices.
+        If device_mac provided, check if already owned.
+        """
+        # Check if device already belongs to user
+        if device_mac:
+            if self.devices.filter(mac_address=device_mac).exists():
+                return True, "Device already owned"
+        
+        # Check device limits
+        active_devices = self.devices.filter(status='active').count()
+        max_allowed = self.get_max_allowed_devices()
+        
+        if active_devices >= max_allowed:
+            return False, f"Device limit reached ({active_devices}/{max_allowed})"
+        
+        return True, "Can add device"
     
     def update_network_presence(self, device_mac, ip_address, location):
         """
@@ -240,7 +280,8 @@ class ClientH(TimeStampedModel):
             defaults={
                 'session_id': uuid.uuid4(),
                 'ip_address': ip_address,
-                'location': location
+                'location': location,
+                'session_type': 'network'
             }
         )
         
@@ -273,18 +314,12 @@ class ClientH(TimeStampedModel):
         """Get all active devices (not suspended)"""
         return self.devices.filter(status='active')
     
-    def can_add_device(self):
-        """Check if user can add more devices based on account tier limits"""
-        active_devices = self.get_active_devices().count()
-        max_devices = self.get_max_allowed_devices()
-        return active_devices < max_devices
-    
     def get_max_allowed_devices(self):
         """Get maximum allowed devices based on account tier"""
         tier_limits = {
-            'basic': 3,
-            'premium': 5,
-            'business': 10,
+            'basic': 5,
+            'premium': 10,
+            'business': 25,
             'enterprise': 50
         }
         return tier_limits.get(self.account_tier, 3)
@@ -311,14 +346,20 @@ class ClientH(TimeStampedModel):
     def get_session_statistics(self):
         """Get comprehensive session statistics"""
         active_sessions = self.active_sessions
+        
+        from django.db.models import Sum
         return {
             'total_active_sessions': active_sessions.count(),
             'unique_locations': active_sessions.values('location').distinct().count(),
             'unique_devices': active_sessions.values('device').distinct().count(),
+            'voucher_sessions': active_sessions.filter(active_voucher__isnull=False).exclude(active_voucher='').count(),
+            'owner_sessions': active_sessions.filter(is_owner=True).count(),
+            'transferred_sessions': active_sessions.filter(was_transferred=True).count(),
             'oldest_session': active_sessions.order_by('login_time').first(),
             'newest_session': active_sessions.order_by('-login_time').first(),
+            'total_data_used': active_sessions.aggregate(total=Sum('data_used'))['total'] or 0,
         }
-
+        
     class Meta:
         indexes = [
             models.Index(fields=['account']),
@@ -376,7 +417,8 @@ class UserDevice(TimeStampedModel):
     )
     mac_address = models.CharField(
         max_length=17, 
-        unique=True,
+        unique=False,
+        db_index=True,
         help_text="Unique hardware MAC address"
     )
     device_name = models.CharField(
@@ -444,10 +486,34 @@ class UserDevice(TimeStampedModel):
         help_text="Most frequently used location"
     )
     
+    previous_owners = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="History of previous owners [{'user_id': X, 'from': 'date', 'to': 'date'}]"
+    )
+    
+    device_identification = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Additional device identification (browser, OS version, etc.)"
+    )
+    
     # Configuration
     auto_connect = models.BooleanField(
         default=True,
         help_text="Automatically connect when in range"
+    )
+    
+    max_concurrent_sessions = models.IntegerField(
+        default=1,
+        help_text="Maximum concurrent sessions allowed"
+    )
+
+    created = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When the device was first created/registered",
+        null=True,  
+        blank=True,
     )
 
     def __str__(self):
@@ -466,6 +532,34 @@ class UserDevice(TimeStampedModel):
         """Get current active session for this device"""
         return self.sessions.filter(is_active=True).first()
     
+    @property
+    def has_active_voucher(self):
+        """Check if device has active voucher in any session"""
+        return self.sessions.filter(
+            is_active=True,
+            active_voucher__isnull=False,
+            voucher_expires__gt=timezone.now()
+        ).exists()
+    
+    @property
+    def active_voucher_session(self):
+        """Get active voucher session if exists"""
+        return self.sessions.filter(
+            is_active=True,
+            active_voucher__isnull=False,
+            voucher_expires__gt=timezone.now()
+        ).first()
+    
+    @property
+    def concurrent_sessions_count(self):
+        """Get number of concurrent active sessions"""
+        return self.sessions.filter(is_active=True).count()
+    
+    @property
+    def can_create_session(self):
+        """Check if device can create new session"""
+        return self.concurrent_sessions_count < self.max_concurrent_sessions
+    
     def update_presence(self, ip_address=None, location=None):
         """
         Update device presence information and create activity log.
@@ -477,10 +571,6 @@ class UserDevice(TimeStampedModel):
         self.last_seen = timezone.now()
         self.total_connections += 1
         
-        if ip_address:
-            # Note: IP is now stored in sessions, but we keep last known for quick access
-            pass
-            
         if location:
             self.last_seen_location = location
             
@@ -497,18 +587,83 @@ class UserDevice(TimeStampedModel):
                 'device_id': str(self.id),
                 'mac_address': self.mac_address,
                 'ip_address': ip_address,
-                'location': str(location) if location else None
+                'location': str(location) if location else None,
+                'total_connections': self.total_connections
             }
         )
+    
+    def transfer_to_user(self, new_user, reason="Device transfer"):
+        """
+        Transfer device to new user with history tracking.
+        
+        Args:
+            new_user (ClientH): New owner
+            reason (str): Reason for transfer
+        
+        Returns:
+            bool: Success status
+        """
+        old_user = self.user
+        
+        # Record previous owner
+        self.previous_owners.append({
+            'user_id': old_user.id,
+            'account': old_user.account,
+            'from': self.created.isoformat(),
+            'to': timezone.now().isoformat(),
+            'reason': reason
+        })
+        
+        # Transfer device
+        self.user = new_user
+        self.device_name = f"{new_user.display_name}'s Device"
+        self.is_trusted = False  # Reset trust on transfer
+        self.save()
+        
+        # Terminate old user's sessions
+        terminated = self.sessions.filter(
+            user=old_user,
+            is_active=True
+        ).update(is_active=False)
+        
+        # Log the transfer
+        from security.models import SecurityLog
+        SecurityLog.objects.create(
+            user=old_user,
+            action_type='device_transferred_out',
+            description=f"Device {self.mac_address} transferred to {new_user.account}",
+            severity='medium',
+            details={
+                'new_owner': new_user.account,
+                'device_mac': self.mac_address,
+                'terminated_sessions': terminated,
+                'reason': reason
+            }
+        )
+        
+        SecurityLog.objects.create(
+            user=new_user,
+            action_type='device_transferred_in',
+            description=f"Received device {self.mac_address} from {old_user.account}",
+            severity='medium',
+            details={
+                'previous_owner': old_user.account,
+                'device_mac': self.mac_address,
+                'reason': reason
+            }
+        )
+        
+        return True
     
     def block_device(self, reason="Security concern"):
         """Block this device from network access"""
         old_status = self.status
         self.status = 'suspended'
+        self.is_trusted = False
         self.save()
         
         # Terminate any active sessions
-        self.sessions.filter(is_active=True).update(is_active=False)
+        terminated = self.sessions.filter(is_active=True).update(is_active=False)
         
         from security.models import SecurityLog
         SecurityLog.objects.create(
@@ -521,9 +676,12 @@ class UserDevice(TimeStampedModel):
                 'mac_address': self.mac_address,
                 'old_status': old_status,
                 'new_status': self.status,
+                'terminated_sessions': terminated,
                 'reason': reason,
             }
         )
+        
+        return terminated
     
     def unblock_device(self, reason="User request"):
         """Unblock this device and allow network access"""
@@ -559,11 +717,14 @@ class UserDevice(TimeStampedModel):
         from_date = timezone.now() - timedelta(days=days)
         sessions = self.sessions.filter(login_time__gte=from_date)
         
+        from django.db.models import Sum
         return {
             'total_sessions': sessions.count(),
             'average_duration': self._calculate_average_duration(sessions),
             'unique_locations': sessions.values('location').distinct().count(),
             'most_frequent_location': self._get_most_frequent_location(sessions),
+            'total_data_used': sessions.aggregate(total=Sum('data_used'))['total'] or 0,
+            'voucher_sessions': sessions.filter(active_voucher__isnull=False).count(),
         }
     
     def _calculate_average_duration(self, sessions):
@@ -591,10 +752,18 @@ class UserDevice(TimeStampedModel):
             models.Index(fields=['device_type']),
             models.Index(fields=['device_platform']),
             models.Index(fields=['favorite_location']),
+            models.Index(fields=['is_trusted']),
         ]
         ordering = ['-last_seen']
         verbose_name = "User Device"
         verbose_name_plural = "User Devices"
+        constraints = [
+            models.UniqueConstraint(
+                fields=['mac_address', 'user'],
+                name='unique_device_per_user',
+                condition=models.Q(status='active')
+            )
+        ]
 
 
 class UserSession(TimeStampedModel):
@@ -605,6 +774,7 @@ class UserSession(TimeStampedModel):
     tracking real-time network presence and activity.
     """
     
+    # Core fields
     user = models.ForeignKey(
         ClientH, 
         on_delete=models.CASCADE, 
@@ -643,6 +813,67 @@ class UserSession(TimeStampedModel):
         default=True,
         help_text="Whether the session is currently active"
     )
+    
+    
+    session_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('web', 'Web Authentication'),
+            ('network', 'Network Connection'),
+            ('voucher', 'Voucher Active'),
+        ],
+        default='network',
+        help_text="Type of session"
+    )
+    
+    is_owner = models.BooleanField(
+        default=True,
+        help_text="Is this user the device owner? (False for borrowed devices)"
+    )
+    
+    was_transferred = models.BooleanField(
+        default=False,
+        help_text="Was device transferred during this session?"
+    )
+    
+    request_metadata = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Additional request metadata"
+    )
+    
+    active_voucher = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Active voucher code for this session"
+    )
+    
+    voucher_activated = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When voucher was activated for this session"
+    )
+    
+    voucher_expires = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When active voucher expires"
+    )
+    
+    auto_logout_minutes = models.IntegerField(
+        default=1440,  # 24 hours
+        help_text="Auto logout after X minutes (0 = never)"
+    )
+    
+    data_used = models.BigIntegerField(
+        default=0,
+        help_text="Data used during this session (bytes)"
+    )
+    user_agent = models.TextField(
+        blank=True,
+        default='',
+        help_text="User agent string from the connection"
+    )
 
     def __str__(self):
         """String representation of the session"""
@@ -657,17 +888,94 @@ class UserSession(TimeStampedModel):
     
     @property
     def is_expired(self):
-        """Check if session has expired (more than 24 hours)"""
-        return self.duration > timedelta(hours=24)
+        """Check if session has expired (based on auto_logout_minutes)"""
+        if self.auto_logout_minutes == 0:
+            return False
+        return self.duration > timedelta(minutes=self.auto_logout_minutes)
+    
+    @property
+    def has_active_voucher(self):
+        """Check if session has active voucher"""
+        return bool(
+            self.active_voucher and 
+            self.voucher_expires and 
+            self.voucher_expires > timezone.now()
+        )
+    
+    @property
+    def voucher_time_remaining(self):
+        """Get remaining voucher time"""
+        if not self.has_active_voucher:
+            return timedelta(0)
+        return self.voucher_expires - timezone.now()
     
     def refresh_activity(self):
         """Update last activity timestamp"""
         self.last_activity = timezone.now()
         self.save()
     
+    def activate_voucher(self, voucher_code, expires_at, voucher_data=None):
+        """Activate voucher for this session"""
+        self.active_voucher = voucher_code
+        self.voucher_activated = timezone.now()
+        self.voucher_expires = expires_at
+        self.session_type = 'voucher'
+        
+        if voucher_data:
+            if 'auto_logout' in voucher_data:
+                self.auto_logout_minutes = voucher_data['auto_logout']
+        
+        self.save()
+        
+        # Log voucher activation
+        from security.models import SecurityLog
+        SecurityLog.objects.create(
+            user=self.user,
+            action_type='voucher_activated',
+            description=f"Voucher {voucher_code} activated for session",
+            severity='info',
+            ip_address=self.ip_address,
+            details={
+                'session_id': self.session_id,
+                'voucher_code': voucher_code,
+                'expires_at': expires_at.isoformat(),
+                'device_mac': self.device.mac_address
+            }
+        )
+    
+    def deactivate_voucher(self, reason="Expired or cancelled"):
+        """Deactivate voucher for this session"""
+        old_voucher = self.active_voucher
+        self.active_voucher = ''
+        self.voucher_activated = None
+        self.voucher_expires = None
+        self.session_type = 'network'
+        self.save()
+        
+        # Log voucher deactivation
+        from security.models import SecurityLog
+        SecurityLog.objects.create(
+            user=self.user,
+            action_type='voucher_expired',
+            description=f"Voucher {old_voucher} deactivated: {reason}",
+            severity='info',
+            ip_address=self.ip_address,
+            details={
+                'session_id': self.session_id,
+                'old_voucher': old_voucher,
+                'reason': reason,
+                'device_mac': self.device.mac_address
+            }
+        )
+    
     def terminate(self, reason="User logout"):
         """Terminate this session"""
         self.is_active = False
+        
+        # Deactivate voucher if active
+        if self.has_active_voucher:
+            self.deactivate_voucher(f"Session terminated: {reason}")
+        
         self.save()
         
         # Log session termination
@@ -681,9 +989,19 @@ class UserSession(TimeStampedModel):
                 'session_id': self.session_id,
                 'device_id': str(self.device.id),
                 'duration': str(self.duration),
-                'reason': reason
+                'reason': reason,
+                'had_voucher': bool(self.active_voucher)
             }
         )
+    
+    def update_data_usage(self, bytes_used):
+        """Update data usage for this session"""
+        self.data_used += bytes_used
+        self.save()
+        
+        # Update client lifetime data
+        self.user.lifetime_data_used += bytes_used
+        self.user.save()
     
     def get_session_summary(self):
         """Get comprehensive session summary"""
@@ -694,8 +1012,17 @@ class UserSession(TimeStampedModel):
             'location': str(self.location) if self.location else 'Unknown',
             'ip_address': self.ip_address,
             'is_active': self.is_active,
-            'login_time': self.login_time,
-            'last_activity': self.last_activity,
+            'login_time': self.login_time.isoformat(),
+            'last_activity': self.last_activity.isoformat(),
+            'session_type': self.session_type,
+            'is_owner': self.is_owner,
+            'was_transferred': self.was_transferred,
+            'has_active_voucher': self.has_active_voucher,
+            'active_voucher': self.active_voucher,
+            'voucher_expires': self.voucher_expires.isoformat() if self.voucher_expires else None,
+            'voucher_time_remaining': str(self.voucher_time_remaining) if self.has_active_voucher else '00:00:00',
+            'data_used': self.data_used,
+            'auto_logout_minutes': self.auto_logout_minutes,
         }
 
     class Meta:
@@ -706,6 +1033,10 @@ class UserSession(TimeStampedModel):
             models.Index(fields=['login_time']),
             models.Index(fields=['last_activity']),
             models.Index(fields=['is_active']),
+            models.Index(fields=['session_type']),
+            models.Index(fields=['is_owner']),
+            models.Index(fields=['active_voucher']),
+            models.Index(fields=['voucher_expires']),
         ]
         ordering = ['-last_activity']
         verbose_name = "User Session"

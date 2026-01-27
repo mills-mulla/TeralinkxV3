@@ -59,3 +59,15 @@
 #     path('announcements/', AnnouncementView.as_view()),
 #     path('activeads/', ActiveAdsAPIView.as_view(), name='active-ads'),
 # ]
+from django.urls import path
+from .views.network_views import NetworkInfoView
+from .services.csrf import get_csrf_token
+
+urlpatterns = [
+    
+    # Network information endpoint
+    path('network-info/', NetworkInfoView.as_view(), name='network-info'),
+    path('cross/', get_csrf_token),
+    # Health check endpoint (for captive portal detection)
+    path('network-health/', NetworkInfoView.as_view(), name='network-health'),
+]

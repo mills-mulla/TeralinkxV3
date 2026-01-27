@@ -1,4 +1,5 @@
-# views/user.py
+# secirity/auth_client.py
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated

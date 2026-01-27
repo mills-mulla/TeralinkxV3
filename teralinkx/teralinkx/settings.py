@@ -44,6 +44,7 @@ ALLOWED_HOSTS = [
 # Apps
 INSTALLED_APPS = [
     'django_prometheus',
+    'django_json_widget',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -75,12 +76,12 @@ INSTALLED_APPS = [
 
 # Middleware
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',  # Keep this enabled
+    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -116,6 +117,8 @@ CSRF_COOKIE_HTTPONLY = False    # Allow JavaScript access if needed
 CSRF_COOKIE_SAMESITE = 'Lax'    # Change from 'None' to 'Lax'
 CSRF_USE_SESSIONS = False       # Use cookies instead of sessions
 CSRF_FAILURE_VIEW = 'django.views.csrf.csrf_failure'
+
+
 
 # URLs & Templates
 ROOT_URLCONF = 'teralinkx.urls'
@@ -204,39 +207,60 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # Default primary key
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# ========== CORS SETTINGS FOR DEVELOPMENT ==========
-CORS_ALLOW_HEADERS = list(default_headers) + [
-    "x-csrftoken",
-    "authorization",
-    "content-type",
-]
 
+###############################################################
+##################### CORS Configuration ######################
+# For development
+CORS_ALLOW_ALL_ORIGINS = True 
+
+#for production
 CORS_ALLOW_CREDENTIALS = True
+# CORS_ALLOWED_ORIGINS = [
+#     'http://teralinkxwaves.uk',
+#     'http://login.teralinkxwaves.uk',
+#     'http://service.teralinkxwaves.uk',
+#     'http://teralinkxwaves.spot',
+#     'http://teralinkxwaves.co.ke',
+#     'http://localhost:8000',
+#     'http://localhost:8200',
+#     'http://127.0.0.1:8000',
+#     'http://localhost:5173',
+#     'http://127.0.0.1:5173',
+#     'http://192.168.88.16:8200',
+#     'http://192.168.8.8:5173',
+#     'http://192.168.88.16',
+#     'http://10.0.0.1',
+#     'http://0.0.0.0:8000',
+# ]
 
-CORS_ALLOWED_ORIGINS = [
-    'http://teralinkxwaves.uk',
-    'http://login.teralinkxwaves.uk',
-    'http://service.teralinkxwaves.uk',
-    'http://teralinkxwaves.spot',
-    'http://teralinkxwaves.co.ke',
-    'http://localhost:8000',
-    'http://127.0.0.1:8000',
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'http://192.168.88.16:8200',
-    'http://192.168.8.8:5173',
-    'http://192.168.88.16',
-    'http://10.0.0.1',
-    'http://0.0.0.0:8000',
+# Expose  headers to frontend
+CORS_EXPOSE_HEADERS = [
+    'Content-Range',
+    'X-Content-Range',
+    'X-Session-ID',
+    'X-Client-Version',
+]
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'x-csrftoken',
+    'authorization',
+    'content-type',
+    'x-client-timestamp',  
+    'x-session-id',       
+    'x-client-version',   
+    'x-hotspot-name',     
 ]
 
-# For development, you can also allow all origins (be careful in production)
-CORS_ALLOW_ALL_ORIGINS = True  # Enable this for development only
 
+
+# Allowed methods
 CORS_ALLOW_METHODS = [
-    'DELETE', 'GET', 'OPTIONS', 'PATCH', 'POST', 'PUT',
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
 ]
-
 CSRF_TRUSTED_ORIGINS = [
     'http://teralinkxwaves.uk',
     'http://login.teralinkxwaves.uk',

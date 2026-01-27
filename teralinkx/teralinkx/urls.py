@@ -25,7 +25,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/',include('users.urls')),
     path('api/',include('packages.urls')),
-    # path('api/',include('core.urls')),
+    path('api/',include('core.urls')),
+    path('api/',include('security.urls')),
     # path('suapi/',include('core.superuser.urls')),
     path('__debug__/', include('debug_toolbar.urls')), 
    

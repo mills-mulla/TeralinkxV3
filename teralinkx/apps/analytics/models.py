@@ -9,11 +9,11 @@ from core.models import TimeStampedModel
 class ActiveSession(TimeStampedModel):
     """Enhanced active session management"""
     session_id = models.CharField(max_length=100, unique=True)
-    user = models.ForeignKey('users.ClientH', on_delete=models.CASCADE, related_name='active_sessions')
+    user = models.ForeignKey('users.ClientH', on_delete=models.CASCADE, related_name='analytics_active_sessions')
     device = models.ForeignKey(  # ADD THIS FIELD
         'users.UserDevice', 
         on_delete=models.CASCADE, 
-        related_name='active_sessions',
+        related_name='analytics_active_sessions',
         null=True, 
         blank=True,
         help_text="Device associated with this active session"

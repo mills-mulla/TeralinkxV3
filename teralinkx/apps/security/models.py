@@ -10,6 +10,179 @@ from core.models import TimeStampedModel
 
 User = get_user_model()
 
+import random
+from django.conf import settings
+
+class PhoneOTP(models.Model):
+    """
+    Model for storing phone number OTPs
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    phone_number = models.CharField(max_length=20, db_index=True)
+    otp = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(db_index=True)
+    is_used = models.BooleanField(default=False, db_index=True)
+    attempt_count = models.IntegerField(default=0)
+    purpose = models.CharField(
+        max_length=20,
+        choices=[
+            ('signup', 'Sign Up'),
+            ('login', 'Login'),
+            ('reset', 'Password Reset'),
+            ('verify', 'Phone Verification')
+        ],
+        default='login'
+    )
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=['phone_number', 'is_used', 'expires_at']),
+        ]
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.phone_number} - {self.otp}"
+    
+    def is_expired(self):
+        return timezone.now() > self.expires_at
+    
+    def increment_attempt(self):
+        self.attempt_count += 1
+        self.save()
+    
+    def mark_used(self):
+        self.is_used = True
+        self.save()
+    
+    @classmethod
+    def cleanup_expired(cls):
+        """Clean up expired OTPs"""
+        cls.objects.filter(expires_at__lt=timezone.now()).delete()
+
+
+class VerificationSession(models.Model):
+    """
+    Model for tracking verification sessions
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    phone_number = models.CharField(max_length=20)
+    session_token = models.CharField(max_length=100, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_completed = models.BooleanField(default=False)
+    next_step = models.CharField(
+        max_length=20,
+        choices=[
+            ('otp_sent', 'OTP Sent'),
+            ('otp_verified', 'OTP Verified'),
+            ('password_required', 'Password Required'),
+            ('completed', 'Completed')
+        ],
+        default='otp_sent'
+    )
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=['session_token']),
+            models.Index(fields=['phone_number', 'is_completed']),
+        ]
+    
+    def is_expired(self):
+        return timezone.now() > self.expires_at
+    
+    def get_remaining_time(self):
+        if self.is_expired():
+            return 0
+        return (self.expires_at - timezone.now()).seconds
+
+        
+class AuthSession(TimeStampedModel):
+    """
+    Authentication session tracking
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    phone_number = models.CharField(max_length=20, db_index=True)
+    session_token = models.CharField(max_length=100, unique=True, db_index=True)
+    auth_token = models.CharField(max_length=100, null=True, blank=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(db_index=True)
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'Pending'),
+            ('otp_sent', 'OTP Sent'),
+            ('otp_verified', 'OTP Verified'),
+            ('password_verified', 'Password Verified'),
+            ('authenticated', 'Authenticated'),
+            ('expired', 'Expired'),
+            ('failed', 'Failed')
+        ],
+        default='pending'
+    )
+    auth_method = models.CharField(
+        max_length=20,
+        choices=[
+            ('otp', 'OTP'),
+            ('password', 'Password')
+        ],
+        default='otp'
+    )
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True)
+    
+    # Foreign key to user after authentication
+    user = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='auth_sessions'
+    )
+    
+    class Meta:
+        indexes = [
+            models.Index(fields=['phone_number', 'status', 'expires_at']),
+            models.Index(fields=['session_token', 'status']),
+            models.Index(fields=['auth_token']),
+        ]
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.phone_number} - {self.status} - {self.auth_method}"
+    
+    def is_expired(self):
+        return timezone.now() > self.expires_at
+    
+    def mark_authenticated(self, user=None, auth_token=None):
+        """Mark session as authenticated"""
+        self.status = 'authenticated'
+        if user:
+            self.user = user
+        if auth_token:
+            self.auth_token = auth_token
+        self.save()
+    
+    def mark_failed(self, reason="Authentication failed"):
+        """Mark session as failed"""
+        self.status = 'failed'
+        self.save()
+        
+        # Log the failure
+        SecurityLog.objects.create(
+            action_type='login_failed',
+            action_category='authentication',
+            description=f"Authentication failed for {self.phone_number}: {reason}",
+            severity='medium',
+            ip_address=self.ip_address,
+            details={
+                'phone_number': self.phone_number,
+                'auth_method': self.auth_method,
+                'reason': reason,
+                'session_id': str(self.id)
+            }
+        )
+
 class SecurityLog(TimeStampedModel):
     """Comprehensive security audit trail with threat detection"""
     SEVERITY_LEVELS = [

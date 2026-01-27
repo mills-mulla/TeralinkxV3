@@ -1,6 +1,8 @@
 # apps/locations/models.py
 from django.db import models
 from core.models import TimeStampedModel
+from django.core.exceptions import ValidationError
+import uuid
 
 class Location(TimeStampedModel):
     """ISP-focused location management"""
@@ -10,6 +12,7 @@ class Location(TimeStampedModel):
         ('branch', 'Branch Office'), 
         ('hotspot', 'Public Hotspot'),
         ('commercial', 'Commercial Building'),
+        ('fallback', 'Fallback Location'),  # Add fallback type
     ]
     
     # Core Identification
@@ -17,8 +20,7 @@ class Location(TimeStampedModel):
     code = models.CharField(
         max_length=10, 
         unique=True, 
-        help_text="Location code like HQ-001",
-        default="LOC-001"  # Add default value
+        help_text="Location code like HQ-001"
     )
     location_type = models.CharField(max_length=20, choices=LOCATION_TYPES, default='hotspot')
     
@@ -48,13 +50,36 @@ class Location(TimeStampedModel):
         max_digits=3, decimal_places=2, default=1.0,
         help_text="Price multiplier for roaming users"
     )
+    description = models.TextField(
+        blank=True,
+        help_text="Description of the location"
+    )
 
     class Meta:
         db_table = 'locations'
         ordering = ['name']
+        verbose_name = 'Location'
+        verbose_name_plural = 'Locations'
 
     def __str__(self):
         return f"{self.name} ({self.code})"
+
+    def clean(self):
+        """Validate the model"""
+        if not self.code:
+            self.code = f"LOC-{uuid.uuid4().hex[:6].upper()}"
+        
+        # Ensure code starts with LOC-
+        if not self.code.startswith('LOC-'):
+            self.code = f"LOC-{self.code}"
+        
+        # Ensure unique code
+        if Location.objects.filter(code=self.code).exclude(pk=self.pk).exists():
+            raise ValidationError(f"Location with code {self.code} already exists")
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
 
     @property
     def is_operational(self):

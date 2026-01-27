@@ -1,0 +1,474 @@
+📋 Comprehensive Test Checklist for User App
+1. MODEL TESTS
+ClientH Model
+
+    Test 1.1: Client creation with valid data
+
+    Test 1.2: Client creation without required fields (should fail)
+
+    Test 1.3: Account number auto-generation
+
+    Test 1.4: Client status changes (active → suspended → active)
+
+    Test 1.5: Balance and credit calculations
+
+    Test 1.6: Device limit validation based on account tier
+
+    Test 1.7: Session statistics calculation
+
+    Test 1.8: Voucher expiration checks
+
+    Test 1.9: Location tracking updates
+
+    Test 1.10: Failed login attempts tracking and reset
+
+UserDevice Model
+
+    Test 2.1: Device creation and ownership
+
+    Test 2.2: MAC address validation
+
+    Test 2.3: Device online/offline status
+
+    Test 2.4: Device transfer between users
+
+    Test 2.5: Device blocking/unblocking
+
+    Test 2.6: Session limit enforcement
+
+    Test 2.7: Device presence updates
+
+    Test 2.8: Previous owners tracking
+
+    Test 2.9: Voucher activation on device
+
+    Test 2.10: Connection statistics calculation
+
+UserSession Model
+
+    Test 3.1: Session creation and activation
+
+    Test 3.2: Session expiration checks
+
+    Test 3.3: Voucher activation/deactivation in session
+
+    Test 3.4: Data usage tracking
+
+    Test 3.5: Session termination
+
+    Test 3.6: Session refresh/activity updates
+
+    Test 3.7: Session type validation
+
+    Test 3.8: Owner vs borrowed sessions
+
+    Test 3.9: Session metadata storage
+
+    Test 3.10: Auto-logout functionality
+
+2. API ENDPOINT TESTS
+ClientView (Authentication/Registration)
+
+    Test 4.1: User registration with valid data
+
+    Test 4.2: User login with correct credentials
+
+    Test 4.3: User login with incorrect credentials (should fail)
+
+    Test 4.4: Registration without required fields (should fail)
+
+    Test 4.5: Phone number format validation
+
+    Test 4.6: MAC address format validation
+
+    Test 4.7: JWT token generation on successful auth
+
+    Test 4.8: Device conflict resolution (transfer/create_new/reject)
+
+    Test 4.9: Location detection from AP/SSID
+
+    Test 4.10: Existing user tries to register again (should fail)
+
+GetClientView (Device Check-in)
+
+    Test 5.1: Device check-in with phone and MAC
+
+    Test 5.2: Device check-in without required fields (should fail)
+
+    Test 5.3: New device creation during check-in
+
+    Test 4.4: Existing device reconnection
+
+    Test 5.5: Device blocking prevention
+
+    Test 5.6: Session creation during check-in
+
+    Test 5.7: Location updates during check-in
+
+    Test 5.8: Device information updates
+
+    Test 5.9: Rate limiting enforcement
+
+    Test 5.10: Comprehensive response data verification
+
+Token Management Endpoints
+
+    Test 6.1: JWT token refresh with valid refresh token
+
+    Test 6.2: JWT token refresh with invalid refresh token (should fail)
+
+    Test 6.3: Token verification endpoint
+
+    Test 6.4: Logout with token blacklisting
+
+    Test 6.5: Device-aware token validation
+
+    Test 6.6: Token expiration enforcement
+
+    Test 6.7: Multiple device token management
+
+    Test 6.8: Session validation endpoint
+
+    Test 6.9: Token claims verification
+
+    Test 6.10: Concurrent token usage prevention
+
+Profile Management Endpoints
+
+    Test 7.1: Profile retrieval with authentication
+
+    Test 7.2: Profile update with valid data
+
+    Test 7.3: Profile update without authentication (should fail)
+
+    Test 7.4: Profile image upload
+
+    Test 7.5: Device management via profile
+
+    Test 7.6: Location updates via profile
+
+    Test 7.7: Security-sensitive field updates (logging)
+
+    Test 7.8: Permission-based field restrictions
+
+    Test 7.9: Two-factor authentication toggle
+
+    Test 7.10: Auto-renew settings update
+
+3. SERVICE LAYER TESTS
+ClientService Tests
+
+    Test 8.1: authenticate_or_register for new user
+
+    Test 8.2: authenticate_or_register for existing user
+
+    Test 8.3: Device conflict resolution scenarios
+
+    Test 8.4: Failed login attempt handling
+
+    Test 8.5: Account suspension after max failed attempts
+
+    Test 8.6: JWT token generation with custom claims
+
+    Test 8.7: Location detection logic
+
+    Test 8.8: Transaction rollback on errors
+
+    Test 8.9: Security logging for all operations
+
+    Test 8.10: Correlation ID tracking across operations
+
+Security Features
+
+    Test 9.1: SecurityLog creation for sensitive actions
+
+    Test 9.2: Threat score calculation
+
+    Test 9.3: IP address validation and logging
+
+    Test 9.4: User agent tracking
+
+    Test 9.5: Suspicious activity detection
+
+    Test 9.6: Device fingerprint validation
+
+    Test 9.7: Rate limiting for authentication attempts
+
+    Test 9.8: Input sanitization and validation
+
+    Test 9.9: JWT token revocation/blacklisting
+
+    Test 9.10: Session hijacking prevention
+
+4. INTEGRATION TESTS
+End-to-End User Flows
+
+    Test 10.1: Complete user registration flow
+
+text
+
+New User → Register → Device Check-in → Get JWT → Use API
+
+    Test 10.2: Complete user authentication flow
+
+text
+
+Existing User → Login → Device Check-in → Get JWT → Refresh Token → Logout
+
+    Test 10.3: Device transfer flow
+
+text
+
+User A's Device → Login as User B → Device Transfer → New Session
+
+    Test 10.4: Voucher activation flow
+
+text
+
+User → Activate Voucher → Session Updates → Voucher Expiration
+
+    Test 10.5: Profile management flow
+
+text
+
+User → Update Profile → Security Log → Verify Changes
+
+Error Scenario Tests
+
+    Test 11.1: Invalid JWT token usage
+
+    Test 11.2: Expired JWT token usage
+
+    Test 11.3: Device limit exceeded
+
+    Test 11.4: Session limit exceeded
+
+    Test 11.5: Invalid location updates
+
+    Test 11.6: Database constraint violations
+
+    Test 11.7: Network failures during transactions
+
+    Test 11.8: Concurrent access conflicts
+
+    Test 11.9: Malformed input data
+
+    Test 11.10: Unauthorized access attempts
+
+5. PERFORMANCE & SCALABILITY TESTS
+Load Testing
+
+    Test 12.1: Concurrent user registrations
+
+    Test 12.2: Concurrent user logins
+
+    Test 12.3: High-volume device check-ins
+
+    Test 12.4: JWT token validation under load
+
+    Test 12.5: Database query optimization
+
+Edge Cases
+
+    Test 13.1: Very long phone numbers
+
+    Test 13.2: Special characters in display names
+
+    Test 13.3: Multiple device transfers
+
+    Test 13.4: Long-running sessions (days)
+
+    Test 13.5: Large data usage tracking
+
+6. SECURITY AUDIT TESTS
+Authentication Security
+
+    Test 14.1: Password strength enforcement
+
+    Test 14.2: JWT token tampering detection
+
+    Test 14.3: Session fixation prevention
+
+    Test 14.4: CSRF protection for admin (not API)
+
+    Test 14.5: SQL injection prevention
+
+Data Protection
+
+    Test 15.1: Sensitive data encryption
+
+    Test 15.2: PII (Personal Identifiable Information) protection
+
+    Test 15.3: Audit trail completeness
+
+    Test 15.4: Data validation at all layers
+
+    Test 15.5: Secure default configurations
+
+7. ADMIN PANEL TESTS
+Admin Interface
+
+    Test 16.1: Admin user can view all models
+
+    Test 16.2: Admin actions work (suspend, activate, etc.)
+
+    Test 16.3: Admin search functionality
+
+    Test 16.4: Admin filters work correctly
+
+    Test 16.5: Admin inline displays
+
+    Test 16.6: Admin custom actions
+
+    Test 16.7: Admin permission enforcement
+
+    Test 16.8: Admin data exports
+
+    Test 16.9: Admin bulk operations
+
+    Test 16.10: Admin UI responsiveness
+
+8. DEPLOYMENT & CONFIGURATION TESTS
+Settings & Configuration
+
+    Test 17.1: JWT configuration validation
+
+    Test 17.2: Database connection pooling
+
+    Test 17.3: CORS configuration
+
+    Test 17.4: Environment-specific settings
+
+    Test 17.5: Logging configuration
+
+Third-Party Integration
+
+    Test 18.1: RouterOS callback simulation
+
+    Test 18.2: Location service integration
+
+    Test 18.3: Email/SMS notification integration
+
+    Test 18.4: Payment gateway integration
+
+    Test 18.5: Monitoring and alerting
+
+9. DATA CONSISTENCY TESTS
+Data Integrity
+
+    Test 19.1: Foreign key constraint enforcement
+
+    Test 19.2: Unique constraint enforcement
+
+    Test 19.3: Data cascading deletes/updates
+
+    Test 19.4: Transaction isolation levels
+
+    Test 19.5: Data backup and restore
+
+Business Logic Validation
+
+    Test 20.1: Account tier upgrade/downgrade rules
+
+    Test 20.2: Voucher expiration and renewal
+
+    Test 20.3: Credit limit enforcement
+
+    Test 20.4: Auto-renew logic
+
+    Test 20.5: Device ownership transfer rules
+
+10. MONITORING & OBSERVABILITY TESTS
+Logging & Monitoring
+
+    Test 21.1: All critical operations are logged
+
+    Test 21.2: Error logging with context
+
+    Test 21.3: Performance metrics collection
+
+    Test 21.4: Security event alerts
+
+    Test 21.5: Audit trail completeness
+
+🎯 PRIORITY TESTING ORDER
+Phase 1: CRITICAL (Start Here)
+
+    ✅ Tests 4.1-4.7 (Authentication/Registration)
+
+    ✅ Tests 5.1-5.6 (Device Check-in)
+
+    ✅ Tests 6.1-6.4 (Token Management)
+
+    ✅ Tests 8.1-8.4 (Core Service Logic)
+
+Phase 2: IMPORTANT
+
+    ✅ Tests 1.1-1.6 (Model Basics)
+
+    ✅ Tests 2.1-2.5 (Device Management)
+
+    ✅ Tests 3.1-3.5 (Session Management)
+
+    ✅ Tests 7.1-7.4 (Profile Management)
+
+Phase 3: COMPREHENSIVE
+
+    ✅ Tests 9.1-9.6 (Security)
+
+    ✅ Tests 10.1-10.5 (Integration Flows)
+
+    ✅ Tests 11.1-11.5 (Error Scenarios)
+
+    ✅ Tests 14.1-14.5 (Security Audit)
+
+Phase 4: ADVANCED
+
+    ✅ Tests 12.1-12.5 (Performance)
+
+    ✅ Tests 13.1-13.5 (Edge Cases)
+
+    ✅ Tests 16.1-16.5 (Admin Panel)
+
+    ✅ Tests 17.1-17.5 (Deployment)
+
+📊 TESTING TOOLS RECOMMENDATION
+
+    Unit Tests: Django Test Framework
+
+    API Tests: Django REST Framework APITestCase
+
+    Integration Tests: pytest-django
+
+    Load Tests: Locust or JMeter
+
+    Security Tests: OWASP ZAP or Burp Suite
+
+    Coverage: coverage.py
+
+    Mocking: unittest.mock
+
+    Database: Test database with fixtures
+
+🚀 QUICK START TESTING CHECKLIST
+
+Before deploying, ensure these ESSENTIAL tests pass:
+MUST PASS:
+
+    User can register and get JWT token
+
+    User can login with correct credentials
+
+    User cannot login with wrong credentials
+
+    Device check-in creates session
+
+    JWT token refresh works
+
+    Logout blacklists tokens
+
+    Device limits are enforced
+
+    Security logs are created for sensitive actions
+
+    Admin panel works for superusers
