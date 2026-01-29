@@ -44,7 +44,7 @@ User = get_user_model()
 class PaymentStatusRequestSerializer(serializers.Serializer):
     """✅ Request validation schemas"""
     request_id = serializers.CharField(max_length=100, required=True)
-    hotspot_ip = serializers.IPAddressField(required=False, allow_null=True)
+    # hotspot_ip = serializers.IPAddressField(required=False, allow_null=True)
     idempotency_key = serializers.CharField(max_length=100, required=False, allow_null=True)
     
     def validate_request_id(self, value):
@@ -330,7 +330,7 @@ class JWTUserDataExtractor:
                 package = PackageType.objects.filter(
                     code=package_code,
                     is_active=True,
-                    is_available=True
+                    
                 ).first()
                 
                 if package:
@@ -354,6 +354,7 @@ class VoucherManager:
         client = user_context['client']
         location = user_context['location']
         
+
         dispatch_voucher = DispatchVoucher.objects.create(
             voucher_code=voucher_code,
             package=package_type,
@@ -394,7 +395,7 @@ class VoucherManager:
         return activate_voucher(prefix=prefix, profile=profile, devices=devices)
     
     @staticmethod
-    def activate_and_create_voucher(user_context, package_type, package_code, transaction_record, hotspot_ip=None):
+    def activate_and_create_voucher(user_context, package_type, package_code, transaction_record, hotspot_ip):
         try:
             activation_result = VoucherManager.activate_voucher_with_retry(
                 prefix='QRDSTk',
@@ -428,9 +429,9 @@ class VoucherManager:
             raise
     
     @staticmethod
-    def perform_auto_login(account, voucher_code, bound_ip):
+    def perform_auto_login(account, voucher_code, hotspot_ip):
         """
-        Simplified version using RouterManager
+        CORRECT version using RouterManager
         """
         try:
             is_valid, _ = validate_voucher(account, voucher_code)
@@ -444,13 +445,11 @@ class VoucherManager:
             try:
                 # Connect and execute command
                 router_manager.connect()
-                
-                # Execute the hotspot login command
+                          
                 router_manager.execute_command(
-                    path='/ip/hotspot/active',
-                    command='login',
+                    path='/ip/hotspot/active/login', 
                     user=voucher_code,
-                    ip=bound_ip
+                    ip=hotspot_ip
                 )
                 
                 logger.info(f"Auto-login successful for {account}")
@@ -498,7 +497,7 @@ class PaymentProcessor:
         return mpesa_circuit_breaker.call(query_stk_status, checkout_request_id)
     
     @staticmethod
-    def process_payment_status(checkout_request_id, user_context, hotspot_ip=None, idempotency_key=None):
+    def process_payment_status(checkout_request_id, user_context, hotspot_ip, idempotency_key=None):
         start_time = time.time()
         user = user_context['user']
         
@@ -548,6 +547,7 @@ class PaymentProcessor:
         result_code = str(mpesa_response.get('ResultCode'))
         
         if result_code == '0':
+            
             result = PaymentProcessor.handle_successful_payment(
                 user_context=user_context,
                 transaction_record=transaction_record,
@@ -574,7 +574,7 @@ class PaymentProcessor:
                 mpesa_response=mpesa_response
             )
             
-            PaymentMetrics.record_payment_failure('payment_pending')
+            PaymentMetrics.record_payment_failure('payment_pending')#to be reviewed later for correct queue status update!!!
             return result
     
     @staticmethod
@@ -758,7 +758,7 @@ def payment_status(request):
     
     validated_data = serializer.validated_data
     checkout_request_id = validated_data['request_id']
-    hotspot_ip = validated_data.get('hotspot_ip')
+    ##hotspot_ip = validated_data.get('hotspot_ip')
     idempotency_key = validated_data.get('idempotency_key')
     
     # Generate idempotency key if not provided
@@ -770,7 +770,7 @@ def payment_status(request):
     
     try:
         user_context = JWTUserDataExtractor.extract_user_data(request)
-        
+        hotspot_ip = user_context['jwt_payload']['last_login_ip']
         result = PaymentProcessor.process_payment_status(
             checkout_request_id=checkout_request_id,
             user_context=user_context,

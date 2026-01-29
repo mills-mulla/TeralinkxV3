@@ -64,7 +64,7 @@ class ClientView(APIView):
             # Get user agent for security logging
             user_agent = request.META.get('HTTP_USER_AGENT', '')
             client_ip = self._get_client_ip(request)
-            
+            print(client_ip)
             # Extract validated data
             validated_data = serializer.validated_data
             
@@ -76,7 +76,7 @@ class ClientView(APIView):
                 current_ip=validated_data.get('current_ip') or client_ip,
                 ap_identifier=ap_identifier,
                 display_name=validated_data.get('display_name'),
-                conflict_resolution='transfer',  # Your business rule
+                conflict_resolution='transfer',  # business rule
                 user_agent=user_agent,
                 request_metadata={
                     'user_agent': user_agent,

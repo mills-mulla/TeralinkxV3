@@ -44,7 +44,7 @@ class RouterOSManager:
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type((ConnectionError, TimeoutError))
+        retry=retry_if_exception_type(Exception)  # Changed to generic Exception
     )
     def connect(self) -> bool:
         """
@@ -76,15 +76,9 @@ class RouterOSManager:
             logger.info(f"Connected to RouterOS at {self.host}:{self.port}")
             return True
             
-        except librouteros.exceptions.ConnectionError as e:
+        except Exception as e:  # Catch all exceptions
             logger.error(f"Connection failed to {self.host}:{self.port}: {e}")
             raise ConnectionError(f"RouterOS connection failed: {str(e)}")
-        except librouteros.exceptions.TrapError as e:
-            logger.error(f"Authentication failed for {self.username}: {e}")
-            raise ConnectionError(f"RouterOS authentication failed: {str(e)}")
-        except Exception as e:
-            logger.error(f"Unexpected connection error: {e}")
-            raise
     
     def disconnect(self):
         """Disconnect from RouterOS API"""
@@ -110,7 +104,7 @@ class RouterOSManager:
     @retry(
         stop=stop_after_attempt(2),
         wait=wait_exponential(multiplier=1, min=1, max=5),
-        retry=retry_if_exception_type((ConnectionError, TimeoutError))
+        retry=retry_if_exception_type(Exception)  # Changed to generic Exception
     )
     def execute_command(self, path: str, command: str = None, **kwargs) -> List[Dict]:
         """
@@ -144,14 +138,9 @@ class RouterOSManager:
         except librouteros.exceptions.TrapError as e:
             logger.error(f"RouterOS trap error for {path} {command}: {e}")
             raise RouterOSAPIError(f"RouterOS error: {str(e)}")
-        except librouteros.exceptions.ConnectionError as e:
-            logger.error(f"Connection lost during {path} {command}: {e}")
-            self.disconnect()
-            raise ConnectionError(f"Connection lost: {str(e)}")
-        except Exception as e:
-            logger.error(f"Unexpected error executing {path} {command}: {e}")
+        except Exception as e:  # Catch all other exceptions
+            logger.error(f"Error executing {path} {command}: {e}")
             raise RouterOSAPIError(f"Command execution failed: {str(e)}")
-
 
 def generate_voucher(prefix: str, length: int = 16) -> str:
     """
@@ -233,19 +222,14 @@ def parse_devices(devices_input) -> int:
     wait=wait_exponential(multiplier=1, min=2, max=10),
     retry=retry_if_exception_type((ConnectionError, TimeoutError, RouterOSAPIError))
 )
+
+
+
 def activate_voucher(prefix: str, profile: str, devices, 
                     location: Optional[str] = None,
                     router_config: Optional[Dict] = None) -> Dict[str, str]:
     """
     Activate voucher in RouterOS User Manager using librouteros.
-    
-    Enhanced with:
-    - librouteros official library
-    - Retry mechanisms
-    - Location-based profile routing
-    - Configurable router settings
-    - Better error handling
-    - Comprehensive logging
     
     Args:
         prefix: Voucher prefix (e.g., 'QRDSTk')
@@ -268,7 +252,7 @@ def activate_voucher(prefix: str, profile: str, devices,
         device_count = parse_devices(devices)
         
         logger.info(f"[{activation_id}] Activating voucher: {voucher}, "
-                   f"Profile: {profile}, Devices: {device_count}, Location: {location}")
+                   f"Profile: {profile}, Devices: {device_count}")
         
         # Get router configuration
         config = router_config or {}
@@ -277,12 +261,6 @@ def activate_voucher(prefix: str, profile: str, devices,
         router_pass = config.get('password', 'q')
         router_port = config.get('port', 8728)
         router_ssl = config.get('ssl', False)
-        
-        # Determine actual profile name
-        actual_profile = profile
-        if location:
-            actual_profile = f"{profile}-{location}"
-            logger.info(f"[{activation_id}] Using location-specific profile: {actual_profile}")
         
         # Use context manager for automatic connection management
         with RouterOSManager(
@@ -293,88 +271,73 @@ def activate_voucher(prefix: str, profile: str, devices,
             ssl=router_ssl
         ) as router:
             
-            # Step 1: Check if profile exists
-            logger.debug(f"[{activation_id}] Checking profile existence: {actual_profile}")
-            try:
-                profiles = router.execute_command(
-                    path='/user-manager/profile',
-                    command='print',
-                    where={'name': actual_profile}
-                )
-                
-                if not profiles:
-                    logger.warning(f"[{activation_id}] Profile '{actual_profile}' not found, "
-                                  f"falling back to '{profile}'")
-                    actual_profile = profile
-                    profiles = router.execute_command(
-                        path='/user-manager/profile',
-                        command='print',
-                        where={'name': actual_profile}
-                    )
+            # # Step 1: Check if profile exists (optional, but good for debugging)
+            # logger.debug(f"[{activation_id}] Checking profile existence: {profile}")
+            # try:
+            #     profiles = router.execute_command(
+            #         path='/user-manager/profile/print',
                     
-                    if not profiles:
-                        raise RouterOSAPIError(f"Profile '{profile}' not found on router")
-            except Exception as e:
-                logger.warning(f"[{activation_id}] Profile check failed: {e}")
-                # Continue anyway, router will raise error if profile doesn't exist
+            #     )
+                
+            #     # Filter profiles by name
+            #     profile_exists = any(p.get('name') == profile for p in profiles)
+                
+            #     if not profile_exists:
+            #         logger.warning(f"[{activation_id}] Profile '{profile}' not found on router")
+            #         # You might want to create the profile here or handle this error
+            #     else:
+            #         logger.info(f"[{activation_id}] Profile '{profile}' exists")
+            # except Exception as e:
+            #     logger.warning(f"[{activation_id}] Profile check failed: {e}")
+            #     # Continue anyway, the router will error if profile doesn't exist
             
-            # Step 2: Create voucher user
+            # Step 2: Create voucher user with CORRECT parameter name: shared-users (with hyphen)
             logger.info(f"[{activation_id}] Creating voucher user: {voucher}")
+            
+            # Prepare user parameters
+            user_params = {
+                'name': voucher,
+                'shared-users': str(device_count),  # CORRECT: with hyphen, as string
+                'comment': f"Voucher: {profile}, Devices: {device_count}, Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            }
+            
+            # Execute the command
             user_response = router.execute_command(
                 path='/user-manager/user',
                 command='add',
-                name=voucher,
-                shared_users=str(device_count)
+                **user_params
             )
             
-            # Step 3: Apply profile to voucher
-            logger.info(f"[{activation_id}] Applying profile '{actual_profile}' to voucher")
-            profile_response = router.execute_command(
-                path='/user-manager/user/profile',
-                command='add',
-                user=voucher,
-                profile=actual_profile
-            )
+            logger.info(f"[{activation_id}] User created successfully")
             
-            # Step 4: Set comment/description
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            # Step 3: Apply profile to the user
+            logger.info(f"[{activation_id}] Applying profile '{profile}' to voucher")
             try:
-                router.execute_command(
-                    path='/user-manager/user',
-                    command='set',
-                    numbers=voucher,
-                    comment=f"Activated: {timestamp} | Profile: {actual_profile} | Devices: {device_count}"
+                profile_response = router.execute_command(
+                    path='/user-manager/user-profile',
+                    command='add',
+                    user=voucher,
+                    profile=profile
                 )
+                logger.info(f"[{activation_id}] Profile applied successfully")
             except Exception as e:
-                logger.warning(f"[{activation_id}] Failed to set comment: {e}")
-                # Non-critical error
-            
-            # Step 5: Optional - Enable user immediately
-            try:
-                router.execute_command(
-                    path='/user-manager/user',
-                    command='set',
-                    numbers=voucher,
-                    disabled='no'
-                )
-            except Exception as e:
-                logger.warning(f"[{activation_id}] Failed to enable user: {e}")
-                # Non-critical error
+                logger.warning(f"[{activation_id}] Failed to apply profile: {e}")
+                # This might not be necessary if profile is set during user creation
+                # Continue anyway
         
         processing_time = time.time() - start_time
         logger.info(
             f"[{activation_id}] Voucher {voucher} activated successfully. "
-            f"Profile: {actual_profile}, Devices: {device_count}, "
+            f"Profile: {profile}, Devices: {device_count}, "
             f"Processing time: {processing_time:.2f}s"
         )
         
         # Cache the activation for idempotency and monitoring
         activation_data = {
             'voucher_code': voucher,
-            'profile': actual_profile,
+            'profile': profile,
             'devices': device_count,
             'activated_at': time.time(),
-            'location': location,
             'processing_time': processing_time,
             'activation_id': activation_id,
             'router_host': router_host
@@ -392,17 +355,16 @@ def activate_voucher(prefix: str, profile: str, devices,
             "voucher_code": voucher,
             "status": "activated",
             "devices": device_count,
-            "profile": actual_profile,
-            "location": location,
+            "profile": profile,
             "processing_time": processing_time,
-            "activation_timestamp": timestamp,
+            "activation_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "activation_id": activation_id,
             "router_host": router_host
         }
 
-    except (ConnectionError, TimeoutError, RouterOSAPIError) as e:
+    except Exception as e:
         processing_time = time.time() - start_time
-        logger.error(f"[{activation_id}] Voucher activation failed: {e}")
+        logger.error(f"[{activation_id}] Voucher activation failed: {e}", exc_info=True)
         
         # Record failure metrics
         cache_key = "voucher_activation_metrics"
@@ -417,25 +379,6 @@ def activate_voucher(prefix: str, profile: str, devices,
             "processing_time": processing_time,
             "activation_id": activation_id
         }
-        
-    except Exception as e:
-        processing_time = time.time() - start_time
-        logger.error(f"[{activation_id}] Unexpected error activating voucher: {e}", exc_info=True)
-        
-        # Record failure metrics
-        cache_key = "voucher_activation_metrics"
-        metrics = cache.get(cache_key, {'success': 0, 'failure': 0, 'total_time': 0.0})
-        metrics['failure'] = metrics.get('failure', 0) + 1
-        cache.set(cache_key, metrics, timeout=86400)
-        
-        return {
-            "voucher_code": "ERROR",
-            "status": "failed",
-            "error": f"System error: {str(e)}",
-            "processing_time": processing_time,
-            "activation_id": activation_id
-        }
-
 
 def get_voucher_info(voucher_code: str, router_config: Optional[Dict] = None) -> Optional[Dict]:
     """

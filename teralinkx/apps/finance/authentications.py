@@ -72,16 +72,17 @@ class RouterConfig:
 
 
 class RouterManager:
-    """Manages RouterOS connections using librouteros"""
+    """Clean and robust RouterOS connection manager"""
     
     def __init__(self, config: Optional[Dict] = None):
         self.config = config or RouterConfig.get_config()
         self.connection = None
+        # Remove: self._api_version = None
     
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type((ConnectionError, TimeoutError))
+        retry=retry_if_exception_type(Exception)
     )
     def connect(self):
         """Connect to RouterOS API"""
@@ -107,15 +108,9 @@ class RouterManager:
             logger.info(f"Connected to RouterOS at {self.config['host']}:{self.config['port']}")
             return True
             
-        except librouteros.exceptions.ConnectionError as e:
+        except Exception as e:
             logger.error(f"Connection failed to {self.config['host']}: {e}")
             raise ConnectionError(f"RouterOS connection failed: {str(e)}")
-        except librouteros.exceptions.TrapError as e:
-            logger.error(f"Authentication failed: {e}")
-            raise ConnectionError(f"RouterOS authentication failed: {str(e)}")
-        except Exception as e:
-            logger.error(f"Unexpected connection error: {e}")
-            raise
     
     def disconnect(self):
         """Disconnect from RouterOS"""
@@ -140,19 +135,17 @@ class RouterManager:
     @retry(
         stop=stop_after_attempt(2),
         wait=wait_exponential(multiplier=1, min=1, max=5),
-        retry=retry_if_exception_type((ConnectionError, TimeoutError))
+        retry=retry_if_exception_type(Exception)
     )
     def execute_command(self, path: str, command: str = None, **kwargs) -> list:
         """
-        Execute RouterOS API command
+        Universal RouterOS command execution
         
-        Args:
-            path: API path (e.g., '/ip/hotspot/active')
-            command: Command to execute (add, set, remove, print, etc.)
-            **kwargs: Additional parameters
-        
-        Returns:
-            List of response dictionaries
+        Works with all RouterOS commands:
+        - /system/identity
+        - /interface print
+        - /ip/hotspot/active login user=xxx ip=xxx
+        - /ip/hotspot/active/login user=xxx ip=xxx
         """
         if not self.connection:
             self.connect()
@@ -161,24 +154,123 @@ class RouterManager:
             api_path = self.connection.path(path)
             
             if command:
-                result = list(getattr(api_path, command)(**kwargs))
+                # Standard command execution
+                return list(api_path(command, **kwargs))
             else:
-                result = list(api_path(**kwargs))
+                # No command specified - try calling directly
+                # This handles cases like /ip/hotspot/active/login
+                try:
+                    return list(api_path(**kwargs))
+                except TypeError:
+                    # Some paths need an empty command string
+                    return list(api_path('', **kwargs))
             
-            logger.debug(f"RouterOS command: {path} {command} {kwargs}")
-            return result
-            
-        except librouteros.exceptions.TrapError as e:
-            logger.error(f"RouterOS trap error: {e}")
-            raise RuntimeError(f"RouterOS error: {str(e)}")
-        except librouteros.exceptions.ConnectionError as e:
-            logger.error(f"Connection lost: {e}")
-            self.disconnect()
-            raise ConnectionError(f"Connection lost: {str(e)}")
         except Exception as e:
-            logger.error(f"Command execution error: {e}")
-            raise
-
+            logger.error(f"Command execution error for {path} {command}: {e}")
+            raise RuntimeError(f"Command execution failed: {str(e)}")
+    
+    # ============================================================================
+    # CONVENIENCE METHODS FOR COMMON OPERATIONS
+    # ============================================================================
+    
+    def hotspot_login(self, username: str, ip_address: str) -> bool:
+        """Convenience method for hotspot login"""
+        try:
+            # Try the most reliable pattern first
+            self.execute_command(
+                path='/ip/hotspot/active',
+                command='login',
+                user=username,
+                ip=ip_address
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Hotspot login failed: {e}")
+            return False
+    
+    def hotspot_logout(self, session_id: str = None, mac_address: str = None, ip_address: str = None) -> bool:
+        """Convenience method for hotspot logout"""
+        try:
+            if session_id:
+                self.execute_command(
+                    path='/ip/hotspot/active',
+                    command='remove',
+                    numbers=session_id
+                )
+                return True
+            elif mac_address or ip_address:
+                # Find session first
+                sessions = self.execute_command(
+                    path='/ip/hotspot/active',
+                    command='print'
+                )
+                
+                for session in sessions:
+                    sess_mac = session.get('mac-address', '')
+                    sess_ip = session.get('address', '')
+                    
+                    if (mac_address and sess_mac.lower() == mac_address.lower()) or \
+                       (ip_address and sess_ip == ip_address):
+                        self.execute_command(
+                            path='/ip/hotspot/active',
+                            command='remove',
+                            numbers=session.get('.id')
+                        )
+                        return True
+            return False
+        except Exception as e:
+            logger.error(f"Hotspot logout failed: {e}")
+            return False
+    
+    def get_active_sessions(self) -> list:
+        """Get all active hotspot sessions"""
+        try:
+            return self.execute_command(
+                path='/ip/hotspot/active',
+                command='print'
+            )
+        except Exception as e:
+            logger.error(f"Failed to get active sessions: {e}")
+            return []
+    
+    def get_system_info(self) -> dict:
+        """Get system information"""
+        try:
+            identity = self.execute_command('/system/identity')
+            resource = self.execute_command('/system/resource')
+            
+            return {
+                'identity': identity[0] if identity else {},
+                'resource': resource[0] if resource else {},
+                'version': resource[0].get('version') if resource else 'unknown'
+            }
+        except Exception as e:
+            logger.error(f"Failed to get system info: {e}")
+            return {}
+    
+    def create_hotspot_user(self, username: str, password: str, profile: str = 'default') -> bool:
+        """Create hotspot user"""
+        try:
+            self.execute_command(
+                path='/ip/hotspot/user',
+                command='add',
+                name=username,
+                password=password,
+                profile=profile,
+                disabled='no'
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Failed to create hotspot user: {e}")
+            return False
+    
+    def test_connection(self) -> bool:
+        """Test if connection is working"""
+        try:
+            self.execute_command('/system/identity')
+            return True
+        except:
+            return False
 
 # ============================================================================
 # VOUCHER VALIDATION
