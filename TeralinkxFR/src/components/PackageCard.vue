@@ -24,7 +24,7 @@
         <!-- Info -->
         <div class="flex flex-row justify-between">
           <p class="text-xs text-gray-700 dark:text-gray-300 mt-auto">{{ pkg.devices }}</p>
-          <p class="text-xs text-gray-700 dark:text-gray-300 mt-auto hidden">{{ pkg.package_desc }}</p>
+          <p class="text-xs text-gray-700 dark:text-gray-300 mt-auto hidden">{{ pkg.package_code }}</p>
           <p class="text-sm text-black dark:text-white font-bold mt-0">
             <span class="text-xs font-semibold">@KES</span> {{ pkg.price }}
           </p>

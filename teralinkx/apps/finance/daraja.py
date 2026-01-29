@@ -81,7 +81,7 @@ class MpesaHelper:
         raise RuntimeError("Could not retrieve M-Pesa access token after retries")
 
     @staticmethod
-    def initiate_payment(account, amount, phone, package, package_desc):
+    def initiate_payment(account, amount, phone, package, package_code):
         """Initiate STK push payment, with token refresh and retry"""
         token = MpesaHelper.get_access_token()  # ensures valid token
 
@@ -105,7 +105,7 @@ class MpesaHelper:
             "Items": [{
                 "package": package,
                 "price": amount,
-                "package_desc": package_desc,
+                "package_code": package_code,
                 "phoneNumber": phone
             }]
         }
@@ -127,10 +127,10 @@ class QueueHelper:
     """Handles queue operations"""
     
     @staticmethod
-    def create_queue_record(package_desc, initiator, checkout_id, recipient, package, price, used_balance):
+    def create_queue_record(package_code, initiator, checkout_id, recipient, package, price, used_credit):
         """Create a new queue record for pending transactions"""
         return Queue.objects.create(
-            package_desc=package_desc,
+            package_code=package_code,
             initiator=initiator,
             checkout_request_id=checkout_id,
             recipient=recipient,
@@ -138,7 +138,7 @@ class QueueHelper:
             price=price,
             status='Pending...',
             method='mpesa',
-            used_balance=used_balance
+            used_credit=used_credit
         )
 
     @staticmethod
@@ -179,27 +179,27 @@ class VoucherHelper:
     """Handles voucher operations"""
     
     @staticmethod
-    def activate_voucher(package_desc, mpesa_receipt):
+    def activate_voucher(package_code, mpesa_receipt):
         """Activate a voucher using the generate module"""
         from .generate import activate_voucher
-        from .views.chekout_confirmation import get_device_by_package_desc
-        pkginst = get_device_by_package_desc(package_desc)
+        from .views.chekout_confirmation import get_device_by_package_code
+        pkginst = get_device_by_package_code(package_code)
 
-        return activate_voucher(prefix=mpesa_receipt, profile=package_desc,devices=pkginst.devices)
+        return activate_voucher(prefix=mpesa_receipt, profile=package_code,devices=pkginst.devices)
 
     @staticmethod
-    def get_available_voucher(package_desc):
+    def get_available_voucher(package_code):
         """Get an available voucher for the given package"""
-        return AvailableVoucher.objects.filter(package_desc=package_desc).first()
+        return AvailableVoucher.objects.filter(package_code=package_code).first()
 
     @staticmethod
-    def create_dispatch_record(account, voucher_code, package, package_desc, duration, price, devices):
+    def create_dispatch_record(account, voucher_code, package, package_code, duration, price, devices):
         """Create a dispatch voucher record"""
         return DispatchVoucher.objects.create(
             dispatch_account=account,
             dispatch_voucher_code=voucher_code,
             dispatch_package=package,
-            dispatch_package_desc=package_desc,
+            dispatch_package_code=package_code,
             dispatch_package_duration=duration,
             dispatch_status='active',
             dispatch_price=str(price),
@@ -321,23 +321,23 @@ class PaymentAPIView(APIView):
         amount = load.get('Amount')
         phone = load.get('PhoneNumber')
         package = item.get('package')
-        package_desc = item.get('package_desc')
-        used_balance = load.get('UsedBalance')
+        package_code = item.get('package_code')
+        used_credit = load.get('UsedBalance')
 
         # Initiate payment
         response = MpesaHelper.initiate_payment(
-            target_account, amount, phone, package, package_desc
+            target_account, amount, phone, package, package_code
         )
 
         print(response)
         queue_record = QueueHelper.create_queue_record(
-            package_desc=package_desc,
+            package_code=package_code,
             initiator=phone,
             checkout_id=response.get('CheckoutRequestID'),
             recipient=target_account,
             package=package,
             price=amount,
-            used_balance=used_balance
+            used_credit=used_credit
         )
 
         try:
@@ -418,38 +418,38 @@ class ProcessCallback(APIView):
 
     def process_queue_record(self, queue_record, mpesa_receipt, initiator, amount):
         """Process a single queue record"""
-        package_desc = queue_record.package_desc.strip()
+        package_code = queue_record.package_code.strip()
         recipient = queue_record.recipient.strip()
-        used_balance = queue_record.used_balance
+        used_credit = queue_record.used_credit
         devices = 1
 
         # Try to activate voucher
-        activated_voucher = VoucherHelper.activate_voucher(package_desc, mpesa_receipt)
+        activated_voucher = VoucherHelper.activate_voucher(package_code, mpesa_receipt)
         
         if activated_voucher.get("status") == "activated":
-            self.handle_activated_voucher(activated_voucher, package_desc, recipient, queue_record)
+            self.handle_activated_voucher(activated_voucher, package_code, recipient, queue_record)
         else:
-            self.handle_available_voucher(package_desc, recipient, queue_record)
+            self.handle_available_voucher(package_code, recipient, queue_record)
 
         # Update client balance and perform auto-login
-        self.update_client_balance(recipient, used_balance,amount)
-        self.perform_auto_login(recipient, package_desc)
+        self.update_client_balance(recipient, used_credit,amount)
+        self.perform_auto_login(recipient, package_code)
         
         # Clean up
         QueueHelper.mark_as_processed(queue_record)
         QueueHelper.delete_pending_records(initiator, amount)
         update_active_users()
 
-    def handle_activated_voucher(self, activated_voucher, package_desc, recipient, queue_record):
+    def handle_activated_voucher(self, activated_voucher, package_code, recipient, queue_record):
         """Handle successfully activated voucher"""
         voucher_code = activated_voucher["voucher_code"]
-        package = Package.objects.get(package_desc=package_desc)
+        package = Package.objects.get(package_code=package_code)
         
         VoucherHelper.create_dispatch_record(
             account=recipient,
             voucher_code=voucher_code,
             package=package.package,
-            package_desc=package_desc,
+            package_code=package_code,
             duration=package.package_duration,
             price=package.price,
             devices=package.devices
@@ -457,19 +457,19 @@ class ProcessCallback(APIView):
 
         NotificationHelper.send_voucher_notification(recipient, voucher_code, queue_record.package)
 
-    def handle_available_voucher(self, package_desc, recipient, queue_record):
+    def handle_available_voucher(self, package_code, recipient, queue_record):
         """Handle available voucher"""
-        available_voucher = VoucherHelper.get_available_voucher(package_desc)
+        available_voucher = VoucherHelper.get_available_voucher(package_code)
         if not available_voucher:
             raise Exception('No available voucher found')
 
-        package = Package.objects.get(package_desc=available_voucher.package_desc)
+        package = Package.objects.get(package_code=available_voucher.package_code)
         
         VoucherHelper.create_dispatch_record(
             account=recipient,
             voucher_code=available_voucher.voucher_code,
             package=available_voucher.package,
-            package_desc=available_voucher.package_desc,
+            package_code=available_voucher.package_code,
             duration=available_voucher.duration,
             price=available_voucher.price,
             devices=package.devices
@@ -482,12 +482,12 @@ class ProcessCallback(APIView):
         )
         available_voucher.delete()
 
-    def update_client_balance(self, recipient, used_balance,amount):
+    def update_client_balance(self, recipient, used_credit,amount):
         """Update client balance after successful purchase"""
-        if used_balance:
+        if used_credit:
             try:
                 client = ClientH.objects.get(account=recipient, status__in=['bound', 'active'])
-                client.balance -= used_balance
+                client.balance -= used_credit
                 client.save()
             except ClientH.DoesNotExist:
                 logger.error("Client %s is not bound or does not exist", recipient)
@@ -503,7 +503,7 @@ class ProcessCallback(APIView):
 
 
 
-    def perform_auto_login(self, recipient, package_desc):
+    def perform_auto_login(self, recipient, package_code):
         """Perform automatic login for the client"""
         from .authentications import validate_voucher, who, TeralinkxWaves, how
         from .models import DHCPLease
@@ -515,7 +515,7 @@ class ProcessCallback(APIView):
             # Get the latest voucher for this account
             voucher = DispatchVoucher.objects.filter(
                 dispatch_account=recipient,
-                dispatch_package_desc=package_desc
+                dispatch_package_code=package_code
             ).latest('dispatch_time')
             
             is_valid, _ = validate_voucher(recipient, voucher.dispatch_voucher_code)

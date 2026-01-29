@@ -6,7 +6,7 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db.models import Sum, Count
-
+from django.core.exceptions import ValidationError
 from core.models import TimeStampedModel, StatusTrackedModel
 
 User = get_user_model()
@@ -168,6 +168,7 @@ class Currency(TimeStampedModel):
         return cls.objects.filter(is_active=True)
     
     class Meta:
+        # app_label = ""
         verbose_name = "Currency"
         verbose_name_plural = "Currencies"
         ordering = ['code']
@@ -288,8 +289,8 @@ class PaymentGateway(TimeStampedModel, StatusTrackedModel):
     config = models.JSONField(default=dict)
     callback_url = models.URLField(
         blank=True,
-        default='https://teralinkxwaves.uk/api/payment/callback/',
-        help_text="Your system's callback URL for payment notifications. This is where payment gateways will send transaction updates."
+        default='https://teralinkxwaves.uk/api/payments/callback/',
+        help_text="System's callback URL for payment notifications. This is where payment gateways will send transaction updates."
     )
     webhook_url = models.URLField(
         blank=True,
@@ -328,7 +329,7 @@ class PaymentGateway(TimeStampedModel, StatusTrackedModel):
         
         # Set appropriate default URLs based on gateway type
         if not self.callback_url:
-            self.callback_url = 'https://teralinkxwaves.uk/api/payment/callback/'
+            self.callback_url = 'https://teralinkxwaves.uk/api/payments/callback/'
         
         if not self.webhook_url and self.gateway_type in ['stripe', 'paypal']:
             self.webhook_url = 'https://teralinkxwaves.uk/api/webhooks/payment/'
@@ -728,8 +729,8 @@ class TransactionQueue(TimeStampedModel):
         ('processing', 'Processing'),
         ('completed', 'Completed'),
         ('failed', 'Failed'),
-        ('Pending...', 'Pending...'),  # V2 compatibility
-        ('processed', 'Processed'),  # V2 compatibility
+        ('refunded', 'Refunded'),  
+        ('processed', 'Processed'),  
     ]
     
     # Core Identity
@@ -740,12 +741,12 @@ class TransactionQueue(TimeStampedModel):
     method = models.CharField(max_length=255, default='mpesa')
     initiator = models.CharField(max_length=25)
     checkout_request_id = models.CharField(max_length=255, null=True, blank=True)
-    package_desc = models.CharField(max_length=255)
+    package_code = models.CharField(max_length=255)
     package = models.CharField(max_length=255)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     recipient = models.CharField(max_length=25)
-    used_balance = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    used_credit = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     
     # Enhanced Status Tracking
     failure_reason = models.TextField(blank=True)
@@ -761,7 +762,7 @@ class TransactionQueue(TimeStampedModel):
     pending_timeout_hours = models.IntegerField(default=24)
     
     # Gateway Data
-    gateway_request_data = models.JSONField(default=dict)
+    gateway_result_data = models.JSONField(default=dict)
     
     # Analytics
     metadata = models.JSONField(default=dict)
@@ -1519,3 +1520,5 @@ class RevenueStream(TimeStampedModel):
             models.Index(fields=['category', 'is_active']),
             models.Index(fields=['target_revenue']),
         ]
+
+     

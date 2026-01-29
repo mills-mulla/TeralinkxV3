@@ -19,7 +19,7 @@ User = get_user_model()
 now = timezone.now()
 
 
-def create_dispatch_voucher(user, dispatch_obj, voucher_code, dispatch_account, package_desc, queue_record, hotspot_ip):
+def create_dispatch_voucher(user, dispatch_obj, voucher_code, dispatch_account, package_code, queue_record, hotspot_ip):
     """
     Creates a DispatchVoucher record and deducts the client's balance.
     Also performs auto-login for the voucher.
@@ -29,7 +29,7 @@ def create_dispatch_voucher(user, dispatch_obj, voucher_code, dispatch_account, 
         dispatch_obj: Dispatch object (Package or DailyPass).
         voucher_code: Voucher code string.
         dispatch_account: Dispatch account identifier.
-        package_desc: Description of the package.
+        package_code: Description of the package.
         quota_record: Record with usage information.
         hotspot_ip: IP address for hotspot auto-login.
     """
@@ -37,7 +37,7 @@ def create_dispatch_voucher(user, dispatch_obj, voucher_code, dispatch_account, 
         dispatch_account=dispatch_account,
         dispatch_voucher_code=voucher_code,
         dispatch_package=getattr(dispatch_obj, 'package', None),
-        dispatch_package_desc=package_desc,
+        dispatch_package_code=package_code,
         dispatch_package_duration=getattr(dispatch_obj, 'package_duration', None),
         dispatch_status='active',
         dispatch_price=str(getattr(dispatch_obj, 'price', 0)),
@@ -47,25 +47,25 @@ def create_dispatch_voucher(user, dispatch_obj, voucher_code, dispatch_account, 
     )
 
     client = user.clienth
-    client.balance -= Decimal(queue_record.used_balance)
+    client.balance -= Decimal(queue_record.used_credit)
     client.save()
 
     perform_auto_login(dispatch_account, voucher_code, hotspot_ip)
 
 
-def get_device_by_package_desc(package_desc):
+def get_device_by_package_code(package_code):
     """
     Retrieves a device either from Package or DailyPass matching the package description.
 
     Args:
-        package_desc: Description string of the package.
+        package_code: Description string of the package.
 
     Returns:
         device instance or None if not found.
     """
-    pkg = Package.objects.filter(package_desc=package_desc).first()
+    pkg = Package.objects.filter(package_code=package_code).first()
     if not pkg:
-        pkg = DailyPass.objects.filter(package_desc__icontains=package_desc).first()
+        pkg = DailyPass.objects.filter(package_code__icontains=package_code).first()
     return pkg
 
 
@@ -93,18 +93,18 @@ def refund_user_balance(user, amount):
         logger.error(f"❌ Error during refund for user {user.username} (User ID: {user.id}): {str(e)}")
 
 
-def process_voucher_activation(user, pkg, package_desc, queue_record, hotspot_ip):
+def process_voucher_activation(user, pkg, package_code, queue_record, hotspot_ip):
     """
     Activates a voucher and dispatches it. Updates DailyPass limit if applicable.
 
     Args:
         user: User instance.
         device: Device instance (Package or DailyPass).
-        package_desc: Package description.
+        package_code: Package description.
         queue_record: Queue record related to payment.
         hotspot_ip: IP for auto-login.
     """
-    activation_result = activate_voucher(prefix='QRDSTk', profile=package_desc, devices=pkg.devices)
+    activation_result = activate_voucher(prefix='QRDSTk', profile=package_code, devices=pkg.devices)
 
     if activation_result["status"] != "activated":
         logger.error("Voucher activation failed")
@@ -116,7 +116,7 @@ def process_voucher_activation(user, pkg, package_desc, queue_record, hotspot_ip
         })
 
     voucher_code = activation_result["voucher_code"]
-    dispatch_helper_args = (user, pkg, voucher_code, queue_record.recipient.strip(),package_desc, queue_record, hotspot_ip)
+    dispatch_helper_args = (user, pkg, voucher_code, queue_record.recipient.strip(),package_code, queue_record, hotspot_ip)
     create_dispatch_voucher(*dispatch_helper_args)
     
     if isinstance(pkg, DailyPass):
@@ -195,8 +195,8 @@ def payment_status(request):
     for queue_record in pending_transactions:
         try:
             response_data = query_stk_status(checkout_request_id)
-            package_desc = queue_record.package_desc.strip()
-            pkg = get_device_by_package_desc(package_desc)
+            package_code = queue_record.package_code.strip()
+            pkg = get_device_by_package_code(package_code)
             recipient = queue_record.recipient.strip()
 
             if str(response_data.get('ResultCode')) == '0':
@@ -216,7 +216,7 @@ def payment_status(request):
 
                     if pkg:
                         # Process voucher activation and dispatch
-                        return process_voucher_activation(user, pkg, package_desc, queue_record, hotspot_ip)
+                        return process_voucher_activation(user, pkg, package_code, queue_record, hotspot_ip)
 
             else:
                 logger.warning(f"Transaction still pending or failed: {response_data}")

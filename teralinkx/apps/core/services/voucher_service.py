@@ -7,7 +7,7 @@ class VoucherService:
             dispatch_account=account,
             dispatch_voucher_code=voucher.voucher_code,
             dispatch_package=voucher.package,
-            dispatch_package_desc=voucher.package_desc,
+            dispatch_package_code=voucher.package_code,
             dispatch_package_duration=str(voucher.duration),
             dispatch_status="active",
             dispatch_devices='',

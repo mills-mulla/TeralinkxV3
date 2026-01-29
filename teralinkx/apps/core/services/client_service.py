@@ -4,7 +4,7 @@ import traceback
 import uuid
 import hashlib
 from datetime import timedelta
-from typing import Optional, Tuple, Dict, Any
+from typing import Optional, Tuple, Dict, Any, List 
 from decimal import Decimal
 
 from django.apps import apps 
@@ -116,55 +116,126 @@ class ClientService:
         correlation_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Generate JWT tokens with custom claims for your system.
+        Generate JWT tokens with ALL custom claims required 
         """
-        # Clean up old tokens if you want to enforce single session
+        # Clean up old tokens if needed
         # OutstandingToken.objects.filter(user=user).delete()
         
         refresh = RefreshToken.for_user(user)
         
-        # Add custom claims for your system
+        # ============ CORE IDENTITY (REQUIRED) ============
         refresh['client_id'] = str(client.id)
-        refresh['client_account'] = client.account
-        refresh['account_tier'] = client.account_tier
-        refresh['phone_number'] = client.phone_number
-        refresh['display_name'] = client.display_name
-        refresh['correlation_id'] = correlation_id or str(uuid.uuid4())
+        refresh['client_account'] = client.account  # ✅ Payment system REQUIRES this
+        refresh['account_tier'] = client.account_tier  # ✅ Payment system REQUIRES this
+        refresh['phone_number'] = client.phone_number or ''  # ✅ Payment system REQUIRES this
+        refresh['display_name'] = client.display_name or user.username
         
-        # Add device information if available
+        # ============ FINANCIAL INFORMATION (REQUIRED for payment) ============
+        refresh['balance'] = float(client.balance)  # ✅ CRITICAL for payment confirmation
+        refresh['credit_limit'] = float(client.credit_limit)
+        refresh['total_spent'] = float(client.total_spent)
+        
+        # ============ LOCATION INFORMATION (REQUIRED for payment) ============
+        # Home location (from client profile)
+        refresh['home_location_id'] = client.home_location_id if client.home_location else None
+        refresh['home_location_code'] = client.home_location.code if client.home_location else None
+        
+        # Current location (from session or detected location)
+        current_loc = location or (session.location if session else None) or client.current_location
+        refresh['current_location_id'] = current_loc.id if current_loc else None
+        refresh['current_location_code'] = current_loc.code if current_loc else None
+        refresh['location_id'] = current_loc.id if current_loc else None  # Alias for compatibility
+        
+        # ============ STATUS & SETTINGS (REQUIRED for payment) ============
+        refresh['is_active'] = client.status == 'active'  # ✅ Payment system checks this
+        refresh['auto_renew'] = client.auto_renew  # ✅ Payment system expects this
+        refresh['two_factor_enabled'] = client.two_factor_enabled  # ✅ Payment system expects this
+        
+        # ============ ACTIVE VOUCHER INFO (if any) ============
+        if client.active_voucher:
+            try:
+                voucher = DispatchVoucher.objects.filter(
+                    voucher_code=client.active_voucher,
+                    status='active'
+                ).first()
+                if voucher:
+                    refresh['active_voucher'] = voucher.voucher_code
+                    refresh['voucher_expires_at'] = voucher.expires_at.isoformat() if voucher.expires_at else None
+                    refresh['voucher_package'] = voucher.package.name if voucher.package else None
+                    refresh['voucher_package_id'] = voucher.package.id if voucher.package else None
+            except Exception as e:
+                logger.warning(f"Failed to get active voucher info for JWT: {e}")
+        
+        # ============ DEVICE INFORMATION ============
         if device:
             refresh['device_id'] = str(device.id)
             refresh['device_mac'] = device.mac_address
+            refresh['device_name'] = device.device_name
             refresh['is_owner'] = device.user == client
-            refresh['was_transferred'] = device.previous_owners and len(device.previous_owners) > 0
+            refresh['was_transferred'] = bool(device.previous_owners and len(device.previous_owners) > 0)
             refresh['is_trusted'] = device.is_trusted
         
-        # Add session information if available
+        # ============ SESSION INFORMATION ============
         if session:
             refresh['session_id'] = session.session_id
             refresh['login_time'] = session.login_time.isoformat()
-            refresh['location_id'] = str(session.location.id) if session.location else None
+            refresh['session_location_id'] = str(session.location.id) if session.location else None
         
-        # Add security context
+        # ============ SECURITY CONTEXT ============
         if ip_address:
             refresh['ip_hash'] = hashlib.sha256(ip_address.encode()).hexdigest()[:16]
+            refresh['last_login_ip'] = ip_address
         
         if user_agent:
             refresh['ua_hash'] = hashlib.sha256(user_agent.encode()).hexdigest()[:16]
         
-        # Add permissions/roles
+        # ============ TIMESTAMPS ============
+        refresh['last_login'] = client.last_login.isoformat() if client.last_login else timezone.now().isoformat()
+        refresh['last_balance_update'] = client.last_balance_update.isoformat() if client.last_balance_update else None
+        refresh['token_issued_at'] = timezone.now().isoformat()
+        
+        # ============ PERMISSIONS/ROLES ============
         refresh['permissions'] = {
             'max_devices': client.get_max_allowed_devices(),
-            'can_transfer_devices': True,  # Your business rule
+            'can_transfer_devices': True,
             'auto_renew': client.auto_renew,
             'two_factor_enabled': client.two_factor_enabled,
             'status': client.status,
-            'account_tier': client.account_tier
+            'account_tier': client.account_tier,
+            'can_purchase': client.status == 'active' and client.balance >= 0,
+            'can_use_credit': client.is_eligible_for_credit,
+            'available_credit': float(client.available_credit)
+        }
+        
+        # ============ USER METADATA ============
+        refresh['user_id'] = user.id
+        refresh['username'] = user.username
+        refresh['email'] = user.email or ''
+        refresh['correlation_id'] = correlation_id or str(uuid.uuid4())
+        
+        # ============ AUTHENTICATION CONTEXT ============
+        refresh['auth_method'] = 'password'
+        refresh['auth_timestamp'] = timezone.now().isoformat()
+        refresh['auth_provider'] = 'teralinkx_waves'
+        
+        # ============ ADDITIONAL CLIENT METADATA ============
+        refresh['client_metadata'] = {
+            'created_at': client.created_at.isoformat() if hasattr(client, 'created_at') else None,
+            'lifetime_data_used': client.lifetime_data_used,
+            'failed_login_attempts': client.failed_login_attempts,
+            'profile_image': bool(client.profile_image),
+            'is_roaming': client.current_location != client.home_location if client.current_location and client.home_location else False
         }
         
         # Set expiration times
         access_token = refresh.access_token
         access_token.set_exp(lifetime=ClientService.ACCESS_TOKEN_LIFETIME)
+        
+        # Log the token generation with claim details
+        logger.info(
+            f"Generated JWT with {len(refresh.payload)} claims for client: {client.account} "
+            f"(Balance: {client.balance}, Location: {current_loc.code if current_loc else 'None'})"
+        )
         
         return {
             'refresh': str(refresh),
@@ -172,7 +243,13 @@ class ClientService:
             'token_type': 'Bearer',
             'expires_in': int(ClientService.ACCESS_TOKEN_LIFETIME.total_seconds()),
             'refresh_expires_in': int(ClientService.REFRESH_TOKEN_LIFETIME.total_seconds()),
-            'correlation_id': refresh['correlation_id']
+            'correlation_id': refresh['correlation_id'],
+            'claims_summary': {
+                'client_account': refresh['client_account'],
+                'balance': refresh['balance'],
+                'location_id': refresh['location_id'],
+                'has_active_voucher': 'active_voucher' in refresh
+            }
         }
 
     @staticmethod
@@ -1129,7 +1206,14 @@ class ClientService:
                             'id': client.current_location.id,
                             'name': client.current_location.name,
                             'code': client.current_location.code
-                        } if client.current_location else None
+                        } if client.current_location else None,
+                        # Add additional client info for debugging
+                        'additional_info': {
+                            'auto_renew': client.auto_renew,
+                            'two_factor_enabled': client.two_factor_enabled,
+                            'credit_limit': float(client.credit_limit),
+                            'total_spent': float(client.total_spent)
+                        }
                     },
                     'auth': token_data,
                     'device': {
@@ -1709,3 +1793,61 @@ class ClientService:
         except Exception as e:
             logger.error(f"Failed to get active sessions for user {user.id}: {str(e)}")
             raise BusinessLogicError("Failed to retrieve active sessions")
+
+    # Add this new method for JWT claims verification
+    @staticmethod
+    def verify_jwt_claims_for_payment(token_data: Dict) -> Tuple[bool, List[str]]:
+        """
+        Verify JWT contains all claims required by payment confirmation system.
+        
+        Returns: (is_valid, missing_claims)
+        """
+        required_claims = [
+            'client_account',
+            'account_tier',
+            'balance',
+            'phone_number',
+            'current_location_id'  # or location_id
+        ]
+        
+        optional_claims = [
+            'home_location_id',
+            'is_active',
+            'auto_renew',
+            'two_factor_enabled',
+            'active_voucher',
+            'voucher_expires_at'
+        ]
+        
+        # Extract claims from token
+        try:
+            from rest_framework_simplejwt.tokens import AccessToken
+            access_token = AccessToken(token_data['access'])
+            claims = access_token.payload
+            
+            missing_required = []
+            missing_optional = []
+            
+            for claim in required_claims:
+                if claim not in claims or claims[claim] is None:
+                    missing_required.append(claim)
+            
+            for claim in optional_claims:
+                if claim not in claims:
+                    missing_optional.append(claim)
+            
+            is_valid = len(missing_required) == 0
+            
+            logger.info(
+                f"JWT claims verification - "
+                f"Valid: {is_valid}, "
+                f"Missing required: {missing_required}, "
+                f"Missing optional: {missing_optional}, "
+                f"Total claims: {len(claims)}"
+            )
+            
+            return is_valid, missing_required + missing_optional
+            
+        except Exception as e:
+            logger.error(f"Failed to verify JWT claims: {e}")
+            return False, ['token_validation_failed']

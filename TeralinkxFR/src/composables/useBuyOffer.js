@@ -55,7 +55,7 @@ export function useBuyOffer() {
       } else if (response.status === 201) {
         isloading.value = false 
         offer.price = response.data.new_price
-        offer.usedbalance = response.data.used_balance
+        offer.usedbalance = response.data.used_credit
         
         if (onSuccessModal) onSuccessModal(offer) // onSuccessModal is the openBuycomponent argument callback
       } else {

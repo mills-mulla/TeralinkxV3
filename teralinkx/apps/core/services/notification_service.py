@@ -1,7 +1,7 @@
 # notifications.py
-from ..models import Notification
+from notifications.models import Notification
 from ..utils.pusher_notifier import send_notification
-from ..tasks import push_notification_task
+from sync.tasks import push_notification_task
 
 
 def create_and_notify(user, message, type, extra_data=None):

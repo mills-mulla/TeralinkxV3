@@ -3,21 +3,21 @@
 
 # @admin.register(AvailableVoucher)
 # class AvailableVoucherAdmin(admin.ModelAdmin):
-#     list_display = ('voucher_code', 'package', 'package_desc', 'duration', 'price')
-#     search_fields = ('voucher_code', 'package_desc')
+#     list_display = ('voucher_code', 'package', 'package_code', 'duration', 'price')
+#     search_fields = ('voucher_code', 'package_code')
 #     list_filter = ('package',)
 
 
 # @admin.register(Package)
 # class PackageAdmin(admin.ModelAdmin):
-#     list_display = ('package', 'price', 'package_desc', 'package_duration', 'devices')
-#     search_fields = ('package', 'package_desc')
+#     list_display = ('package', 'price', 'package_code', 'package_duration', 'devices')
+#     search_fields = ('package', 'package_code')
 
 
 # @admin.register(DailyPass)
 # class DailyPassAdmin(admin.ModelAdmin):
-#     list_display = ('package', 'price','usage_limit', 'package_desc', 'package_duration', 'devices','limit','status')
-#     search_fields = ('package', 'package_desc')
+#     list_display = ('package', 'price','usage_limit', 'package_code', 'package_duration', 'devices','limit','status')
+#     search_fields = ('package', 'package_code')
 
 
 # @admin.register(DispatchVoucher)
@@ -121,8 +121,8 @@
 
 # @admin.register(Queue)
 # class QueueAdmin(admin.ModelAdmin):
-#     list_display = ('recipient', 'package_desc', 'package', 'price','used_balance', 'status', 'queue_time')
-#     search_fields = ('recipient', 'package_desc', 'checkout_request_id')
+#     list_display = ('recipient', 'package_code', 'package', 'price','used_credit', 'status', 'queue_time')
+#     search_fields = ('recipient', 'package_code', 'checkout_request_id')
 #     list_filter = ('status', 'queue_time')
 
 

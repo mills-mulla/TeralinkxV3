@@ -53,9 +53,9 @@ export function useBuyPackage() {
 
       } else if (response.status === 201) {
         isloading.value = false
-        const { new_price, used_balance } = response.data
+        const { new_price, used_credit } = response.data
         pkg.price = new_price
-        pkg.usedbalance = used_balance
+        pkg.usedbalance = used_credit
         selectedPackage.value = pkg
         showBuyComponent.value = true
       } else {

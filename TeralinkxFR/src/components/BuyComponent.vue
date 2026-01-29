@@ -100,7 +100,7 @@ onMounted(() => {
 
   itemName.value = `Buy ${props.packageDetails.package}`
   itemAmount.value = `@KES ${props.packageDetails.price}`
-  itemDesc.value = props.packageDetails.package_desc
+  itemDesc.value = props.packageDetails.package_code
   usedbalance.value = props.packageDetails.usedbalance
 })
 
@@ -126,7 +126,7 @@ function submitForm() {
           {
             package: itemName.value,
             price: match,
-            package_desc: itemDesc.value,
+            package_code: itemDesc.value,
             phoneNumber: formattedPhoneNumber
           }
         ]

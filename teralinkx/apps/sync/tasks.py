@@ -2,7 +2,7 @@
 
 from celery import shared_task, group
 from core.models import *
-from core.views.moitoring import monitor_user
+# from core.views.moitoring import monitor_user
 import logging
 from decimal import Decimal
 
@@ -40,28 +40,29 @@ def task_delete_pending():
 
 BATCH_SIZE = 100  # adjust based on your server/API load
 
-@shared_task
-def process_dispatch_voucher_batch(voucher_ids):
-    """
-    Updates a batch of DispatchVoucher records.
-    """
-    vouchers = DispatchVoucher.objects.filter(dispatch_id__in=voucher_ids)
+#create monitoring  for this to work
+# @shared_task
+# def process_dispatch_voucher_batch(voucher_ids):
+#     """
+#     Updates a batch of DispatchVoucher records.
+#     """
+#     vouchers = DispatchVoucher.objects.filter(dispatch_id__in=voucher_ids)
 
-    for voucher in vouchers:
-        try:
-            stats = monitor_user(voucher.usermanid)
-            if stats:
-                # Store as decimals (MB) for proper math
-                voucher.total_download = Decimal(str(int(stats['total_download']) / (1024 * 1024)))
-                voucher.total_upload = Decimal(str(int(stats['total_upload']) / (1024 * 1024)))
-                voucher.uptime = int(stats['uptime'])
-                voucher.active_sessions = stats['active_sessions']
-                voucher.save(update_fields=['total_download', 'total_upload', 'uptime', 'active_sessions'])
-                logging.info(f"Updated usage for {voucher.dispatch_voucher_code}")
-            else:
-                logging.warning(f"No stats returned for {voucher.usermanid}")
-        except Exception as e:
-            logging.error(f"Failed to update {voucher.dispatch_voucher_code}: {e}")
+#     for voucher in vouchers:
+#         try:
+#             stats = monitor_user(voucher.usermanid)
+#             if stats:
+#                 # Store as decimals (MB) for proper math
+#                 voucher.total_download = Decimal(str(int(stats['total_download']) / (1024 * 1024)))
+#                 voucher.total_upload = Decimal(str(int(stats['total_upload']) / (1024 * 1024)))
+#                 voucher.uptime = int(stats['uptime'])
+#                 voucher.active_sessions = stats['active_sessions']
+#                 voucher.save(update_fields=['total_download', 'total_upload', 'uptime', 'active_sessions'])
+#                 logging.info(f"Updated usage for {voucher.dispatch_voucher_code}")
+#             else:
+#                 logging.warning(f"No stats returned for {voucher.usermanid}")
+#         except Exception as e:
+#             logging.error(f"Failed to update {voucher.dispatch_voucher_code}: {e}")
 
 @shared_task
 def update_all_dispatch_voucher_usage():
@@ -77,7 +78,7 @@ def update_all_dispatch_voucher_usage():
 
 
 
-from .utils.pusher_notifier import send_notification
+from core.utils.pusher_notifier import send_notification
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=5)
 def push_notification_task(self, channel, event, payload):

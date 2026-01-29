@@ -361,6 +361,8 @@ class ClientH(TimeStampedModel):
         }
         
     class Meta:
+        # Use default app label ('users') so string
+        # relations like 'users.ClientH' resolve correctly.
         indexes = [
             models.Index(fields=['account']),
             models.Index(fields=['status']),

@@ -292,7 +292,7 @@ class PaymentTransactionAdmin(admin.ModelAdmin):
         if obj.raw_callback_data:
             import json
             formatted_json = json.dumps(obj.raw_callback_data, indent=2)
-            return format_html('<pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto;">{}</pre>', formatted_json)
+            return format_html('<pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto; color: black;">{}</pre>', formatted_json)
         return "No raw data"
     raw_callback_data_preview.short_description = 'Raw Callback Data'
     
@@ -383,12 +383,12 @@ class TransactionQueueAdmin(admin.ModelAdmin):
         'status', 'retry_count', 'created_at', 'pending_duration_safe'
     ]
     list_filter = ['queue_type', 'status', 'failure_category', 'priority', 'created_at']
-    search_fields = ['initiator', 'recipient', 'checkout_request_id', 'package_desc']
+    search_fields = ['initiator', 'recipient', 'checkout_request_id', 'package_code']
     readonly_fields = [
         'queue_type', 'user', 'method', 'initiator', 'checkout_request_id',
-        'package_desc', 'package', 'price', 'recipient', 'used_balance',
+        'package_code', 'package', 'price', 'recipient', 'used_credit',
         'failure_reason', 'error_code', 'failure_category', 'retry_count',
-        'gateway_request_data_preview', 'metadata_preview', 'created_at',
+        'gateway_result_data_preview', 'metadata_preview', 'created_at',
         'pending_duration_safe', 'is_expired_safe'
     ]
     fieldsets = (
@@ -404,7 +404,7 @@ class TransactionQueueAdmin(admin.ModelAdmin):
         }),
         ('Package Details', {
             'fields': (
-                'package_desc', 'package', 'price', 'used_balance'
+                'package_code', 'package', 'price', 'used_credit'
             )
         }),
         ('Failure Information', {
@@ -419,7 +419,7 @@ class TransactionQueueAdmin(admin.ModelAdmin):
             )
         }),
         ('Raw Data', {
-            'fields': ('gateway_request_data_preview', 'metadata_preview'),
+            'fields': ('gateway_result_data_preview', 'metadata_preview'),
             'classes': ('collapse',)
         })
     )
@@ -444,21 +444,21 @@ class TransactionQueueAdmin(admin.ModelAdmin):
         return "N/A"
     is_expired_safe.short_description = 'Is Expired?'
     
-    def gateway_request_data_preview(self, obj):
+    def gateway_result_data_preview(self, obj):
         """Preview gateway request data"""
-        if obj.gateway_request_data:
+        if obj.gateway_result_data:
             import json
-            formatted_json = json.dumps(obj.gateway_request_data, indent=2)
-            return format_html('<pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto;">{}</pre>', formatted_json)
+            formatted_json = json.dumps(obj.gateway_result_data, indent=2)
+            return format_html('<pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto; color: black;">{}</pre>', formatted_json)
         return "No gateway data"
-    gateway_request_data_preview.short_description = 'Gateway Request Data'
+    gateway_result_data_preview.short_description = 'Gateway Result Data'
     
     def metadata_preview(self, obj):
         """Preview metadata"""
         if obj.metadata:
             import json
             formatted_json = json.dumps(obj.metadata, indent=2)
-            return format_html('<pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto;">{}</pre>', formatted_json)
+            return format_html('<pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; overflow-x: auto; color: black;">{}</pre>', formatted_json)
         return "No metadata"
     metadata_preview.short_description = 'Metadata'
     

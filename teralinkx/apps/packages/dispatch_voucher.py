@@ -23,9 +23,10 @@ class DispatchVoucherAPIView(APIView):
         # Get authenticated user from JWT token
         user = request.user
         
-        # Get user's vouchers - filter by the authenticated user
-        vouchers = DispatchVoucher.objects.filter(user=user).order_by('-created_at')
         
+        # Get user's vouchers - filter by the authenticated user
+        vouchers = DispatchVoucher.objects.filter(phone=user).order_by('-created_at')
+        print (vouchers)
         # Apply filters from query parameters
         status_filter = request.query_params.get('status')
         is_active = request.query_params.get('is_active')

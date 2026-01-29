@@ -85,7 +85,7 @@ class VoucherManager:
             dispatch_account = recipient,
             dispatch_voucher_code = voucher_data["voucher_code"],
             dispatch_package = device.package,
-            dispatch_package_desc = voucher_data["package_desc"],
+            dispatch_package_code = voucher_data["package_code"],
             dispatch_package_duration = device.package_duration,
             dispatch_status = 'active',
             dispatch_price = str(device.price),
@@ -201,7 +201,7 @@ class PackagePurchaseService(APIView):
             'status': 'insufficient_balance',
             'message': 'Insufficient balance to buy the package.',
             'new_price': new_price,
-            'used_balance': client.balance
+            'used_credit': client.balance
         }, status=status.HTTP_201_CREATED)
     
     def _process_purchase(self, client, product, prefix,ping,hotspot_ip):
@@ -246,14 +246,14 @@ class PackagePurchaseService(APIView):
         
         return Queue.objects.create(
             checkout_request_id=request_id,
-            package_desc=product.package_desc,
+            package_code=product.package_code,
             initiator=client.account,
             recipient=client.account,
             package=product.package,
             price=product.price,
             status='Pending...',
             method='balance',
-            used_balance=product.price
+            used_credit=product.price
         )
     
     def _process_voucher_activation(self, client, product, prefix, queue_record,ping,hotspot_ip):
@@ -268,7 +268,7 @@ class PackagePurchaseService(APIView):
         Returns:
             Response: API response with activation result
         """
-        activation_result = activate_voucher(prefix=prefix, profile=product.package_desc,devices=product.devices)
+        activation_result = activate_voucher(prefix=prefix, profile=product.package_code,devices=product.devices)
         
         if activation_result.get("status") == "activated":
             return self._handle_activated_voucher(client, product, activation_result, queue_record,ping,hotspot_ip)
@@ -293,7 +293,7 @@ class PackagePurchaseService(APIView):
             client.account,
             {
                 "voucher_code": voucher_code,
-                "package_desc": product.package_desc
+                "package_code": product.package_code
             },
             product
         )
@@ -318,7 +318,7 @@ class PackagePurchaseService(APIView):
             Response: API response
         """
         available_voucher = AvailableVoucher.objects.filter(
-            package_desc=product.package_desc
+            package_code=product.package_code
         ).first()
         
         if not available_voucher:
@@ -349,7 +349,7 @@ class PackagePurchaseService(APIView):
             dispatch_account=client.account,
             dispatch_voucher_code=available_voucher.voucher_code,
             dispatch_package=available_voucher.package,
-            dispatch_package_desc=available_voucher.package_desc,
+            dispatch_package_code=available_voucher.package_code,
             dispatch_package_duration=available_voucher.duration,
             dispatch_status=voucher_status,
             dispatch_price=str(available_voucher.price),
@@ -454,7 +454,7 @@ class VoucherRenewService(APIView):
 
         # Map description to package
         try:
-            product = Package.objects.get(package_desc=expired.dispatch_package_desc)
+            product = Package.objects.get(package_code=expired.dispatch_package_code)
         except Package.DoesNotExist:
             return Response(
                 {"error": "No matching package found for this voucher."},

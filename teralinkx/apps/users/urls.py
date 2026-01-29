@@ -1,4 +1,4 @@
-# urls.py
+# apps/users/urls.py
 from django.urls import path
 from .client import (
     ClientView, 
