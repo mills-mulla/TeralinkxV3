@@ -145,7 +145,7 @@ TEMPLATES = [
 # Database - PostgreSQL for production
 DATABASES = {
     'default': dj_database_url.parse(
-        os.environ.get('DATABASE_URL', 'postgresql://teralinkx:justboot@db:5432/teralinkx')
+        os.environ.get('DATABASE_URL', 'postgresql://teralinkx:justboot@db:5432/teralinkxv3')
     )
 }
 
