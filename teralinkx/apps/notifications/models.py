@@ -21,6 +21,7 @@ class Notification(TimeStampedModel):
         ('package_expiry', 'Package Expiry'),
         ('low_balance', 'Low Balance Alert'),
         ('data_exhausted', 'Data Exhausted'),
+        ('announcement', 'Public Announcement'),
     ]
     
     PRIORITY_LEVELS = [

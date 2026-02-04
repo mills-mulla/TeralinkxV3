@@ -88,9 +88,9 @@ class AdvertisementAdmin(admin.ModelAdmin):
         ('Scheduling', {
             'fields': (
                 'start_date',
-                'end_date',
-                'priority'
-            )
+                ('end_date', 'priority')
+            ),
+            'description': 'End date is required for active ads. Leave blank for draft ads.'
         }),
         ('Budget & Pricing', {
             'fields': (
@@ -129,10 +129,11 @@ class AdvertisementAdmin(admin.ModelAdmin):
         """Display CTR in list view"""
         ctr = (obj.clicks / obj.impressions * 100) if obj.impressions > 0 else 0
         color = 'green' if ctr > 2 else 'orange' if ctr > 0.5 else 'red'
+        ctr_formatted = f"{ctr:.2f}%"
         return format_html(
-            '<span style="color: {}; font-weight: bold;">{:.2f}%</span>',
-            color,
-            ctr
+            '<span style="color: {}; font-weight: bold;">{}</span>',
+            str(color),
+            ctr_formatted
         )
     ctr_display.short_description = 'CTR'
     
@@ -148,11 +149,14 @@ class AdvertisementAdmin(admin.ModelAdmin):
     created_at_display.short_description = 'Created'
     
     def is_live_display(self, obj):
-        """Display live status"""
-        if obj.is_live:
-            return format_html('<span style="color: green; font-weight: bold;">✓ LIVE</span>')
-        else:
-            return format_html('<span style="color: red; font-weight: bold;">✗ INACTIVE</span>')
+        """Display live status with error handling"""
+        try:
+            if obj.is_live:
+                return format_html('<span style="color: green; font-weight: bold;">✓ LIVE</span>')
+            else:
+                return format_html('<span style="color: red; font-weight: bold;">✗ INACTIVE</span>')
+        except (TypeError, AttributeError):
+            return format_html('<span style="color: orange; font-weight: bold;">⚠ ERROR</span>')
     is_live_display.short_description = 'Live Status'
     
     def activate_ads(self, request, queryset):
@@ -172,6 +176,24 @@ class AdvertisementAdmin(admin.ModelAdmin):
         updated = queryset.update(status='archived')
         self.message_user(request, f'{updated} ads archived successfully.')
     archive_ads.short_description = "Archive selected ads"
+    
+    def get_queryset(self, request):
+        """Optimize queryset with select_related"""
+        return super().get_queryset(request).select_related().prefetch_related('locations')
+    
+    def get_form(self, request, obj=None, **kwargs):
+        """Customize form based on ad type"""
+        form = super().get_form(request, obj, **kwargs)
+        
+        # Add help text for different ad types
+        if 'ad_type' in form.base_fields:
+            form.base_fields['ad_type'].help_text = (
+                "Banner: Simple image ads | Video: Video content with thumbnail | "
+                "Audio: Audio content | Carousel: Multiple rotating images | "
+                "Native: Content that blends with app design"
+            )
+        
+        return form
 
 @admin.register(AdMedia)
 class AdMediaAdmin(admin.ModelAdmin):

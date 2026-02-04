@@ -8,11 +8,17 @@ import router from './router'
 import './styles.css'
 import store from './components/store'
 import FontAwesomeIcon from './plugins/font-awesome'
+import { useTheme } from './composables/useTheme'
 
 // Import the enhanced HotSpot plugin
 import hotspotPlugin from './plugins/hotspot'
 
 const app = createApp(App)
+const pinia = createPinia()
+
+// Initialize theme before mounting
+const { updateTheme } = useTheme()
+updateTheme()
 
 // Configure Toast
 app.use(Vue3Toastify, {
@@ -26,15 +32,13 @@ app.component('font-awesome-icon', FontAwesomeIcon)
 
 // Install plugins with proper type safety
 app.use(store)
-app.use(createPinia())
+app.use(pinia)
 app.use(router)
 
 // Install HotSpot plugin with initialization check
 if (window.hotspotContext) {
   app.use(hotspotPlugin)
-  // console.log('Hotspot context check if available in main.ts page:',window.hotspotContext)
 } else {
-  console.warn('HotSpot data not detected - running in fallback mode')
   // Initialize with fallback data if needed
   window.hotspotContext = {
     mac: '',
@@ -43,6 +47,11 @@ if (window.hotspotContext) {
   }
   app.use(hotspotPlugin)
 }
+
+// Initialize auth store after pinia is set up
+import { useAuthStore } from './stores/auth'
+const authStore = useAuthStore()
+authStore.initialize()
 
 app.mount('#app')
 

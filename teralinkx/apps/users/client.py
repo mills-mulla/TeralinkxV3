@@ -68,16 +68,28 @@ class ClientView(APIView):
             # Extract validated data
             validated_data = serializer.validated_data
             
+            # Ensure password is provided for regular client endpoint
+            if not validated_data.get('password'):
+                return Response(
+                    {
+                        'error': 'Password is required for this endpoint',
+                        'code': 'PASSWORD_REQUIRED',
+                        'suggested_action': 'use_passwordless_endpoint_or_provide_password'
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
             # Use production-grade service with JWT support
             result = ClientService.authenticate_or_register(
                 phone=validated_data['phone'],
-                password=validated_data['password'],
+                password=validated_data['password'],  # Required for this endpoint
                 current_mac=validated_data.get('current_mac'),
                 current_ip=validated_data.get('current_ip') or client_ip,
                 ap_identifier=ap_identifier,
                 display_name=validated_data.get('display_name'),
                 conflict_resolution='transfer',  # business rule
                 user_agent=user_agent,
+                device_info=validated_data.get('device_info'),  # Enhanced device info
                 request_metadata={
                     'user_agent': user_agent,
                     'client_ip': client_ip,

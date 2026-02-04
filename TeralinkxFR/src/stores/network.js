@@ -25,7 +25,7 @@ export const useNetworkStore = defineStore('network', () => {
   // Helper functions
   const generatePlaceholderMac = () => {
     const sessionKey = sessionStorage.getItem('network_session_key') || 
-                      Math.random().toString(36).substr(2, 9)
+                      Math.random().toString(36).substring(2, 11)
     sessionStorage.setItem('network_session_key', sessionKey)
     
     const hash = simpleHash(sessionKey)

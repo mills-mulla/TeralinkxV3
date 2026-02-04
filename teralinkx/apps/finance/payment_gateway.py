@@ -24,8 +24,8 @@ from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
 from users.models import ClientH
-from packages.models import PackageType, AvailableVoucher, DispatchVoucher
-from locations.models import Location
+from packages.models import PackageType, AvailableVoucher, DispatchVoucher, Coupon
+from core.services.rewards_service import RewardsService
 from notifications.models import Notification
 
 
@@ -599,39 +599,57 @@ class PaymentTransactionHelper:
     
     @staticmethod
     def create_balance_transaction(user, payment_transaction, queue_item):
-        """Create balance transaction for the payment"""
+        """Create balance transaction for the payment with atomic balance updates"""
         
-        transaction_type = 'topup'
-        credit = payment_transaction.amount
-        debit = Decimal('0')
+        # 🔍 DEBUG: Log balance transaction attempt
+        logger.info(f"BALANCE TRANSACTION DEBUG - User: {user.account}, Queue used_credit: {queue_item.used_credit if queue_item else 'N/A'}")
         
-        # If used balance was involved, adjust
-        if queue_item.used_credit and queue_item.used_credit > 0:
-            transaction_type = 'internet_purchase'
-            debit = queue_item.used_credit
+        # 🔴 FIX: Only create balance transactions for mixed payments with credit usage
+        # Pure M-Pesa payments should NOT affect user balance
+        if not queue_item.used_credit or queue_item.used_credit <= 0:
+            logger.info(f"BALANCE TRANSACTION DEBUG - Pure M-Pesa payment - no balance transaction needed for {user.account}")
+            return
         
-        # Get current balance
-        balance_before = user.balance
+        logger.info(f"BALANCE TRANSACTION DEBUG - Creating balance transaction for mixed payment: credit={queue_item.used_credit}")
         
-        # Update user balance
-        net_effect = credit - debit
-        user.balance += net_effect
-        user.save()
+        transaction_type = 'internet_purchase'
+        credit = Decimal('0')  # No credit added for M-Pesa payments
+        debit = queue_item.used_credit  # Only deduct the credit portion
         
-        # Create balance transaction
-        BalanceTransaction.objects.create(
-            user=user,
-            transaction_type=transaction_type,
-            debit=debit,
-            credit=credit,
-            balance_before=balance_before,
-            balance_after=user.balance,
-            payment_transaction=payment_transaction,
-            description=f"Payment for {queue_item.package_code} via M-Pesa",
-            reference=payment_transaction.transaction_id
-        )
+        # 🔴 ATOMIC BALANCE UPDATE WITH VALIDATION
+        from django.db import transaction
+        with transaction.atomic():
+            # Re-fetch user with SELECT FOR UPDATE to prevent race conditions
+            user = ClientH.objects.select_for_update().get(id=user.id)
+            
+            # Get current balance
+            balance_before = user.balance
+            
+            # Calculate net effect (should be negative for credit deduction)
+            net_effect = credit - debit
+            
+            # Validate balance won't go negative
+            if balance_before + net_effect < 0:
+                raise ValueError(f"Transaction would result in negative balance: {balance_before + net_effect}")
+            
+            # Update user balance (deduct credit portion)
+            user.balance += net_effect
+            user.save()
+            
+            # Create balance transaction
+            BalanceTransaction.objects.create(
+                user=user,
+                transaction_type=transaction_type,
+                debit=debit,
+                credit=credit,
+                balance_before=balance_before,
+                balance_after=user.balance,
+                payment_transaction=payment_transaction,
+                description=f"Credit portion of mixed payment for {queue_item.package_code}",
+                reference=payment_transaction.transaction_id
+            )
         
-        logger.info(f"Balance transaction created for user {user.account}")
+        logger.info(f"BALANCE TRANSACTION DEBUG - Mixed payment balance transaction: {balance_before} → {user.balance} (deducted {debit}) for {user.account}")
     
     @staticmethod
     def clean_phone_number(phone):
@@ -796,10 +814,82 @@ class PaymentInitiateAPIView(APIView):
         if not phone and isinstance(jwt_payload, dict):
             phone = (jwt_payload.get('phone_number') or '').strip()
 
-        amount = (data.get('Amount') or '').strip()
-        if not amount:
-            pkgam = PackageType.objects.get(code=package_code)
-            amount = pkgam.price
+        # Handle coupon discount calculation
+        coupon_code = data.get('coupon_code')
+        coupon_discount = Decimal('0')
+        
+        # Get package for price calculation
+        try:
+            package = PackageType.objects.get(code=package_code)
+            base_amount = package.price
+        except PackageType.DoesNotExist:
+            return Response(
+                {'error': 'Package not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Apply coupon discount if provided
+        if coupon_code:
+            try:
+                coupon = Coupon.objects.get(code=coupon_code, is_active=True)
+                
+                # Check if coupon is expired
+                if coupon.valid_until < timezone.now():
+                    return Response(
+                        {'error': 'Coupon has expired'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                # Check usage limit
+                if coupon.total_uses >= coupon.max_uses:
+                    return Response(
+                        {'error': 'Coupon usage limit reached'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                # Calculate discount with M-Pesa compatibility
+                if coupon.coupon_type == 'percentage':
+                    discount_amount = base_amount * (coupon.discount_value / 100)
+                    
+                    # 🔴 DYNAMIC M-PESA DISCOUNT ROUNDING SYSTEM
+                    # For expensive packages (≥50 KES): Round UP (ceiling) - more generous
+                    # For cheap packages (<50 KES): Round DOWN (floor) - conservative
+                    import math
+                    if base_amount >= 50:
+                        # Expensive packages: Round UP for better customer experience
+                        discount_amount = Decimal(str(math.ceil(float(discount_amount))))
+                    else:
+                        # Cheap packages: Round DOWN to maintain profitability
+                        discount_amount = Decimal(str(math.floor(float(discount_amount))))
+                    
+                    coupon_discount = min(discount_amount, base_amount)
+                else:  # fixed amount
+                    coupon_discount = min(coupon.discount_value, base_amount)
+                
+                # Apply minimum order value check
+                if coupon.minimum_order_value and base_amount < coupon.minimum_order_value:
+                    return Response({
+                        'error': f'Minimum order value of KES {coupon.minimum_order_value} required'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                    
+            except Coupon.DoesNotExist:
+                return Response(
+                    {'error': 'Invalid coupon code'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        # Calculate final amount after coupon discount
+        final_amount = base_amount - coupon_discount
+        
+        # 🔴 ENSURE FINAL AMOUNT IS WHOLE NUMBER FOR M-PESA
+        final_amount = max(Decimal('1'), Decimal(str(int(final_amount))))  # Minimum 1 KES
+        
+        # Use provided amount or calculated amount
+        amount = data.get('Amount', '')
+        if amount:
+            amount = str(amount).strip()
+        else:
+            amount = str(final_amount)
 
         # Validate required fields
         if not all([account, amount, package_name, package_code]):
@@ -868,6 +958,20 @@ class PaymentInitiateAPIView(APIView):
                 location_id=location_id,
                 result=result
             )
+            
+            # Apply coupon if provided
+            if coupon_code:
+                try:
+                    coupon = Coupon.objects.get(code=coupon_code, is_active=True)
+                    # Increment usage count
+                    coupon.total_uses += 1
+                    # If max uses reached, deactivate coupon
+                    if coupon.total_uses >= coupon.max_uses:
+                        coupon.is_active = False
+                    coupon.save()
+                    logger.info(f"Applied coupon {coupon_code} with discount {coupon_discount}")
+                except Coupon.DoesNotExist:
+                    pass  # Already validated above
         except Exception as e:
             logger.error("Payment initiation core error: %s", e, exc_info=True)
             return Response(
@@ -951,6 +1055,14 @@ class PaymentCallbackAPIView(APIView):
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
             
+            # Handle mixed payment credit deduction ONLY if credit was actually used
+            if queue_item and queue_item.used_credit > 0:
+                logger.info(f"CALLBACK DEBUG - Processing mixed payment with credit: {queue_item.used_credit}")
+                # Credit deduction is already handled in create_balance_transaction
+                # No additional deduction needed here
+            else:
+                logger.info(f"CALLBACK DEBUG - Pure M-Pesa payment - no credit deduction needed")
+            
             # Process queue item if exists
             if queue_item:
                 success = TransactionQueueHelper.process_successful_queue(queue_item, callback_data)
@@ -983,6 +1095,7 @@ class PaymentCallbackAPIView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
+
     def handle_failed_payment(self, checkout_id, result_code, result_desc):
         """Handle failed payment callback"""
         try:
@@ -1058,6 +1171,20 @@ class PaymentCallbackAPIView(APIView):
                 )
                 
                 if dispatch_voucher:
+                    # 🎁 AWARD REWARD POINTS FOR M-PESA PURCHASE
+                    try:
+                        user_client = queue_item.user if queue_item else payment_transaction.user
+                        if user_client:
+                            points_awarded = RewardsService.award_purchase_points(
+                                user=user_client,
+                                amount_spent=payment_transaction.amount,
+                                voucher=dispatch_voucher
+                            )
+                            logger.info(f"Awarded {points_awarded} reward points to {user_client.account}")
+                    except Exception as e:
+                        logger.error(f"Failed to award reward points: {e}")
+                        # Don't fail the purchase if rewards fail
+                    
                     logger.info(f"Voucher activated: {voucher_code}")
                     return dispatch_voucher
                 else:

@@ -50,6 +50,7 @@ from users.models import ClientH
 from finance.models import TransactionQueue
 from packages.generate import activate_voucher
 from finance.authentications import RouterManager, RouterConfig
+from core.services.rewards_service import RewardsService
 from locations.models import Location
 
 # Import V3 payment gateway helpers
@@ -157,6 +158,7 @@ class BalancePurchaseRequestSerializer(serializers.Serializer):
     hotspot_ip = serializers.IPAddressField(required=False, allow_null=True)
     idempotency_key = serializers.CharField(max_length=100, required=False, allow_null=True)
     auto_login = serializers.BooleanField(default=True, required=False)
+    coupon_code = serializers.CharField(max_length=50, required=False, allow_null=True)
     
     def validate_package_id(self, value):
         """Ensure package exists and is available"""
@@ -488,11 +490,14 @@ class BalanceVoucherManager:
     
     @staticmethod
     def create_dispatch_voucher(user_context: Dict, package: PackageType, 
-                               voucher_code: str, transaction_record) -> DispatchVoucher:
-        """Create dispatch voucher record using V3 models"""
+                               voucher_code: str, transaction_record, final_price: Decimal = None) -> DispatchVoucher:
+        """Create dispatch voucher record using V3 models with conditional balance deduction"""
         user = user_context['user']
         client = user_context['client']
         location = user_context['location']
+        
+        # Use final_price if provided (with coupon discount), otherwise use transaction price
+        deduction_amount = final_price if final_price is not None else Decimal(transaction_record.price)
         
         dispatch_voucher = DispatchVoucher.objects.create(
             voucher_code=voucher_code,
@@ -500,7 +505,7 @@ class BalanceVoucherManager:
             user=user,
             location=location,
             home_location=location,
-            price_paid=transaction_record.price,
+            price_paid=deduction_amount,
             activated_at=timezone.now(),
             expires_at=timezone.now() + package.duration,
             status='active',
@@ -510,16 +515,34 @@ class BalanceVoucherManager:
             is_roaming=False,
         )
         
-        # Update client financials atomically
-        with transaction.atomic():
-            client.balance -= Decimal(transaction_record.price)
-            client.total_spent += Decimal(transaction_record.price)
+        # 🔴 CRITICAL FIX: Only deduct balance for actual balance purchases
+        # Check if this is a balance purchase (method='balance') vs M-Pesa payment (method='mpesa')
+        is_balance_purchase = getattr(transaction_record, 'method', None) == 'balance'
+        
+        if is_balance_purchase:
+            logger.info(f"DEBUG: Balance purchase - deducting {deduction_amount} from {client.account}")
+            
+            # Get fresh client and deduct balance
+            client.refresh_from_db()
+            old_balance = client.balance
+            client.balance -= deduction_amount
+            client.total_spent += deduction_amount
             client.active_voucher = voucher_code
             client.voucher_expiry = dispatch_voucher.expires_at
             client.save()
             
-            # Increment package sales
-            package.increment_sales()
+            logger.info(f"BALANCE DEDUCTION: {old_balance} -> {client.balance} (deducted {deduction_amount}) for {client.account}")
+        else:
+            logger.info(f"DEBUG: M-Pesa payment - NO balance deduction for {client.account}")
+            
+            # Update client voucher info without balance deduction
+            client.refresh_from_db()
+            client.active_voucher = voucher_code
+            client.voucher_expiry = dispatch_voucher.expires_at
+            client.save()
+        
+        # Increment package sales
+        package.increment_sales()
         
         logger.info(f"Created dispatch voucher {voucher_code} for {client.account}")
         return dispatch_voucher
@@ -592,10 +615,43 @@ class BalancePurchaseProcessor:
         return True, None
     
     @staticmethod
+    def check_balance_sufficiency_with_price(client: ClientH, price: Decimal) -> tuple:
+        """Check if client has sufficient balance for specific price"""
+        if client.balance < price:
+            shortage = price - client.balance
+            BalanceAuditLogger.log_insufficient_balance(
+                client.user,
+                required=price,
+                available=client.balance
+            )
+            return False, {
+                'status': 'insufficient_balance',
+                'required': float(price),
+                'available': float(client.balance),
+                'shortage': float(shortage)
+            }
+        
+        return True, None
+    
+    @staticmethod
     def create_transaction_record(user_context: Dict, package: PackageType, 
-                                 checkout_request_id: str) -> TransactionQueue:
+                                 checkout_request_id: str, final_price: Decimal = None,
+                                 applied_coupon = None) -> TransactionQueue:
         """Create transaction queue record using V3 TransactionQueue"""
         client = user_context['client']
+        price = final_price if final_price is not None else package.price
+        
+        metadata = {
+            'package_id': package.id,
+            'account_tier': user_context['account_tier'],
+            'location_id': user_context['current_location_id'],
+            'purchase_type': 'balance_only'
+        }
+        
+        if applied_coupon:
+            metadata['coupon_code'] = applied_coupon.code
+            metadata['original_price'] = float(package.price)
+            metadata['discount_amount'] = float(package.price - price)
         
         return TransactionQueue.objects.create(
             queue_type='balance_purchase',
@@ -605,28 +661,45 @@ class BalancePurchaseProcessor:
             checkout_request_id=checkout_request_id,
             package_code=package.code,
             package=package.name,
-            price=package.price,
+            price=price,
             status='pending',
             recipient=client.account,
-            used_credit=package.price,
+            used_credit=price,
             priority='normal',
-            metadata={
-                'package_id': package.id,
-                'account_tier': user_context['account_tier'],
-                'location_id': user_context['current_location_id'],
-                'purchase_type': 'balance_only'
-            }
+            metadata=metadata
         )
     
     @staticmethod
     def process_purchase(user_context: Dict, package: PackageType, 
                         hotspot_ip: Optional[str] = None,
                         auto_login: bool = True,
-                        idempotency_key: Optional[str] = None) -> Dict:
-        """Process complete purchase workflow"""
+                        idempotency_key: Optional[str] = None,
+                        coupon_code: Optional[str] = None) -> Dict:
+        """Process complete purchase workflow with coupon support"""
         start_time = time.time()
         client = user_context['client']
         user = user_context['user']
+        
+        # Calculate final price with coupon discount
+        final_price = package.price
+        discount_amount = Decimal('0')
+        applied_coupon = None
+        
+        if coupon_code:
+            from packages.models import Coupon
+            try:
+                coupon = Coupon.objects.get(code=coupon_code, is_active=True)
+                if coupon.valid_until >= timezone.now() and coupon.total_uses < coupon.max_uses:
+                    if coupon.coupon_type == 'percentage':
+                        discount_amount = package.price * (coupon.discount_value / 100)
+                    else:
+                        discount_amount = min(coupon.discount_value, package.price)
+                    
+                    final_price = max(Decimal('0'), package.price - discount_amount)
+                    applied_coupon = coupon
+                    logger.info(f"Applied coupon {coupon_code}: {discount_amount} discount")
+            except Coupon.DoesNotExist:
+                logger.warning(f"Invalid coupon code used: {coupon_code}")
         
         # 🔴 RESOLVE HOTSPOT IP FROM MULTIPLE SOURCES
         request = user_context.get('request')
@@ -662,8 +735,8 @@ class BalancePurchaseProcessor:
             BalanceMetrics.record_purchase_failure('package_unavailable')
             raise ValueError(error_msg)
         
-        # Check balance
-        has_balance, insufficient_data = BalancePurchaseProcessor.check_balance_sufficiency(client, package)
+        # Check balance with final price
+        has_balance, insufficient_data = BalancePurchaseProcessor.check_balance_sufficiency_with_price(client, final_price)
         if not has_balance:
             BalanceMetrics.record_purchase_failure('insufficient_balance')
             return insufficient_data
@@ -674,11 +747,13 @@ class BalancePurchaseProcessor:
             package.id
         )
         
-        # Create transaction record
+        # Create transaction record with coupon info
         transaction_record = BalancePurchaseProcessor.create_transaction_record(
             user_context,
             package,
-            checkout_request_id
+            checkout_request_id,
+            final_price,
+            applied_coupon
         )
         
         try:
@@ -709,31 +784,75 @@ class BalancePurchaseProcessor:
             
             voucher_code = activation_result["voucher_code"]
             
-            # Create dispatch voucher
+            # Mark as used and track coupon usage
+            if applied_coupon:
+                applied_coupon.total_uses += 1
+                if applied_coupon.total_uses >= applied_coupon.max_uses:
+                    applied_coupon.is_active = False
+                applied_coupon.save()
+                logger.info(f"Coupon {applied_coupon.code} used. Remaining uses: {applied_coupon.max_uses - applied_coupon.total_uses}")
+            
+            # Create dispatch voucher with balance deduction
+            logger.info(f"DEBUG: About to create dispatch voucher for {client.account}")
             dispatch_voucher = BalanceVoucherManager.create_dispatch_voucher(
                 user_context=user_context,
                 package=package,
                 voucher_code=voucher_code,
-                transaction_record=transaction_record
+                transaction_record=transaction_record,
+                final_price=final_price
             )
+            logger.info(f"DEBUG: Dispatch voucher created successfully")
             
-            # Mark transaction as completed
+            # Verify balance was actually deducted by re-fetching client
+            client_after_deduction = ClientH.objects.get(id=client.id)
+            logger.info(f"DEBUG: Client balance after voucher creation: {client_after_deduction.balance}")
+            
+            # 🔴 CRITICAL: Mark transaction as completed IMMEDIATELY after balance deduction
+            # This ensures the transaction is committed before any non-critical operations
             transaction_record.mark_processed()
+            logger.info(f"DEBUG: Transaction marked as processed - balance should be committed")
             
-            # Perform auto-login if requested and IP is available
+            # Force transaction commit by ending the current transaction block
+            transaction.commit()
+            logger.info(f"DEBUG: Transaction explicitly committed")
+            
+            # Verify balance is still deducted after commit
+            client_post_commit = ClientH.objects.get(id=client.id)
+            logger.info(f"DEBUG: Client balance after explicit commit: {client_post_commit.balance}")
+            
+            # 🎁 AWARD REWARD POINTS FOR PURCHASE (non-critical - separate transaction)
+            try:
+                # Use a separate transaction for rewards to prevent rollback of main purchase
+                with transaction.atomic():
+                    points_awarded = RewardsService.award_purchase_points(
+                        user=client,
+                        amount_spent=package.price,
+                        voucher=dispatch_voucher
+                    )
+                    logger.info(f"Awarded {points_awarded} reward points to {client.account}")
+            except Exception as e:
+                logger.error(f"Failed to award reward points to {client.account}: {e}")
+                # Don't let reward failures affect the main purchase
+            
+            # Perform auto-login if requested and IP is available (non-critical - separate operation)
             auto_login_success = False
-            if auto_login and hotspot_ip:
-                auto_login_success = BalanceVoucherManager.perform_auto_login(
-                    account=client.account,
-                    voucher_code=voucher_code,
-                    ip_address=hotspot_ip
-                )
-                if auto_login_success:
-                    logger.info(f"Auto-login performed successfully for {client.account}")
-                else:
-                    logger.warning(f"Auto-login failed for {client.account}")
-            elif auto_login and not hotspot_ip:
-                logger.info(f"Auto-login skipped for {client.account}: No hotspot IP available")
+            try:
+                if auto_login and hotspot_ip:
+                    auto_login_success = BalanceVoucherManager.perform_auto_login(
+                        account=client.account,
+                        voucher_code=voucher_code,
+                        ip_address=hotspot_ip
+                    )
+                    if auto_login_success:
+                        logger.info(f"Auto-login performed successfully for {client.account}")
+                    else:
+                        logger.warning(f"Auto-login failed for {client.account}")
+                elif auto_login and not hotspot_ip:
+                    logger.info(f"Auto-login skipped for {client.account}: No hotspot IP available")
+            except Exception as e:
+                logger.error(f"Auto-login error for {client.account}: {e}")
+                auto_login_success = False
+                # Don't let auto-login failures affect the main purchase
             
             # Audit log success
             BalanceAuditLogger.log_purchase_success(
@@ -789,8 +908,15 @@ class BalancePurchaseProcessor:
                 failure_category="system_error"
             )
             
-            # Refund balance
-            BalancePurchaseProcessor.refund_balance(user_context, package.price)
+            # Refund balance since it was already deducted
+            try:
+                with transaction.atomic():
+                    client = ClientH.objects.select_for_update().get(id=client.id)
+                    client.balance += final_price
+                    client.save()
+                    logger.info(f"Refunded {final_price} to {client.account} due to purchase failure")
+            except Exception as refund_error:
+                logger.error(f"Failed to refund balance to {client.account}: {refund_error}")
             
             # Audit log
             BalanceAuditLogger.log_purchase_failure(
@@ -940,6 +1066,7 @@ class BalancePurchaseAPIView(APIView):
         request_hotspot_ip = validated_data.get('hotspot_ip')  # From request body
         auto_login = validated_data.get('auto_login', True)
         idempotency_key = validated_data.get('idempotency_key')
+        coupon_code = validated_data.get('coupon_code')
         
         # 🔴 RESOLVE HOTSPOT IP FROM MULTIPLE SOURCES
         hotspot_ip = HotspotIPResolver.resolve_hotspot_ip(
@@ -974,7 +1101,8 @@ class BalancePurchaseAPIView(APIView):
                 package=package,
                 hotspot_ip=hotspot_ip,
                 auto_login=auto_login,
-                idempotency_key=idempotency_key
+                idempotency_key=idempotency_key,
+                coupon_code=coupon_code
             )
             
             # Check if insufficient balance
@@ -986,14 +1114,36 @@ class BalancePurchaseAPIView(APIView):
                     'code': 'INSUFFICIENT_BALANCE'
                 }, status=status.HTTP_402_PAYMENT_REQUIRED)
             
-            # Build response
+            # Build response with fresh database query
+            logger.info(f"DEBUG: Building response - final client balance check")
+            
+            # Direct database query to get most accurate balance
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT balance, account FROM users_clienth WHERE id = %s",
+                    [user_context['client'].id]
+                )
+                db_result = cursor.fetchone()
+                if db_result:
+                    actual_balance, account = db_result
+                    logger.info(f"DEBUG: DIRECT DB QUERY - Account: {account}, Balance: {actual_balance}")
+                else:
+                    logger.error(f"DEBUG: DIRECT DB QUERY - No client found with ID {user_context['client'].id}")
+                    actual_balance = 0
+            
+            # Also get via ORM for comparison
+            final_client_check = ClientH.objects.get(id=user_context['client'].id)
+            logger.info(f"DEBUG: ORM QUERY - Balance: {final_client_check.balance}")
+            logger.info(f"DEBUG: BALANCE COMPARISON - DB: {actual_balance}, ORM: {final_client_check.balance}")
+            
             response_data = {
                 'success': True,
                 'timestamp': timezone.now().isoformat(),
                 'user': {
                     'account': user_context['account'],
                     'account_tier': user_context['account_tier'],
-                    'balance': float(user_context['client'].balance)
+                    'balance': float(actual_balance)  # Use direct DB query result
                 },
                 'purchase': result,
                 'metadata': {

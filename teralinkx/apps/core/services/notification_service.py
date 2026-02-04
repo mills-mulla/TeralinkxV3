@@ -9,15 +9,21 @@ def create_and_notify(user, message, type, extra_data=None):
         print("⚠️ Skipping notification: invalid user")
         return None
 
+    # Get the actual User instance if user is ClientH
+    if hasattr(user, 'user'):
+        actual_user = user.user
+    else:
+        actual_user = user
+
     # Save to DB immediately
-    notification = Notification.objects.create(user=user, message=message)
+    notification = Notification.objects.create(user=actual_user, message=message)
 
     # Build payload
     payload = {"message": message, "type": type}
     if extra_data:
         payload.update(extra_data)
 
-    channel = f"user-{user.id}"
+    channel = f"user-{actual_user.id}"
 
     # Queue the Celery task (non-blocking)
     push_notification_task.delay(channel, "new-alert", payload)

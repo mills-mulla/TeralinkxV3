@@ -67,9 +67,11 @@ class ClientHAdmin(admin.ModelAdmin):
         'account_tier', 
         'status', 
         'balance_display',
+        'availability_status_badge',
         'active_devices_count',
         'active_sessions_count',
         'last_login',
+        'last_seen',
         'view_profile'
     )
     
@@ -92,8 +94,10 @@ class ClientHAdmin(admin.ModelAdmin):
         'created_display',
         'modified_display',
         'last_login',
+        'last_seen',
         'last_balance_update',
         'last_location_update',
+        'availability_status_badge',
         'active_devices_count',
         'active_sessions_count',
         'connected_devices_list',
@@ -162,6 +166,8 @@ class ClientHAdmin(admin.ModelAdmin):
                 'created_display',
                 'modified_display',
                 'last_login',
+                'last_seen',
+                'availability_status_badge',
                 'last_balance_update'
             )
         })
@@ -336,6 +342,31 @@ class ClientHAdmin(admin.ModelAdmin):
         credit = obj.available_credit
         return format_html('<span style="color: blue;">KES {:.2f}</span>', float(credit))
     available_credit_display.short_description = "Available Credit"
+    
+    def availability_status_badge(self, obj):
+        status = obj.availability_status
+        colors = {
+            'online': 'green',
+            'recently_active': 'orange', 
+            'away': 'gray',
+            'offline': 'red',
+            'unknown': 'gray'
+        }
+        icons = {
+            'online': '●',
+            'recently_active': '◐',
+            'away': '◯',
+            'offline': '○',
+            'unknown': '?'
+        }
+        color = colors.get(status, 'gray')
+        icon = icons.get(status, '?')
+        return format_html(
+            '<span style="color: {}; background: {}20; padding: 2px 8px; border-radius: 10px;">{} {}</span>',
+            color, color, icon, status.replace('_', ' ').title()
+        )
+    availability_status_badge.short_description = "Availability"
+    availability_status_badge.admin_order_field = 'last_seen'
     
     def view_profile(self, obj):
         url = reverse('admin:users_clienth_change', args=[obj.id])

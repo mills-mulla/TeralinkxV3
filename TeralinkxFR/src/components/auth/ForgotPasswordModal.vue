@@ -331,11 +331,18 @@ const verifyingOTP = ref(false)
 const resettingPassword = ref(false)
 const success = ref(false)
 
-// OTP expiry
+// OTP expiry and rate-limit state
 const otpExpiry = ref(null)
 const canResendOTP = ref(true)
 const resendCooldown = ref(0)
 let resendInterval = null
+let expiryInterval = null
+
+// Client-side attempt tracking for additional protection (note: enforce server-side rate limiting too)
+const sendAttempts = ref(0)
+const maxSendAttempts = 5
+const resendCooldownBase = 60 // base seconds
+const resendCooldownMaxMultiplier = 8 // cap backoff multiplier
 
 // Computed
 const isValidPhone = computed(() => {
@@ -359,6 +366,7 @@ const canResetPassword = computed(() => {
 })
 
 const resendText = computed(() => {
+  if (sendAttempts.value >= maxSendAttempts) return 'Too many attempts'
   if (canResendOTP.value) return 'Resend OTP'
   return `Resend in ${resendCooldown.value}s`
 })
@@ -369,7 +377,7 @@ const validatePhone = () => {
 }
 
 const formatTime = (seconds) => {
-  if (!seconds) return '0:00'
+  if (!seconds || seconds <= 0) return '0:00'
   const mins = Math.floor(seconds / 60)
   const secs = seconds % 60
   return `${mins}:${secs.toString().padStart(2, '0')}`
@@ -415,41 +423,72 @@ const handleOtpPaste = (event) => {
   }
 }
 
+const computeBackoffSeconds = () => {
+  // Exponential backoff based on attempts: base * 2^(attempts-1), capped
+  const multiplier = Math.min(Math.pow(2, Math.max(0, sendAttempts.value - 1)), resendCooldownMaxMultiplier)
+  return Math.round(resendCooldownBase * multiplier)
+}
+
+const clearExpiryInterval = () => {
+  if (expiryInterval) {
+    clearInterval(expiryInterval)
+    expiryInterval = null
+  }
+}
+const clearResendInterval = () => {
+  if (resendInterval) {
+    clearInterval(resendInterval)
+    resendInterval = null
+  }
+}
+
 const sendOTP = async () => {
   if (!isValidPhone.value) return
-  
+
+  if (sendAttempts.value >= maxSendAttempts) {
+    showError('Too many OTP requests. Please try again later or contact support.')
+    return
+  }
+
+  if (!canResendOTP.value) {
+    showInfo(`Please wait ${resendCooldown.value}s before retrying.`)
+    return
+  }
+
   sendingOTP.value = true
-  
+  // Count the attempt immediately to avoid race conditions and brute-force looping
+  sendAttempts.value++
+
   try {
-    // TODO: Call your OTP sending API
+    // TODO: Call your OTP sending API (server must enforce rate limiting)
     // await api.post('/api/password-reset/otp/', {
     //   phone: `254${phone.value}`
     // })
-    
+
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500))
-    
+
     // Set OTP expiry (5 minutes)
     otpExpiry.value = 300
-    
-    // Start OTP expiry timer
-    const expiryInterval = setInterval(() => {
+
+    // Clear any existing expiry timer then start a fresh one
+    clearExpiryInterval()
+    expiryInterval = setInterval(() => {
       if (otpExpiry.value > 0) {
         otpExpiry.value--
       } else {
-        clearInterval(expiryInterval)
+        clearExpiryInterval()
         showError('OTP has expired. Please request a new one.')
         step.value = 1
       }
     }, 1000)
-    
+
     // Move to OTP verification step
     step.value = 2
     showSuccess('OTP sent successfully')
-    
-    // Start resend cooldown
+
+    // Start resend cooldown with exponential backoff
     startResendCooldown()
-    
   } catch (error) {
     showError('Failed to send OTP. Please try again.')
   } finally {
@@ -458,22 +497,45 @@ const sendOTP = async () => {
 }
 
 const startResendCooldown = () => {
+  // If attempts exceeded, block resend entirely
+  if (sendAttempts.value >= maxSendAttempts) {
+    canResendOTP.value = false
+    resendCooldown.value = 0
+    clearResendInterval()
+    return
+  }
+
   canResendOTP.value = false
-  resendCooldown.value = 60 // 60 seconds cooldown
-  
+  // Use exponential backoff based on number of attempts
+  const cooldown = computeBackoffSeconds()
+  resendCooldown.value = cooldown
+
+  clearResendInterval()
   resendInterval = setInterval(() => {
     resendCooldown.value--
-    
+
     if (resendCooldown.value <= 0) {
       canResendOTP.value = true
-      clearInterval(resendInterval)
+      clearResendInterval()
+      // If attempts already exhausted, immediately lock again
+      if (sendAttempts.value >= maxSendAttempts) {
+        canResendOTP.value = false
+      }
     }
   }, 1000)
 }
 
 const resendOTP = async () => {
-  if (!canResendOTP.value) return
-  
+  if (sendAttempts.value >= maxSendAttempts) {
+    showError('Too many OTP requests. Please try again later.')
+    return
+  }
+
+  if (!canResendOTP.value) {
+    showInfo(`Please wait ${resendCooldown.value}s before retrying.`)
+    return
+  }
+
   await sendOTP()
   showInfo('New OTP sent')
 }
@@ -517,7 +579,7 @@ const resetPassword = async () => {
     //   phone: `254${phone.value}`,
     //   password: newPassword.value
     // })
-    
+
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500))
     
@@ -547,7 +609,8 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.body.style.overflow = ''
-  if (resendInterval) clearInterval(resendInterval)
+  clearResendInterval()
+  clearExpiryInterval()
 })
 </script>
 

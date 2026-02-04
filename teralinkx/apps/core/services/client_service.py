@@ -48,10 +48,10 @@ class ClientService:
     # Configuration
     MAX_FAILED_LOGIN_ATTEMPTS = 5
     ACCOUNT_TIER_DEVICE_LIMITS = {
-        'basic': 3,
-        'premium': 5,
-        'business': 10,
-        'enterprise': 50
+        'basic': 100,
+        'premium': 100,
+        'business': 100,
+        'enterprise': 100
     }
     
     # JWT Configuration
@@ -321,13 +321,32 @@ class ClientService:
 
     @staticmethod
     def _validate_phone_number(phone: str) -> bool:
-        """Validate phone number format"""
-        if not phone or len(phone) < 10:
+        """Validate phone number format - accepts +254XXXXXXXXX format"""
+        if not phone:
             return False
         
-        # Remove non-digits
+        # Remove non-digits for validation
         cleaned = ''.join(filter(str.isdigit, phone))
-        return len(cleaned) >= 10
+        
+        # Must be 12 digits (254 + 9 digits) for Kenyan numbers
+        if len(cleaned) != 12:
+            return False
+            
+        # Must start with 254 (Kenya country code)
+        if not cleaned.startswith('254'):
+            return False
+            
+        # Validate Kenyan mobile prefixes (7xx, 1xx, 0xx after 254)
+        mobile_part = cleaned[3:]  # Remove 254
+        if len(mobile_part) != 9:
+            return False
+            
+        # Valid Kenyan mobile prefixes
+        valid_prefixes = ['7', '1', '0']
+        if mobile_part[0] not in valid_prefixes:
+            return False
+            
+        return True
 
     @staticmethod
     def _check_account_limits(client: ClientH) -> bool:
@@ -442,9 +461,9 @@ class ClientService:
             raise BusinessLogicError("User already exists")
 
         user = User.objects.create_user(
-            username=phone,
+            username=phone,  # Store with + format
             password=password,
-            email=email or f"{phone}@teralinkx.net"
+            email=email or f"{phone.replace('+', '')}@teralinkx.net"  # Remove + for email
         )
         
         logger.info(f"Created new user: {phone}")
@@ -578,13 +597,130 @@ class ClientService:
         return client, client_created
 
     @staticmethod
+    def detect_device_type_and_info(device_info: Dict[str, Any]) -> Dict[str, str]:
+        """
+        Enhanced device detection using comprehensive device information.
+        
+        Args:
+            device_info: Dictionary containing device fingerprinting data
+            
+        Returns:
+            Dictionary with detected device type, platform, model, etc.
+        """
+        try:
+            logger.info(f"Device detection input: {device_info}")
+            
+            user_agent = device_info.get('userAgent', '').lower()
+            platform = device_info.get('platform', '').lower()
+            screen_width = device_info.get('screenWidth', 0)
+            screen_height = device_info.get('screenHeight', 0)
+            touch_points = device_info.get('touchPoints', 0)
+            is_touch = device_info.get('isTouch', False)
+            is_mobile = device_info.get('isMobile', False)
+            is_tablet = device_info.get('isTablet', False)
+            
+            logger.info(f"Device detection - UA: {user_agent[:50]}..., Mobile: {is_mobile}, Tablet: {is_tablet}, Touch: {is_touch}")
+            
+            # Device type detection
+            device_type = 'other'
+            device_platform = 'other'
+            device_model = 'Unknown'
+            device_manufacturer = 'Unknown'
+            
+            # Platform detection
+            if 'android' in user_agent:
+                device_platform = 'android'
+                device_manufacturer = 'Android'
+                
+                # Android device type detection
+                if is_tablet or (screen_width >= 768 and not is_mobile):
+                    device_type = 'tablet'
+                else:
+                    device_type = 'phone'
+                    
+            elif any(ios_indicator in user_agent for ios_indicator in ['iphone', 'ipod', 'ipad']):
+                device_platform = 'ios'
+                device_manufacturer = 'Apple'
+                
+                if 'ipad' in user_agent:
+                    device_type = 'tablet'
+                    device_model = 'iPad'
+                elif 'iphone' in user_agent:
+                    device_type = 'phone'
+                    device_model = 'iPhone'
+                elif 'ipod' in user_agent:
+                    device_type = 'phone'
+                    device_model = 'iPod'
+                    
+            elif 'smart-tv' in user_agent or 'smarttv' in user_agent or 'tizen' in user_agent:
+                device_type = 'tv'
+                device_platform = 'tv'
+                device_manufacturer = 'Smart TV'
+                
+            elif 'macintosh' in user_agent or 'mac os' in user_agent:
+                device_platform = 'macos'
+                device_manufacturer = 'Apple'
+                device_type = 'laptop'
+                device_model = 'Mac'
+                
+            elif 'windows' in user_agent:
+                device_platform = 'windows'
+                device_manufacturer = 'PC'
+                
+                # Windows device type detection
+                if is_touch and screen_width < 1200:
+                    device_type = 'tablet'
+                elif 'mobile' in user_agent or is_mobile:
+                    device_type = 'phone'
+                else:
+                    device_type = 'desktop' if screen_width > 1400 else 'laptop'
+                    
+            elif 'linux' in user_agent:
+                device_platform = 'linux'
+                device_type = 'desktop'
+                
+            # Store additional device info
+            additional_info = {
+                'screen_resolution': f"{screen_width}x{screen_height}",
+                'touch_capable': is_touch,
+                'touch_points': touch_points,
+                'pixel_ratio': device_info.get('pixelRatio', 1),
+                'orientation': device_info.get('orientation', 'unknown'),
+                'timezone': device_info.get('timezone', 'unknown'),
+                'language': device_info.get('language', 'unknown'),
+                'connection_type': device_info.get('connectionType', 'unknown')
+            }
+            
+            result = {
+                'device_type': device_type,
+                'device_platform': device_platform,
+                'device_model': device_model,
+                'device_manufacturer': device_manufacturer,
+                'device_identification': additional_info
+            }
+            
+            logger.info(f"Device detection result: {result}")
+            return result
+            
+        except Exception as e:
+            logger.warning(f"Device detection failed: {str(e)}")
+            return {
+                'device_type': 'other',
+                'device_platform': 'other', 
+                'device_model': 'Unknown',
+                'device_manufacturer': 'Unknown',
+                'device_identification': {}
+            }
+
+    @staticmethod
     def _handle_device_with_conflict_resolution(
         mac_address: str,
         client: ClientH,
         ip_address: Optional[str],
         location: Optional[Location],
         conflict_resolution: str = 'transfer',
-        user_agent: Optional[str] = None
+        user_agent: Optional[str] = None,
+        device_info: Optional[Dict] = None
     ) -> Tuple[Optional[UserDevice], bool, bool]:
         """
         Handle device with configurable conflict resolution.
@@ -604,12 +740,25 @@ class ClientService:
                     f"Device limit reached for account tier {client.account_tier}"
                 )
             
+            # Detect device info from user agent if not provided
+            if not device_info and user_agent:
+                device_info = ClientService.detect_device_type_and_info({
+                    'userAgent': user_agent,
+                    'isMobile': 'mobile' in user_agent.lower(),
+                    'isTouch': 'touch' in user_agent.lower()
+                })
+            elif device_info:
+                device_info = ClientService.detect_device_type_and_info(device_info)
+            
             device = UserDevice.objects.create(
                 user=client,
                 mac_address=mac_address,
-                device_name=f"{client.display_name}'s Device",
-                device_type='other',
-                device_platform='other',
+                device_name=f"{client.display_name}'s {device_info.get('device_type', 'Device').title()}" if device_info else f"{client.display_name}'s Device",
+                device_type=device_info.get('device_type', 'other') if device_info else 'other',
+                device_platform=device_info.get('device_platform', 'other') if device_info else 'other',
+                device_model=device_info.get('device_model', 'Unknown') if device_info else 'Unknown',
+                device_manufacturer=device_info.get('device_manufacturer', 'Unknown') if device_info else 'Unknown',
+                device_identification=device_info.get('device_identification', {}) if device_info else {},
                 is_trusted=True,
                 status='active'
             )
@@ -741,19 +890,26 @@ class ClientService:
             for session in terminated_sessions:
                 session.terminate(reason=f"Device transferred to {client.account}")
                 terminated_count += 1
-            
-            # Deactivate any active vouchers on this device for old client
-            active_vouchers = DispatchVoucher.objects.filter(
-                user=old_client,
-                device=existing_device,
-                status='active'
-            ).update(status='transferred')
+
+            logger.info(
+                f"Device transfer cleanup: "
+                f"Terminated {terminated_count} sessions"
+            )
             
             # Transfer device
             previous_owner = existing_device.user.account
             existing_device.user = client
             existing_device.device_name = f"{client.display_name}'s Device"
             existing_device.is_trusted = False  # Reset trust on transfer
+            
+            # Update device detection info if provided
+            if device_info:
+                existing_device.device_type = device_info.get('device_type', existing_device.device_type)
+                existing_device.device_platform = device_info.get('device_platform', existing_device.device_platform)
+                existing_device.device_model = device_info.get('device_model', existing_device.device_model)
+                existing_device.device_manufacturer = device_info.get('device_manufacturer', existing_device.device_manufacturer)
+                existing_device.device_identification = device_info.get('device_identification', existing_device.device_identification)
+            
             existing_device.save()
             
             # Log device transfer (OUT) for old owner
@@ -769,7 +925,6 @@ class ClientService:
                     'new_owner': client.account,
                     'device_mac': mac_address,
                     'terminated_sessions': terminated_count,
-                    'transferred_vouchers': active_vouchers,
                     'previous_owner': previous_owner,
                     'conflict_resolution': 'transferred'
                 }
@@ -969,13 +1124,14 @@ class ClientService:
     @transaction.atomic
     def authenticate_or_register(
         phone: str,
-        password: str,
+        password: Optional[str] = None,
         current_mac: Optional[str] = None,
         current_ip: Optional[str] = None,
         ap_identifier: Optional[str] = None,
         display_name: Optional[str] = None,
         conflict_resolution: str = 'transfer',
         user_agent: Optional[str] = None,
+        device_info: Optional[Dict] = None,
         request_metadata: Optional[Dict] = None
     ) -> Dict[str, Any]:
         """
@@ -995,9 +1151,9 @@ class ClientService:
         try:
             # STEP 1: Validate inputs with detailed logging
             logger.info(f"[Step 1] Validating inputs")
-            if not phone or not password:
-                error_msg = "Phone and password are required"
-                logger.error(f"{error_msg} - Phone: {phone}, Password provided: {bool(password)}")
+            if not phone:
+                error_msg = "Phone is required"
+                logger.error(f"{error_msg}")
                 raise ValidationError(error_msg)
             logger.info(f"[Step 1] Input validation passed")
             
@@ -1032,16 +1188,38 @@ class ClientService:
                 # STEP 3a: Authenticate existing user
                 logger.info(f"[Step 3a] Authenticating existing user: {phone}")
                 try:
-                    user = ClientService._authenticate_user(
-                        phone=phone,
-                        password=password,
-                        ip_address=current_ip,
-                        user_agent=user_agent
-                    )
+                    if password:
+                        # Password provided - authenticate with password
+                        user = ClientService._authenticate_user(
+                            phone=phone,
+                            password=password,
+                            ip_address=current_ip,
+                            user_agent=user_agent
+                        )
+                    else:
+                        # No password - check if account is passwordless
+                        user = User.objects.get(username=phone)
+                        if user.has_usable_password():
+                            raise AuthenticationError("This account requires a password")
+                        # Passwordless account - allow signin
+                    
                     is_new_user = False
                     logger.info(f"[Step 3a] User authenticated successfully: {user.id}")
                 except AuthenticationError as e:
                     logger.warning(f"[Step 3a] Authentication failed: {str(e)}")
+                    
+                    # Handle failed login attempts for existing users
+                    try:
+                        temp_user = User.objects.get(username=phone)
+                        if hasattr(temp_user, 'client_profile'):
+                            ClientService._handle_failed_login(
+                                client=temp_user.client_profile,
+                                ip_address=current_ip or 'unknown',
+                                user_agent=user_agent or ''
+                            )
+                    except Exception as failed_login_error:
+                        logger.warning(f"Failed to track failed login: {str(failed_login_error)}")
+                    
                     raise
                 except Exception as e:
                     logger.error(f"[Step 3a] System error during authentication: {str(e)}")
@@ -1050,12 +1228,23 @@ class ClientService:
                 # STEP 3b: Create new user
                 logger.info(f"[Step 3b] Creating new user: {phone}")
                 try:
-                    user = ClientService._create_user(
-                        phone=phone,
-                        password=password,
-                        email=request_metadata.get('email') if request_metadata else None,
-                        ip_address=current_ip
-                    )
+                    if password:
+                        # Create user with password
+                        user = ClientService._create_user(
+                            phone=phone,
+                            password=password,
+                            email=request_metadata.get('email') if request_metadata else None,
+                            ip_address=current_ip
+                        )
+                    else:
+                        # Create passwordless user
+                        user = User.objects.create_user(
+                            username=phone,
+                            email=f"{phone}@teralinkx.net"
+                        )
+                        user.set_unusable_password()
+                        user.save()
+                        
                     is_new_user = True
                     logger.info(f"[Step 3b] New user created: {user.id}")
                 except ValidationError as e:
@@ -1102,6 +1291,12 @@ class ClientService:
             if current_mac:
                 logger.info(f"[Step 6] Handling device with MAC: {current_mac}")
                 try:
+                    # Process enhanced device info if provided
+                    processed_device_info = {}
+                    if device_info:
+                        processed_device_info = ClientService.detect_device_type_and_info(device_info)
+                        logger.info(f"[Step 6] Enhanced device detection: {processed_device_info.get('device_type')} {processed_device_info.get('device_manufacturer')} {processed_device_info.get('device_model')}")
+                    
                     device, is_device_owner, was_device_transferred = (
                         ClientService._handle_device_with_conflict_resolution(
                             mac_address=current_mac,
@@ -1109,7 +1304,8 @@ class ClientService:
                             ip_address=current_ip,
                             location=location,
                             conflict_resolution=conflict_resolution,
-                            user_agent=user_agent
+                            user_agent=user_agent,
+                            device_info=processed_device_info
                         )
                     )
                     

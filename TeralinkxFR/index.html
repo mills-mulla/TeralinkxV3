@@ -2,9 +2,49 @@
 <html lang="">
   <head>
     <meta charset="UTF-8">
-    <link rel="icon" href="/favicon.ico">
+    <!-- <link rel="icon" href="/favicon.ico"> -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vite App</title>
+    <script>
+      // Test MikroTik variables simulation
+      function initHotspotContext() {
+        // Check if we're in development mode
+        const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        
+        if (isDev) {
+          // Simulate MikroTik variables for testing
+          window.hotspotContext = {
+            mac: '00:11:22:33:44:55', // Test MAC
+            ip: '192.168.88.100',     // Test IP
+          }
+          console.log('🧪 DEV MODE: Simulated hotspot context:', window.hotspotContext)
+        } else {
+          // Production: Use actual MikroTik variables
+          const mikrotikMac = '$(mac)'.replace(/-/g, ':')
+          const mikrotikIp = '$(ip)'
+          
+          // Check if MikroTik processed the variables
+          if (mikrotikMac === '$(mac)' || mikrotikIp === '$(ip)') {
+            // MikroTik didn't process - use fallback
+            window.hotspotContext = {
+              mac: '00:11:22:33:44:55', // Fallback MAC
+              ip: '192.168.88.100',     // Fallback IP
+            }
+            console.log('⚠️ MikroTik variables not processed, using fallback:', window.hotspotContext)
+          } else {
+            // MikroTik processed successfully
+            window.hotspotContext = {
+              mac: mikrotikMac,
+              ip: mikrotikIp,
+            }
+            console.log('🚀 PROD MODE: MikroTik hotspot context:', window.hotspotContext)
+          }
+        }
+      }
+      
+      // Initialize immediately
+      initHotspotContext()
+    </script>
   </head>
   <body>
     <div id="app"></div>

@@ -2,29 +2,60 @@
   <div v-if="announcements.length > 0" class="w-full p-4">
     <ul class="space-y-4 max-h-60 overflow-y-auto pr-2">
       <li
-        v-for="(announcement, index) in announcements"
-        :key="index"
+        v-for="announcement in announcements"
+        :key="announcement.id"
         :class="[
-          'p-3 rounded shadow hover:shadow-md transition border-l-4',
-          getPriorityClass(announcement.priority)
+          'p-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 border-l-4 backdrop-blur-sm',
+          getPriorityClass(announcement.priority),
+          'bg-white/80 dark:bg-gray-800/80'
         ]"
       >
-        <h2 class="font-semibold text-sm">
-          {{ announcement.title }}
-        </h2>
-        <small class="text-gray-500 flex items-center gap-1 mt-1">
-          <i class="fas fa-clock text-2xs"></i>
-          {{ formatDate(announcement.created_at) }}
-        </small>
-        <p class="text-sm text-gray-700 mt-1">
-          {{ announcement.content }}
-        </p>
-
-        <p class="text-2xs text-gray-700 mt-1">
-          From {{ announcement.start_date }} to {{ announcement.end_date }}
-        </p>
-
-
+        <div class="flex items-start justify-between">
+          <div class="flex-1">
+            <div class="flex items-center space-x-2 mb-2">
+              <span class="text-lg">{{ getAnnouncementIcon(announcement.notification_type) }}</span>
+              <h2 class="font-semibold text-sm text-gray-900 dark:text-white">
+                {{ announcement.title }}
+              </h2>
+              <span :class="getScopeBadge(announcement.scope)" class="text-xs px-2 py-1 rounded-full font-medium">
+                {{ announcement.scope.toUpperCase() }}
+              </span>
+            </div>
+            
+            <p class="text-sm text-gray-700 dark:text-gray-300 mb-2">
+              {{ announcement.message }}
+            </p>
+            
+            <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+              <div class="flex items-center space-x-4">
+                <span class="flex items-center gap-1">
+                  <i class="fas fa-clock"></i>
+                  {{ formatDate(announcement.created_at) }}
+                </span>
+                <span v-if="announcement.expires_at" class="flex items-center gap-1 text-orange-600 dark:text-orange-400">
+                  <i class="fas fa-hourglass-half"></i>
+                  Expires {{ formatDate(announcement.expires_at) }}
+                </span>
+              </div>
+              
+              <button 
+                v-if="announcement.action_url" 
+                @click="handleAction(announcement)"
+                class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
+              >
+                {{ announcement.action_text || 'Learn More' }} →
+              </button>
+            </div>
+          </div>
+          
+          <button 
+            @click="dismissAnnouncement(announcement.id)"
+            class="ml-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            title="Dismiss"
+          >
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
       </li>
     </ul>
   </div>
@@ -32,8 +63,9 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import axios from 'axios'
+import { useAuthStore } from '@/stores/auth'
 
+const authStore = useAuthStore()
 const announcements = ref([])
 
 function formatDate(dateStr) {
@@ -44,32 +76,72 @@ function formatDate(dateStr) {
   })
 }
 
-// Map numeric priority to Tailwind alert colors
 function getPriorityClass(priority) {
-  if (priority <= 1) {
-    return 'bg-blue-100 text-blue-800 border-blue-500' // Info
-  } else if (priority <= 2.5) {
-    return 'bg-yellow-100 text-yellow-800 border-yellow-500' // Warning
-  } else {
-    return 'bg-red-100 text-red-800 border-red-500' // Danger
+  const priorityMap = {
+    'low': 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/20',
+    'medium': 'border-yellow-500 bg-yellow-50/50 dark:bg-yellow-900/20', 
+    'high': 'border-orange-500 bg-orange-50/50 dark:bg-orange-900/20',
+    'urgent': 'border-red-500 bg-red-50/50 dark:bg-red-900/20'
+  }
+  return priorityMap[priority] || priorityMap['medium']
+}
+
+function getScopeBadge(scope) {
+  const scopeMap = {
+    'global': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+    'client': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+    'user': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+  }
+  return scopeMap[scope] || scopeMap['global']
+}
+
+function getAnnouncementIcon(type) {
+  const iconMap = {
+    'announcement': '📢',
+    'system': '⚙️',
+    'maintenance': '🔧',
+    'promotional': '🎉',
+    'security': '🔒',
+    'billing': '💳'
+  }
+  return iconMap[type] || '📢'
+}
+
+function handleAction(announcement) {
+  if (announcement.action_url) {
+    if (announcement.action_url.startsWith('http')) {
+      window.open(announcement.action_url, '_blank')
+    } else {
+      window.location.href = announcement.action_url
+    }
   }
 }
 
-async function checkAnnouncements() {
+function dismissAnnouncement(announcementId) {
+  announcements.value = announcements.value.filter(a => a.id !== announcementId)
+  markAsRead(announcementId)
+}
+
+async function markAsRead(notificationId) {
   try {
-    const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/announcements/`, {
-      headers: {
-        Authorization: `Token ${localStorage.getItem('authToken')}`
-      }
+    await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/notifications/${notificationId}/read/`, {
+      method: 'POST',
+      headers: authStore.authHeaders
+    })
+  } catch (error) {
+    console.error('Failed to mark announcement as read:', error)
+  }
+}
+
+async function fetchAnnouncements() {
+  try {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/notifications/announcements/`, {
+      headers: authStore.authHeaders
     })
 
-    if (Array.isArray(response.data)) {
-      const now = new Date()
-      announcements.value = response.data.filter(a => {
-        const start = a.start_date ? new Date(a.start_date) : null
-        const end = a.end_date ? new Date(a.end_date) : null
-        return a.is_active && (!start || start <= now) && (!end || end >= now)
-      })
+    if (response.ok) {
+      const data = await response.json()
+      announcements.value = Array.isArray(data) ? data : []
     }
   } catch (error) {
     console.error('❌ Failed to fetch announcements:', error)
@@ -78,6 +150,6 @@ async function checkAnnouncements() {
 }
 
 onMounted(() => {
-  checkAnnouncements()
+  fetchAnnouncements()
 })
 </script>

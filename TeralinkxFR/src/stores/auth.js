@@ -21,10 +21,36 @@ export const useAuthStore = defineStore('auth', () => {
   })
 
   const currentUser = computed(() => user.value)
-  const authHeaders = computed(() => ({
-    Authorization: `Bearer ${token.value}`,
-    'Content-Type': 'application/json'
-  }))
+  const authHeaders = computed(() => {
+    if (!token.value) {
+      return { 'Content-Type': 'application/json' }
+    }
+    return {
+      Authorization: `Bearer ${token.value}`,
+      'Content-Type': 'application/json'
+    }
+  })
+
+  const isTokenExpiringSoon = computed(() => {
+    if (!token.value) return false
+    try {
+      const expiry = jwtService.getExpiry(token.value)
+      const now = Date.now()
+      const fiveMinutes = 5 * 60 * 1000
+      return (expiry - now) < fiveMinutes
+    } catch {
+      return true
+    }
+  })
+
+  const tokenExpiresAt = computed(() => {
+    if (!token.value) return null
+    try {
+      return new Date(jwtService.getExpiry(token.value))
+    } catch {
+      return null
+    }
+  })
 
   // Passwordless Authentication Actions
   const checkAccountStatus = async (payload) => {
@@ -39,6 +65,8 @@ export const useAuthStore = defineStore('auth', () => {
         exists: response.data.exists,
         requires_password: response.data.requires_password || false,
         requires_otp: response.data.requires_otp || false,
+        failed_attempts: response.data.failed_attempts || 0,
+        account_locked: response.data.account_locked || false,
         message: response.data.message || ''
       }
       
@@ -49,6 +77,8 @@ export const useAuthStore = defineStore('auth', () => {
           exists: false,
           requires_password: false,
           requires_otp: false,
+          failed_attempts: 0,
+          account_locked: false,
           message: 'New account will be created'
         }
       }
@@ -73,7 +103,7 @@ export const useAuthStore = defineStore('auth', () => {
         token.value = response.data.auth.access
         refreshToken.value = response.data.auth.refresh
         
-        // Store user data
+        // Store user data with activity timestamp
         user.value = {
           id: response.data.user.id,
           username: response.data.user.username,
@@ -87,10 +117,11 @@ export const useAuthStore = defineStore('auth', () => {
         // Store session data for OTP if needed
         session.value = response.data.session
         
-        // Persist to storage
+        // Persist to storage with activity tracking
         storage.set('auth_token', token.value)
         storage.set('refresh_token', refreshToken.value)
         storage.set('user', user.value)
+        storage.set('last_activity', Date.now())
         
         // Setup auto-refresh
         setupTokenRefresh()
@@ -108,18 +139,63 @@ export const useAuthStore = defineStore('auth', () => {
     } catch (err) {
       error.value = api.handleError(err)
       
-      // Return structured error response
-      if (err.response?.data?.code === 'AUTH_FAILED') {
+      // Handle specific authentication errors
+      if (err.response?.status === 401) {
+        const errorData = err.response.data
+        
+        // Check for invalid password error
+        if (errorData?.error?.includes('Invalid password') || errorData?.code === 'AUTH_FAILED') {
+          return {
+            success: false,
+            error_type: 'invalid_password',
+            requires_password: true,
+            failed_attempts: errorData?.failed_attempts || null,
+            account_locked: errorData?.account_locked || false,
+            message: errorData?.error || 'Invalid password. Please try again.'
+          }
+        }
+        
+        // Check for account suspended error
+        if (errorData?.error?.includes('suspended') || errorData?.error?.includes('banned')) {
+          return {
+            success: false,
+            error_type: 'account_suspended',
+            message: errorData?.error || 'Account has been suspended. Please contact support.'
+          }
+        }
+        
+        // Generic authentication failure
         return {
           success: false,
-          requires_password: true, // Account requires password
-          message: err.response.data.error || 'Password required'
+          error_type: 'auth_failed',
+          requires_password: errorData?.requires_password || true,
+          message: errorData?.error || 'Authentication failed. Please check your credentials.'
         }
       }
       
+      // Handle device conflict errors
+      if (err.response?.status === 409) {
+        return {
+          success: false,
+          error_type: 'device_conflict',
+          message: err.response.data?.error || 'Device conflict detected'
+        }
+      }
+      
+      // Handle validation errors
+      if (err.response?.status === 400) {
+        return {
+          success: false,
+          error_type: 'validation_error',
+          message: err.response.data?.error || error.value
+        }
+      }
+      
+      // Generic error
       return {
         success: false,
-        message: error.value || 'Authentication failed'
+        error_type: 'system_error',
+        message: error.value || 'Authentication failed. Please try again.'
       }
     } finally {
       loading.value = false
@@ -254,11 +330,18 @@ export const useAuthStore = defineStore('auth', () => {
         device_mac: user.value?.device?.mac_address
       })
       
+      // Update tokens
       token.value = response.data.access
-      refreshToken.value = response.data.refresh
+      if (response.data.refresh) {
+        refreshToken.value = response.data.refresh
+      }
       
+      // Update storage
       storage.set('auth_token', token.value)
       storage.set('refresh_token', refreshToken.value)
+      
+      // Setup next refresh
+      setupTokenRefresh()
       
       return true
     } catch (error) {
@@ -269,13 +352,22 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const setupTokenRefresh = () => {
-    const expiry = jwtService.getExpiry(token.value)
-    const refreshTime = expiry - 5 * 60 * 1000
+    if (!token.value) return
     
-    if (refreshTime > 0) {
-      setTimeout(async () => {
-        await refreshAuth()
-      }, refreshTime - Date.now())
+    try {
+      const expiry = jwtService.getExpiry(token.value)
+      const now = Date.now()
+      const refreshTime = expiry - 5 * 60 * 1000 // 5 minutes before expiry
+      
+      if (refreshTime > now) {
+        setTimeout(async () => {
+          if (token.value && refreshToken.value) {
+            await refreshAuth()
+          }
+        }, refreshTime - now)
+      }
+    } catch (error) {
+      console.warn('Failed to setup token refresh:', error)
     }
   }
 
@@ -295,22 +387,312 @@ export const useAuthStore = defineStore('auth', () => {
     storage.remove('auth_token')
     storage.remove('refresh_token')
     storage.remove('user')
+    storage.remove('last_activity')
   }
 
-  // Initialize from storage
-  const initialize = () => {
+  // Check for existing valid session
+  const checkStoredSession = async () => {
     const storedToken = storage.get('auth_token')
     const storedRefresh = storage.get('refresh_token')
     const storedUser = storage.get('user')
     
+    // Check if we have valid tokens
     if (storedToken && jwtService.isValid(storedToken)) {
       token.value = storedToken
       refreshToken.value = storedRefresh
       user.value = storedUser
+      
       setupTokenRefresh()
+      setupPeriodicRefresh()
+      setupSessionTracking()
+      
+      return true
+    }
+    
+    // Check if we can do seamless re-auth
+    if (storedUser?.phone) {
+      const success = await attemptSeamlessReauth(storedUser)
+      if (success) {
+        setupPeriodicRefresh()
+        setupSessionTracking()
+        return true
+      }
+    }
+    
+    // No valid session found
+    clearAuth()
+    return false
+  }
+
+  // Device Auto-Authentication for seamless token refresh
+  const deviceAutoAuth = async (deviceMac = null, deviceIP = null) => {
+    try {
+      // Generate fallback network data if not provided
+      const generateFallbackMac = () => {
+        const getRandomByte = () => {
+          const array = new Uint8Array(1)
+          crypto.getRandomValues(array)
+          return array[0]
+        }
+        const bytes = Array.from({ length: 6 }, () => getRandomByte())
+        bytes[0] = (bytes[0] & 0xFE) | 0x02
+        return bytes.map(b => b.toString(16).padStart(2, '0')).join(':')
+      }
+      
+      const generateFallbackIP = () => {
+        const ranges = [
+          { base: '10.0', range: 255 },
+          { base: '172.16', range: 15 },
+          { base: '192.168', range: 255 }
+        ]
+        const selectedRange = ranges[Math.floor(Math.random() * ranges.length)]
+        const subnet = Math.floor(Math.random() * selectedRange.range)
+        const host = Math.floor(Math.random() * 254) + 1
+        return `${selectedRange.base}.${subnet}.${host}`
+      }
+      
+      const payload = {
+        current_mac: deviceMac || user.value?.device?.mac_address || generateFallbackMac(),
+        current_ip: deviceIP || generateFallbackIP(),
+        location_id: 1,
+        device_info: {
+          userAgent: navigator.userAgent,
+          platform: navigator.platform,
+          language: navigator.language,
+          seamless_reauth: true,
+          timestamp: new Date().toISOString()
+        }
+      }
+      
+      const response = await api.post('/api/users/auth/device-auto/', payload)
+      
+      if (response.data.success) {
+        // Update tokens
+        token.value = response.data.token
+        
+        // Update user data
+        if (response.data.user_id) {
+          user.value = {
+            ...user.value,
+            id: response.data.user_id,
+            account: response.data.account
+          }
+        }
+        
+        // Persist to storage
+        storage.set('auth_token', token.value)
+        storage.set('user', user.value)
+        storage.set('last_activity', Date.now())
+        
+        return {
+          success: true,
+          token: response.data.token,
+          message: response.data.message
+        }
+      }
+      
+      return {
+        success: false,
+        error: response.data.error || 'Device auto-auth failed'
+      }
+      
+    } catch (error) {
+      console.error('Device auto-auth error:', error)
+      return {
+        success: false,
+        error: error.message || 'Device auto-auth failed'
+      }
+    }
+  }
+
+  // Set authentication data (used by device auto-auth)
+  const setAuthData = (authData) => {
+    if (authData.token) {
+      token.value = authData.token
+      storage.set('auth_token', authData.token)
+    }
+    
+    if (authData.account) {
+      if (!user.value) user.value = {}
+      user.value.account = authData.account
+    }
+    
+    if (authData.user_id) {
+      if (!user.value) user.value = {}
+      user.value.id = authData.user_id
+    }
+    
+    if (user.value) {
+      storage.set('user', user.value)
+    }
+    
+    storage.set('last_activity', Date.now())
+    setupTokenRefresh()
+  }
+  const attemptSeamlessReauth = async (storedUser) => {
+    try {
+      loading.value = true
+      
+      // Generate fallback network data if needed
+      const generateFallbackMac = () => {
+        const getRandomByte = () => {
+          const array = new Uint8Array(1)
+          crypto.getRandomValues(array)
+          return array[0]
+        }
+        const bytes = Array.from({ length: 6 }, () => getRandomByte())
+        bytes[0] = (bytes[0] & 0xFE) | 0x02
+        return bytes.map(b => b.toString(16).padStart(2, '0')).join(':')
+      }
+      
+      const generateFallbackIP = () => {
+        const ranges = [
+          { base: '10.0', range: 255 },
+          { base: '172.16', range: 15 },
+          { base: '192.168', range: 255 }
+        ]
+        const selectedRange = ranges[Math.floor(Math.random() * ranges.length)]
+        const subnet = Math.floor(Math.random() * selectedRange.range)
+        const host = Math.floor(Math.random() * 254) + 1
+        return `${selectedRange.base}.${subnet}.${host}`
+      }
+      
+      // Prepare seamless auth payload
+      const payload = {
+        phone: storedUser.phone,
+        current_mac: storedUser.device?.mac_address || generateFallbackMac(),
+        current_ip: generateFallbackIP(),
+        device_info: {
+          userAgent: navigator.userAgent,
+          platform: navigator.platform,
+          language: navigator.language,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          seamless_reauth: true
+        },
+        timestamp: new Date().toISOString()
+      }
+      
+      // Attempt passwordless authentication
+      const response = await api.post('/api/auth/passwordless/', payload)
+      
+      if (response.data.auth) {
+        // Store new tokens
+        token.value = response.data.auth.access
+        refreshToken.value = response.data.auth.refresh
+        
+        // Update user data
+        user.value = {
+          id: response.data.user.id,
+          username: response.data.user.username,
+          email: response.data.user.email,
+          phone: response.data.user.phone || response.data.client?.phone_number,
+          client: response.data.client,
+          device: response.data.device,
+          session: response.data.session
+        }
+        
+        // Persist to storage with activity tracking
+        storage.set('auth_token', token.value)
+        storage.set('refresh_token', refreshToken.value)
+        storage.set('user', user.value)
+        storage.set('last_activity', Date.now())
+        
+        // Setup auto-refresh
+        setupTokenRefresh()
+        
+        return true
+      }
+      
+      return false
+      
+    } catch (error) {
+      console.warn('Seamless re-auth failed:', error)
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // Setup periodic refresh check
+  const setupPeriodicRefresh = () => {
+    setInterval(() => {
+      if (isTokenExpiringSoon.value && refreshToken.value) {
+        refreshAuth()
+      }
+    }, 2 * 60 * 1000) // 2 minutes
+  }
+
+  // Initialize from storage with seamless re-authentication
+  const initialize = async () => {
+    const storedToken = storage.get('auth_token')
+    const storedRefresh = storage.get('refresh_token')
+    const storedUser = storage.get('user')
+    const lastActivity = storage.get('last_activity')
+    
+    // Check if tokens exist and are structurally valid
+    if (storedToken && storedRefresh && jwtService.isValid(storedToken)) {
+      token.value = storedToken
+      refreshToken.value = storedRefresh
+      user.value = storedUser
+      
+      // Update last activity
+      storage.set('last_activity', Date.now())
+      
+      setupTokenRefresh()
+      setupPeriodicRefresh()
+      setupSessionTracking()
+      
+    } else if (storedUser?.phone) {
+      // Tokens expired but we have user data - attempt seamless re-auth
+      console.log('Tokens expired, attempting seamless re-authentication...')
+      
+      try {
+        const success = await attemptSeamlessReauth(storedUser)
+        if (success) {
+          console.log('Seamless re-authentication successful')
+          setupPeriodicRefresh()
+          setupSessionTracking()
+        } else {
+          console.log('Seamless re-authentication failed, clearing session')
+          clearAuth()
+        }
+      } catch (error) {
+        console.warn('Seamless re-authentication error:', error)
+        clearAuth()
+      }
     } else {
+      // No valid tokens or user data found
       clearAuth()
     }
+  }
+
+  // Session activity tracking to extend session on user activity
+  const setupSessionTracking = () => {
+    let activityTimer = null
+    const ACTIVITY_THRESHOLD = 30 * 60 * 1000 // 30 minutes
+    
+    const resetActivityTimer = () => {
+      if (activityTimer) clearTimeout(activityTimer)
+      
+      // Update last activity timestamp
+      storage.set('last_activity', Date.now())
+      
+      activityTimer = setTimeout(() => {
+        // User inactive for 30 minutes - proactively refresh if needed
+        if (isTokenExpiringSoon.value && refreshToken.value) {
+          refreshAuth()
+        }
+      }, ACTIVITY_THRESHOLD)
+    }
+    
+    // Track user activity
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click']
+    events.forEach(event => {
+      document.addEventListener(event, resetActivityTimer, { passive: true })
+    })
+    
+    // Initial timer
+    resetActivityTimer()
   }
 
   return {
@@ -326,6 +708,8 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     currentUser,
     authHeaders,
+    isTokenExpiringSoon,
+    tokenExpiresAt,
     
     // Passwordless Authentication Actions
     checkAccountStatus,
@@ -333,13 +717,18 @@ export const useAuthStore = defineStore('auth', () => {
     setupPassword,
     verifyOTP,
     authenticate, // For regular auth
+    attemptSeamlessReauth, // For seamless re-auth
     
-    // Existing Actions
+    // Backward compatibility
+    setAuthData,
+    
+    // Existing methods
     logout,
     refreshAuth,
     clearError,
     setError,
     initialize,
-    clearAuth
+    clearAuth,
+    checkStoredSession
   }
 })

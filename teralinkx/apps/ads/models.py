@@ -116,7 +116,7 @@ class Advertisement(TimeStampedModel):
     
     # Scheduling
     start_date = models.DateTimeField(default=timezone.now)
-    end_date = models.DateTimeField()
+    end_date = models.DateTimeField(null=True, blank=True)
     priority = models.IntegerField(default=1, choices=[(1, 'Low'), (2, 'Medium'), (3, 'High')])
     
     # Budget & Pricing
@@ -157,6 +157,9 @@ class Advertisement(TimeStampedModel):
     @property
     def is_live(self):
         """Check if ad is currently active and should be shown"""
+        if not self.start_date or not self.end_date:
+            return False
+            
         now = timezone.now()
         is_within_dates = self.start_date <= now <= self.end_date
         has_budget = self.budget == 0 or self.total_spent < self.budget
@@ -349,14 +352,31 @@ class Advertisement(TimeStampedModel):
         
         return True
 
-    def save(self, *args, **kwargs):
-        """Custom save with validation"""
-        # Validate media assets before saving
+    def clean(self):
+        """Model validation"""
+        from django.core.exceptions import ValidationError
+        
+        # Validate date range
+        if self.start_date and self.end_date and self.start_date >= self.end_date:
+            raise ValidationError('End date must be after start date')
+        
+        # Require end_date for active ads
+        if self.status == 'active' and not self.end_date:
+            raise ValidationError('End date is required for active ads')
+        
+        # Validate budget
+        if self.budget < 0:
+            raise ValidationError('Budget cannot be negative')
+        
+        # Validate media assets for ad type
         if self.status == 'active':
             errors = self.validate_media_assets()
             if errors:
-                raise ValueError(f"Ad validation errors: {', '.join(errors)}")
-        
+                raise ValidationError(errors)
+    
+    def save(self, *args, **kwargs):
+        """Custom save with validation"""
+        self.full_clean()  # Run model validation
         super().save(*args, **kwargs)
 
 

@@ -62,7 +62,6 @@ export function useBuyOffer() {
         throw new Error('Unexpected response status')
       }
     } catch (err) {
-      console.error('Offer purchase error:', err)
       error.value = err.response?.data?.message || err.message || 'Failed to process offer purchase'
       toast.error(error.value)
     } finally {

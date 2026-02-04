@@ -23,7 +23,6 @@ export function useRenewPackage() {
         ping: pingUserId,
       })
 
-      console.log('Renew success:', response.data)
       // show confirmation modal
       selectedVoucher.value = voucher
       showRenewComponent.value = true

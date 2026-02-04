@@ -56,6 +56,8 @@ INSTALLED_APPS = [
     'channels',
     'rest_framework',
     'rest_framework.authtoken',
+    'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'silk',
     'whitenoise.runserver_nostatic',
@@ -83,6 +85,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'core.middleware.last_seen_middleware.LastSeenMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'silk.middleware.SilkyMiddleware',
@@ -213,6 +216,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 ##################### CORS Configuration ######################
 # For development
 CORS_ALLOW_ALL_ORIGINS = True 
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://192.168.88.16:5173',
+] 
 
 #for production
 CORS_ALLOW_CREDENTIALS = True
@@ -323,8 +331,8 @@ PUSHER_SECRET = os.environ.get('PUSHERSCRT', '')
 PUSHER_CLUSTER = os.environ.get('PUSHERCLT', '')
 PUSHER_SSL = False  # Disable SSL for development
 
-# Silk - enable in development
-SILKY_PYTHON_PROFILER = True
+# Silk - disable profiler to avoid conflicts
+SILKY_PYTHON_PROFILER = False
 SILKY_INTERCEPT_FUNC = lambda request: DEBUG
 
 # Channels

@@ -6,11 +6,11 @@ import re
 class AccountCheckSerializer(serializers.Serializer):
     """Serializer for checking account status"""
     phone = serializers.CharField(
-        max_length=15,
+        max_length=16,  # Increased for +254XXXXXXXXX
         validators=[
             RegexValidator(
-                regex=r'^254\d{9}$',
-                message='Phone must be in format 254XXXXXXXXX'
+                regex=r'^(\+?254\d{9}|\d{9,12})$',
+                message='Phone must be a valid Kenyan number'
             )
         ]
     )
@@ -28,8 +28,8 @@ class AccountCheckSerializer(serializers.Serializer):
 
     def validate_phone(self, value):
         """Ensure phone is in correct format"""
-        # Remove any spaces or dashes
-        cleaned = re.sub(r'[\s\-]+', '', value)
+        # Remove any spaces, dashes, or + signs
+        cleaned = re.sub(r'[\s\-\+]+', '', value)
         
         # If starts with 0, replace with 254
         if cleaned.startswith('0'):
@@ -39,17 +39,17 @@ class AccountCheckSerializer(serializers.Serializer):
         if not cleaned.startswith('254') or len(cleaned) != 12:
             raise serializers.ValidationError('Phone must be in format 254XXXXXXXXX')
         
-        return cleaned
+        return '+' + cleaned  # Return with + prefix for consistency
 
 
 class PasswordlessAuthSerializer(serializers.Serializer):
     """Serializer for passwordless authentication"""
     phone = serializers.CharField(
-        max_length=15,
+        max_length=16,  # Increased for +254XXXXXXXXX
         validators=[
             RegexValidator(
-                regex=r'^254\d{9}$',
-                message='Phone must be in format 254XXXXXXXXX'
+                regex=r'^(\+?254\d{9}|\d{9,12})$',
+                message='Phone must be a valid Kenyan number'
             )
         ]
     )
@@ -70,21 +70,22 @@ class PasswordlessAuthSerializer(serializers.Serializer):
             )
         ]
     )
+    device_info = serializers.JSONField(required=False)
 
     def validate(self, data):
         """Custom validation"""
         phone = data.get('phone')
         password = data.get('password', '')
         
-        # Validate phone format
-        cleaned = re.sub(r'[\s\-]+', '', phone)
+        # Validate phone format - handle + prefix
+        cleaned = re.sub(r'[\s\-\+]+', '', phone)
         if cleaned.startswith('0'):
             cleaned = '254' + cleaned[1:]
         
         if not cleaned.startswith('254') or len(cleaned) != 12:
             raise serializers.ValidationError({'phone': 'Phone must be in format 254XXXXXXXXX'})
         
-        data['phone'] = cleaned
+        data['phone'] = '+' + cleaned  # Store with + prefix
         
         # If password is provided but empty string, remove it
         if password == '':
@@ -96,11 +97,11 @@ class PasswordlessAuthSerializer(serializers.Serializer):
 class SetupPasswordSerializer(serializers.Serializer):
     """Serializer for setting up password"""
     phone = serializers.CharField(
-        max_length=15,
+        max_length=16,  # Increased for +254XXXXXXXXX
         validators=[
             RegexValidator(
-                regex=r'^254\d{9}$',
-                message='Phone must be in format 254XXXXXXXXX'
+                regex=r'^(\+?254\d{9}|\d{9,12})$',
+                message='Phone must be a valid Kenyan number'
             )
         ]
     )
@@ -112,24 +113,24 @@ class SetupPasswordSerializer(serializers.Serializer):
 
     def validate_phone(self, value):
         """Ensure phone is in correct format"""
-        cleaned = re.sub(r'[\s\-]+', '', value)
+        cleaned = re.sub(r'[\s\-\+]+', '', value)
         if cleaned.startswith('0'):
             cleaned = '254' + cleaned[1:]
         
         if not cleaned.startswith('254') or len(cleaned) != 12:
             raise serializers.ValidationError('Phone must be in format 254XXXXXXXXX')
         
-        return cleaned
+        return '+' + cleaned
 
 
 class VerifyOTPSerializer(serializers.Serializer):
     """Serializer for OTP verification"""
     phone = serializers.CharField(
-        max_length=15,
+        max_length=16,  # Increased for +254XXXXXXXXX
         validators=[
             RegexValidator(
-                regex=r'^254\d{9}$',
-                message='Phone must be in format 254XXXXXXXXX'
+                regex=r'^(\+?254\d{9}|\d{9,12})$',
+                message='Phone must be a valid Kenyan number'
             )
         ]
     )
@@ -147,11 +148,11 @@ class VerifyOTPSerializer(serializers.Serializer):
 
     def validate_phone(self, value):
         """Ensure phone is in correct format"""
-        cleaned = re.sub(r'[\s\-]+', '', value)
+        cleaned = re.sub(r'[\s\-\+]+', '', value)
         if cleaned.startswith('0'):
             cleaned = '254' + cleaned[1:]
         
         if not cleaned.startswith('254') or len(cleaned) != 12:
             raise serializers.ValidationError('Phone must be in format 254XXXXXXXXX')
         
-        return cleaned
+        return '+' + cleaned

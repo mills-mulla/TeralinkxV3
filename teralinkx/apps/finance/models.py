@@ -5,7 +5,7 @@ from datetime import timedelta
 from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, MaxValueValidator
-from django.db.models import Sum, Count
+from django.db.models import Sum, Count, Avg
 from django.core.exceptions import ValidationError
 from core.models import TimeStampedModel, StatusTrackedModel
 
@@ -676,6 +676,16 @@ class BalanceTransaction(TimeStampedModel):
     def net_effect(self):
         """Get net effect on balance"""
         return self.credit - self.debit
+    
+    @property
+    def is_credit(self):
+        """Check if this is a credit transaction"""
+        return self.credit > 0
+    
+    @property
+    def is_debit(self):
+        """Check if this is a debit transaction"""
+        return self.debit > 0
 
     def save(self, *args, **kwargs):
         """Calculate balance after"""
@@ -1433,10 +1443,13 @@ class RevenueStream(TimeStampedModel):
             status='completed'
         ).aggregate(avg=Avg('amount_base'))['avg'] or 0
         
+        from users.models import ClientH
+        total_customers = ClientH.objects.count()
+        
         avg_purchase_frequency = PaymentTransaction.objects.filter(
             status='completed',
             created_at__gte=timezone.now() - timedelta(days=365)
-        ).count() / max(ClientH.objects.count(), 1)  # Avoid division by zero
+        ).count() / max(total_customers, 1)  # Avoid division by zero
         
         customer_lifespan = 24  # Average months a customer stays
         
@@ -1486,8 +1499,9 @@ class RevenueStream(TimeStampedModel):
         marketing_expenses = Expense.objects.filter(
             category='marketing',
             expense_date__month=timezone.now().month
-        ).aggregate(total=Sum('amount_base'))['total'] or 0
+        ).aggregate(total=Sum('amount'))['total'] or 0
         
+        from users.models import ClientH
         new_customers = ClientH.objects.filter(
             created_at__month=timezone.now().month
         ).count()
@@ -1502,6 +1516,7 @@ class RevenueStream(TimeStampedModel):
         current_month = timezone.now().replace(day=1)
         previous_month = (current_month - timedelta(days=1)).replace(day=1)
         
+        from users.models import ClientH
         current_customers = ClientH.objects.filter(created_at__lt=current_month).count()
         lost_customers = ClientH.objects.filter(
             created_at__lt=previous_month,

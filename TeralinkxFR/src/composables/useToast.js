@@ -1,11 +1,17 @@
 // composables/useToast.js
 import { ref } from 'vue'
 
+// Generate unique IDs to prevent collisions
+const generateId = (() => {
+  let counter = 0
+  return () => `toast_${Date.now()}_${++counter}`
+})()
+
 export const useToast = () => {
   const toasts = ref([])
 
   const showToast = (message, type = 'info', duration = 5000) => {
-    const id = Date.now()
+    const id = generateId()
     const toast = { id, message, type }
     
     toasts.value.push(toast)

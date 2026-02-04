@@ -275,15 +275,36 @@ class DispatchVoucher(TimeStampedModel):
         return f"{self.voucher_code} - {self.user.username} - {self.status}"
 
     def save(self, *args, **kwargs):
-        """Set expires_at based on package duration"""
+        """Set expires_at based on package duration and update status"""
         if not self.expires_at and self.package.duration:
             self.expires_at = self.activated_at + self.package.duration
         
         # Generate unique voucher code if not provided
         if not self.voucher_code:
             self.voucher_code = f"DISP-{uuid.uuid4().hex[:12].upper()}"
+        
+        # Auto-update status based on expiry and data usage
+        self.update_status()
             
         super().save(*args, **kwargs)
+    
+    def update_status(self):
+        """Update voucher status based on current conditions"""
+        now = timezone.now()
+        
+        # Check if expired by time
+        if self.expires_at and now > self.expires_at:
+            self.status = 'expired'
+            return
+        
+        # Check if data exhausted
+        if self.is_data_exhausted:
+            self.status = 'exhausted'
+            return
+        
+        # If not expired or exhausted, should be active
+        if self.status in ['expired', 'exhausted'] and now <= self.expires_at and not self.is_data_exhausted:
+            self.status = 'active'
 
     @property
     def is_active(self):
@@ -291,8 +312,28 @@ class DispatchVoucher(TimeStampedModel):
         now = timezone.now()
         return (self.status == 'active' and 
                 now >= self.activated_at and 
-                now <= self.expires_at and
+                (not self.expires_at or now <= self.expires_at) and
                 not self.is_data_exhausted)
+    
+    @property
+    def computed_status(self):
+        """Get computed status based on current conditions"""
+        now = timezone.now()
+        
+        # Check expiry first
+        if self.expires_at and now > self.expires_at:
+            return 'expired'
+        
+        # Check data exhaustion
+        if self.is_data_exhausted:
+            return 'exhausted'
+        
+        # Check if suspended or cancelled
+        if self.status in ['suspended', 'cancelled']:
+            return self.status
+        
+        # Default to active if none of the above
+        return 'active'
 
     @property
     def is_data_exhausted(self):
@@ -481,7 +522,7 @@ class AvailableVoucher(TimeStampedModel):
 
 
 class Coupon(TimeStampedModel):
-    """Simple coupon/promo code system"""
+    """Simple coupon/promo code system with rewards integration"""
     
     COUPON_TYPES = [
         ('percentage', 'Percentage Discount'),
@@ -552,6 +593,17 @@ class Coupon(TimeStampedModel):
     # Tracking
     total_uses = models.IntegerField(default=0)
     
+    # REWARD SYSTEM FIELDS
+    is_reward = models.BooleanField(default=False, help_text="Generated from rewards system")
+    points_cost = models.IntegerField(null=True, blank=True, help_text="Points required to redeem")
+    reward_tier_required = models.CharField(
+        max_length=20, 
+        choices=[('bronze', 'Bronze'), ('silver', 'Silver'), ('gold', 'Gold'), ('platinum', 'Platinum')],
+        blank=True,
+        help_text="Minimum tier required to redeem"
+    )
+    auto_generated = models.BooleanField(default=False, help_text="Auto-generated reward coupon")
+    
     class Meta:
         db_table = 'coupons'
         app_label = 'packages'
@@ -559,6 +611,7 @@ class Coupon(TimeStampedModel):
             models.Index(fields=['code', 'is_active']),
             models.Index(fields=['valid_until']),
             models.Index(fields=['applicable_to']),
+            models.Index(fields=['is_reward', 'points_cost']),
         ]
         verbose_name = "Coupon"
         verbose_name_plural = "Coupons"
@@ -667,6 +720,42 @@ class CouponUsage(TimeStampedModel):
     def get_user_usage_count(cls, user, coupon):
         """Get how many times user has used this coupon"""
         return cls.objects.filter(user=user, coupon=coupon).count()
+
+
+class PointTransaction(TimeStampedModel):
+    """Track point earning and spending transactions"""
+    
+    TRANSACTION_TYPES = [
+        ('earned_purchase', 'Earned from Purchase'),
+        ('earned_referral', 'Referral Bonus'),
+        ('earned_streak', 'Streak Bonus'),
+        ('earned_achievement', 'Achievement Unlock'),
+        ('redeemed_coupon', 'Redeemed for Coupon'),
+        ('expired', 'Points Expired'),
+    ]
+    
+    user = models.ForeignKey('users.ClientH', on_delete=models.CASCADE, related_name='point_transactions')
+    transaction_type = models.CharField(max_length=20, choices=TRANSACTION_TYPES)
+    points = models.IntegerField()  # Positive for earning, negative for spending
+    description = models.CharField(max_length=255)
+    
+    # Related objects
+    related_voucher = models.ForeignKey(DispatchVoucher, null=True, blank=True, on_delete=models.SET_NULL)
+    related_coupon = models.ForeignKey(Coupon, null=True, blank=True, on_delete=models.SET_NULL)
+    
+    class Meta:
+        db_table = 'point_transactions'
+        app_label = 'packages'
+        indexes = [
+            models.Index(fields=['user', 'created_at']),
+            models.Index(fields=['transaction_type']),
+            models.Index(fields=['user', 'transaction_type']),
+        ]
+        verbose_name = "Point Transaction"
+        verbose_name_plural = "Point Transactions"
+    
+    def __str__(self):
+        return f"{self.user.account} - {self.points} points - {self.transaction_type}"
 
 
 class FeaturedPromotion(TimeStampedModel):

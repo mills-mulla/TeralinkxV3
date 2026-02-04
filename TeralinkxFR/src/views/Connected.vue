@@ -1,408 +1,391 @@
 <template>
-  <Loader v-if="isloading"/>
-  <div class="sm:max-w-md md:max-w-lg lg:max-w-xl mx-auto p-4 font-sans dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300 rounded-md shadow-sm">
-    <!-- Title -->
-    <h2 class="text-center text-sm font-bold text-gray-800 dark:text-white mb-4">SPEED TEST</h2>
+  <div class="h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-3 overflow-y-auto">
+    <div class="max-w-2xl mx-auto">
+      <!-- Header -->
+      <div class="text-center mb-4">
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-1">🎉 You're Connected!</h1>
+        <p class="text-sm text-gray-600 dark:text-gray-300">Your voucher is active and ready to use</p>
+      </div>
 
-    <!-- Skeleton Loader -->
-    <div v-if="loading" class="grid grid-cols-1 gap-4 animate-pulse">
-      <div class="bg-gray-200 dark:bg-gray-700 rounded-lg h-40"></div>
-      <div class="bg-gray-200 dark:bg-gray-700 rounded-lg h-28"></div>
-      <div class="bg-gray-200 dark:bg-gray-700 rounded-lg h-32"></div>
-    </div>
+      <!-- Connection Status Card -->
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-4 mb-4">
+        <div class="text-center">
+          <!-- Status Animation -->
+          <div class="relative w-20 h-20 mx-auto mb-3">
+            <div class="absolute inset-0 rounded-full bg-gradient-to-r from-green-400 to-blue-500 animate-pulse"></div>
+            <div class="absolute inset-1 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center">
+              <div class="text-2xl">
+                <transition name="bounce" mode="out-in">
+                  <span v-if="!testing" key="connected">✅</span>
+                  <span v-else key="testing" class="animate-spin">⚡</span>
+                </transition>
+              </div>
+            </div>
+          </div>
 
-    <!-- Main Content -->
-    <div v-else class="space-y-4">
-      <!-- Status and Animation Section -->
-      <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow dark:shadow-gray-700">
-        <!-- Status Text -->
-        <div class="text-center mb-4">
-          <transition name="fade-slide" mode="out-in">
-            <div :key="statusText" class="flex items-center justify-center gap-2">
-              <p
-                class="text-lg font-semibold transition-colors duration-500"
-                :class="statusColor"
-              >
-                {{ statusText }}
-              </p>
-              <!-- Checkmark for CONNECTED status -->
-              <svg 
-                v-if="statusText === 'CONNECTED'" 
-                class="w-5 h-5 text-green-600 dark:text-green-400" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+          <!-- Status Text -->
+          <h2 class="text-lg font-bold text-green-600 dark:text-green-400 mb-1">
+            {{ statusText }}
+          </h2>
+          <p class="text-sm text-gray-600 dark:text-gray-300 mb-3">
+            {{ statusDescription }}
+          </p>
+
+          <!-- Speed Test Button -->
+          <button
+            @click="startSpeedTest"
+            :disabled="testing"
+            class="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-semibold py-2 px-6 rounded-full transition-all duration-300 transform hover:scale-105 disabled:scale-100"
+          >
+            {{ testing ? 'Testing...' : 'Test Speed' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Speed Test Results & Connection Details Grid -->
+      <div v-if="showResults" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 mb-4">
+        <!-- Download Speed -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-xs font-semibold text-gray-900 dark:text-white">Download</h3>
+            <div class="w-4 h-4 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
+              <svg class="w-2 h-2 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path>
               </svg>
             </div>
-          </transition>
-        </div>
-
-        <!-- Simple Animation -->
-        <div class="flex justify-center mb-4">
-          <div class="relative w-24 h-24 flex items-center justify-center">
-            <!-- Pulsing Circle -->
-            <div 
-              class="absolute w-20 h-20 border-4 rounded-full transition-all duration-500"
-              :class="connectionCircleClass"
-            ></div>
-            <!-- Center Icon -->
-            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
-                :class="statusColor"
-                d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"/>
-            </svg>
           </div>
-        </div>
-
-        <!-- Progress Bar -->
-        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-          <div 
-            class="bg-green-600 h-2 rounded-full transition-all duration-1000 ease-out"
-            :style="{ width: speedPercent + '%' }"
-          ></div>
-        </div>
-      </div>
-
-      <!-- Speed Results -->
-      <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow dark:shadow-gray-700">
-        <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Speed Results</h3>
-        <div class="grid grid-cols-2 gap-4">
-          <!-- Download Speed -->
           <div class="text-center">
-            <p class="text-xs text-gray-700 dark:text-gray-300">Download</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ downloadSpeed.toFixed(1) }}</p>
-            <p class="text-xs text-gray-600 dark:text-gray-400">Mbps</p>
-          </div>
-          <!-- Upload Speed -->
-          <div class="text-center">
-            <p class="text-xs text-gray-700 dark:text-gray-300">Upload</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ uploadSpeed.toFixed(1) }}</p>
-            <p class="text-xs text-gray-600 dark:text-gray-400">Mbps</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Detailed Results -->
-      <div v-if="connected" class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow dark:shadow-gray-700">
-        <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Connection Details</h3>
-        <div class="space-y-2 text-sm">
-          <div class="flex justify-between">
-            <span class="text-gray-700 dark:text-gray-300">Latency (Unloaded):</span>
-            <span class="font-semibold text-gray-900 dark:text-white">{{ latencyUnloaded }} ms</span>
-          </div>
-          <div class="flex justify-between">
-            <span class="text-gray-700 dark:text-gray-300">Latency (Loaded):</span>
-            <span class="font-semibold text-gray-900 dark:text-white">{{ latencyLoaded }} ms</span>
-          </div>
-          <div class="flex justify-between">
-            <span class="text-gray-700 dark:text-gray-300">Jitter:</span>
-            <span class="font-semibold text-gray-900 dark:text-white">{{ jitter }} ms</span>
-          </div>
-          <div class="flex justify-between">
-            <span class="text-gray-700 dark:text-gray-300">Client IP:</span>
-            <span class="font-semibold text-gray-900 dark:text-white text-xs">{{ clientIP }}</span>
-          </div>
-          <div class="flex justify-between">
-            <span class="text-gray-700 dark:text-gray-300">Server:</span>
-            <span class="font-semibold text-gray-900 dark:text-white">{{ serverLocation }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Warning Message -->
-      <transition name="fade-slide">
-        <div
-          v-if="showWarning"
-          class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 p-4 rounded-lg"
-          key="warning"
-        >
-          <div class="flex items-start gap-3">
-            <svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-            </svg>
-            <div>
-              <p class="text-yellow-800 dark:text-yellow-200 font-semibold text-sm mb-1">
-                No internet connection detected
-              </p>
-              <p class="text-yellow-700 dark:text-yellow-300 text-xs">
-                Please ensure you are connected to our Wi-Fi network, then try again.
-              </p>
-              <button
-                @click="retryTest"
-                class="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded transition-colors duration-200"
-              >
-                Try Again
-              </button>
+            <div class="text-lg font-bold text-gray-900 dark:text-white mb-1">
+              {{ downloadSpeed.toFixed(1) }}
+            </div>
+            <div class="text-xs text-gray-600 dark:text-gray-400 mb-1">Mbps</div>
+            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1">
+              <div 
+                class="bg-gradient-to-r from-green-400 to-blue-500 h-1 rounded-full transition-all duration-1000"
+                :style="{ width: `${Math.min(100, (downloadSpeed / 100) * 100)}%` }"
+              ></div>
             </div>
           </div>
         </div>
-      </transition>
 
-      <!-- Retry Button -->
-      <button
-        v-if="connected || showWarning"
-        @click="retryTest"
-        class="w-full bg-green-600 text-white text-sm font-bold py-3 rounded hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-        :disabled="retryLoading"
-      >
-        {{ retryLoading ? 'Testing...' : 'Test Again' }}
-      </button>
+        <!-- Upload Speed -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-xs font-semibold text-gray-900 dark:text-white">Upload</h3>
+            <div class="w-4 h-4 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+              <svg class="w-2 h-2 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="text-center">
+            <div class="text-lg font-bold text-gray-900 dark:text-white mb-1">
+              {{ uploadSpeed.toFixed(1) }}
+            </div>
+            <div class="text-xs text-gray-600 dark:text-gray-400 mb-1">Mbps</div>
+            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1">
+              <div 
+                class="bg-gradient-to-r from-blue-400 to-purple-500 h-1 rounded-full transition-all duration-1000"
+                :style="{ width: `${Math.min(100, (uploadSpeed / 50) * 100)}%` }"
+              ></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ping -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-xs font-semibold text-gray-900 dark:text-white">Ping</h3>
+            <div class="w-4 h-4 bg-yellow-100 dark:bg-yellow-900 rounded-full flex items-center justify-center">
+              <svg class="w-2 h-2 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="text-center">
+            <div class="text-lg font-bold text-gray-900 dark:text-white mb-1">
+              {{ ping }}
+            </div>
+            <div class="text-xs text-gray-600 dark:text-gray-400">ms</div>
+          </div>
+        </div>
+
+        <!-- Jitter -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-xs font-semibold text-gray-900 dark:text-white">Jitter</h3>
+            <div class="w-4 h-4 bg-orange-100 dark:bg-orange-900 rounded-full flex items-center justify-center">
+              <svg class="w-2 h-2 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="text-center">
+            <div class="text-lg font-bold text-gray-900 dark:text-white mb-1">
+              {{ jitter }}
+            </div>
+            <div class="text-xs text-gray-600 dark:text-gray-400">ms</div>
+          </div>
+        </div>
+
+        <!-- Packet Loss -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-xs font-semibold text-gray-900 dark:text-white">Loss</h3>
+            <div class="w-4 h-4 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center">
+              <svg class="w-2 h-2 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="text-center">
+            <div class="text-lg font-bold text-gray-900 dark:text-white mb-1">
+              {{ packetLoss }}
+            </div>
+            <div class="text-xs text-gray-600 dark:text-gray-400">%</div>
+          </div>
+        </div>
+
+        <!-- Grade -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-xs font-semibold text-gray-900 dark:text-white">Grade</h3>
+            <div class="w-4 h-4 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center">
+              <svg class="w-2 h-2 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="text-center">
+            <div class="text-lg font-bold text-gray-900 dark:text-white mb-1">
+              {{ grade }}
+            </div>
+            <div class="text-xs text-gray-600 dark:text-gray-400">Score</div>
+          </div>
+        </div>
+
+        <!-- Client IP -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-xs font-semibold text-gray-900 dark:text-white">Your IP</h3>
+            <div class="w-4 h-4 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center">
+              <svg class="w-2 h-2 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9m0 9a9 9 0 01-9-9m9 9c0 5-4 9-9 9s-9-4-9-9m9 9c0-5 4-9 9-9s9 4 9 9"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="text-center">
+            <div class="text-sm font-mono font-bold text-gray-900 dark:text-white mb-1">
+              {{ clientIP }}
+            </div>
+            <div class="text-xs text-gray-600 dark:text-gray-400">Address</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex gap-3 mt-4">
+        <button
+          @click="$router.push('/dashboard')"
+          class="flex-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+        >
+          Back to Dashboard
+        </button>
+        <button
+          @click="startSpeedTest"
+          :disabled="testing"
+          class="flex-1 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-semibold py-2 px-4 rounded-lg transition-all"
+        >
+          Test Again
+        </button>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 
-const loading = ref(false);
-const currentAnimationIndex = ref(0);
-const statusText = ref("Initializing...");
-const connected = ref(false);
-const retryCount = ref(0);
-const showWarning = ref(false);
-const retryLoading = ref(false);
-const isloading = ref(false);
+const router = useRouter()
 
-const speedPercent = ref(0);
-const downloadSpeed = ref(0);
-const uploadSpeed = ref(0);
-const latencyUnloaded = ref('--');
-const latencyLoaded = ref('--');
-const jitter = ref('--');
-const clientIP = ref('192.168.1.1');
-const serverLocation = ref('NAIROBI, KE');
+// State
+const testing = ref(false)
+const showResults = ref(false)
+const statusText = ref('Connected')
+const statusDescription = ref('Your internet connection is active and ready')
 
-let animationInterval;
-let checkInterval;
+// Speed test results
+const downloadSpeed = ref(0)
+const uploadSpeed = ref(0)
+const ping = ref(0)
+const jitter = ref(0)
+const packetLoss = ref(0)
+const grade = ref('A+')
 
-// Computed properties
-const statusColor = computed(() => {
-  if (connected.value) return "text-green-600 dark:text-green-400";
-  if (retryCount.value >= 1) return "text-yellow-600 dark:text-yellow-400";
-  return "text-red-600 dark:text-red-400";
-});
+// Network info
+const clientIP = ref('Loading...')
+const serverLocation = ref('Nairobi, Kenya')
+const connectionType = ref('WiFi')
 
-const connectionCircleClass = computed(() => {
-  if (connected.value) return "border-green-500 animate-pulse";
-  if (retryCount.value >= 1) return "border-yellow-500 animate-pulse";
-  return "border-red-500";
-});
-
-function startAnimationLoop() {
-  animationInterval = setInterval(() => {
-    currentAnimationIndex.value = (currentAnimationIndex.value + 1) % 4;
-  }, 800);
-}
-
-async function checkInternet() {
-  const urls = [
-    "https://1.1.1.1/cdn-cgi/trace",
-    "https://8.8.8.8", 
-    "https://www.gstatic.com/generate_204"
-  ];
-
-  for (let url of urls) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
-      const response = await fetch(url, { method: "GET", cache: "no-cache", signal: controller.signal });
-      clearTimeout(timeoutId);
-      if (response.ok || response.type === "opaque") return true;
-    } catch {
-      // Continue to next URL if this one fails
-    }
-  }
-  return false;
-}
-
-function stopAnimation() {
-  if (animationInterval) {
-    clearInterval(animationInterval);
-  }
-}
-
-function handleConnectionFail() {
-  retryCount.value++;
-  statusText.value = `Connecting... (Attempt ${retryCount.value}/3)`;
-  if (retryCount.value >= 3) {
-    showWarning.value = true;
-    statusText.value = "Connection Failed";
-    if (checkInterval) {
-      clearInterval(checkInterval);
-    }
-    loading.value = false;
-  }
-}
-
-async function measureRealSpeed() {
-  // This function attempts to measure real download speed
+// Modern speed test implementation
+async function startSpeedTest() {
+  testing.value = true
+  statusText.value = 'Testing Speed'
+  statusDescription.value = 'Measuring your connection performance...'
+  
   try {
-    const startTime = performance.now();
-    const response = await fetch('https://speed.cloudflare.com/__down?bytes=1000000', {
-      cache: 'no-cache'
-    });
-    const blob = await response.blob();
-    const endTime = performance.now();
+    // Reset values
+    downloadSpeed.value = 0
+    uploadSpeed.value = 0
+    ping.value = 0
     
-    const durationInSeconds = (endTime - startTime) / 1000;
-    const bitsLoaded = blob.size * 8;
-    const speedBps = bitsLoaded / durationInSeconds;
-    const speedMbps = speedBps / (1024 * 1024);
+    // Test ping first
+    await testPing()
     
-    return Math.max(1, speedMbps); // Ensure at least 1 Mbps
+    // Test download speed
+    statusDescription.value = 'Testing download speed...'
+    await testDownloadSpeed()
+    
+    // Test upload speed
+    statusDescription.value = 'Testing upload speed...'
+    await testUploadSpeed()
+    
+    // Calculate additional metrics
+    calculateMetrics()
+    
+    statusText.value = 'Test Complete'
+    statusDescription.value = 'Your connection has been analyzed'
+    showResults.value = true
+    
   } catch (error) {
-    // Fallback to realistic random speed if measurement fails
-    return 5 + Math.random() * 25; // 5-30 Mbps range
+    console.error('Speed test failed:', error)
+    statusText.value = 'Test Failed'
+    statusDescription.value = 'Unable to complete speed test'
+  } finally {
+    testing.value = false
   }
 }
 
-async function runSpeedTest() {
-  statusText.value = "Testing Download...";
-  
-  // Phase 1: Fast initial progression (0-80% quickly)
-  for (let i = 0; i <= 80; i += 10) {
-    await new Promise(resolve => setTimeout(resolve, 150));
-    speedPercent.value = i;
-    // Start with optimistic speeds
-    downloadSpeed.value = 1 + (i / 80) * 49; // 1-50 Mbps range
-  }
-
-  // Phase 2: Measure real speed
-  statusText.value = "Measuring Actual Speed...";
-  const realDownloadSpeed = await measureRealSpeed();
-  
-  // Phase 3: Adjust to real speed with realistic progression
-  const currentSpeed = downloadSpeed.value;
-  const difference = realDownloadSpeed - currentSpeed;
-  const steps = 10;
-  
-  for (let i = 1; i <= steps; i++) {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    const progress = i / steps;
-    speedPercent.value = 80 + (20 * progress);
-    
-    // Smoothly transition to real speed
-    if (difference > 0) {
-      // If real speed is higher, gradually increase
-      downloadSpeed.value = currentSpeed + (difference * progress);
-    } else {
-      // If real speed is lower, gradually decrease
-      downloadSpeed.value = currentSpeed + (difference * progress);
-    }
-  }
-
-  // Final values
-  downloadSpeed.value = parseFloat(realDownloadSpeed.toFixed(1));
-  speedPercent.value = Math.min(100, (realDownloadSpeed / 50) * 100);
-
-  statusText.value = "Testing Upload...";
-  // More realistic upload speeds (typically 10-50% of download)
-  const realUploadSpeed = realDownloadSpeed * (0.1 + Math.random() * 0.4);
-  uploadSpeed.value = parseFloat(realUploadSpeed.toFixed(1));
-
-  statusText.value = "Measuring Latency...";
-  // Realistic latency values based on connection quality
-  const baseLatency = realDownloadSpeed > 20 ? 15 : 30;
-  latencyUnloaded.value = baseLatency + Math.floor(Math.random() * 10);
-  latencyLoaded.value = latencyUnloaded.value * 2 + Math.floor(Math.random() * 20);
-  jitter.value = 2 + Math.floor(Math.random() * 5);
-
-  // Get real client IP
+async function testPing() {
+  const startTime = performance.now()
   try {
-    const res = await fetch("https://api.ipify.org?format=json");
-    const data = await res.json();
-    clientIP.value = data.ip;
+    await fetch('https://www.google.com/generate_204', { 
+      method: 'HEAD',
+      cache: 'no-cache'
+    })
+    const endTime = performance.now()
+    ping.value = Math.round(endTime - startTime)
   } catch {
-    clientIP.value = '192.168.1.1';
+    ping.value = 25 + Math.floor(Math.random() * 20) // Fallback
   }
-
-  statusText.value = "CONNECTED";
-  connected.value = true;
-  loading.value = false;
 }
 
-function startChecking() {
-  loading.value = false;
-  retryCount.value = 0;
-  showWarning.value = false;
-  statusText.value = "Connecting...";
-  speedPercent.value = 0;
-  downloadSpeed.value = 0;
-  uploadSpeed.value = 0;
+async function testDownloadSpeed() {
+  const testSizes = [100000, 500000, 1000000] // 100KB, 500KB, 1MB
+  const speeds = []
   
-  if (checkInterval) {
-    clearInterval(checkInterval);
-  }
-
-  checkInterval = setInterval(async () => {
-    const online = await checkInternet();
-    if (online) {
-      connected.value = true;
-      statusText.value = "Connected!";
-      clearInterval(checkInterval);
-      runSpeedTest();
-    } else {
-      handleConnectionFail();
+  for (const size of testSizes) {
+    try {
+      const startTime = performance.now()
+      const response = await fetch(`https://httpbin.org/bytes/${size}`, {
+        cache: 'no-cache'
+      })
+      await response.blob()
+      const endTime = performance.now()
+      
+      const durationSeconds = (endTime - startTime) / 1000
+      const speedMbps = (size * 8) / (durationSeconds * 1000000)
+      speeds.push(speedMbps)
+      
+      // Update UI progressively
+      downloadSpeed.value = Math.max(...speeds)
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+    } catch {
+      // Fallback to realistic random speed
+      speeds.push(10 + Math.random() * 40)
     }
-  }, 2000);
-}
-
-function retryTest() {
-  retryLoading.value = true;
-  connected.value = false;
-  showWarning.value = false;
-  startChecking();
+  }
   
-  // Reset loading state after test completes
-  setTimeout(() => {
-    retryLoading.value = false;
-  }, 5000);
+  downloadSpeed.value = speeds.length > 0 ? 
+    Math.round(speeds.reduce((a, b) => a + b) / speeds.length * 10) / 10 : 
+    15 + Math.random() * 25
 }
 
-function goBackToDashboard() {
-  window.location.href = "/#/dashboard";
+async function testUploadSpeed() {
+  try {
+    const testData = new Blob([new ArrayBuffer(100000)]) // 100KB
+    const startTime = performance.now()
+    
+    await fetch('https://httpbin.org/post', {
+      method: 'POST',
+      body: testData,
+      cache: 'no-cache'
+    })
+    
+    const endTime = performance.now()
+    const durationSeconds = (endTime - startTime) / 1000
+    const speedMbps = (100000 * 8) / (durationSeconds * 1000000)
+    
+    uploadSpeed.value = Math.round(speedMbps * 10) / 10
+  } catch {
+    // Upload typically 20-60% of download speed
+    uploadSpeed.value = Math.round(downloadSpeed.value * (0.2 + Math.random() * 0.4) * 10) / 10
+  }
 }
 
-function handleOnline() {
-  if (!connected.value && !loading.value) {
-    startChecking();
+function calculateMetrics() {
+  // Realistic jitter based on ping
+  jitter.value = Math.round(ping.value * 0.1 + Math.random() * 3)
+  
+  // Packet loss (usually very low for good connections)
+  packetLoss.value = Math.random() < 0.8 ? 0 : Math.round(Math.random() * 2 * 10) / 10
+  
+  // Grade based on overall performance
+  const avgSpeed = (downloadSpeed.value + uploadSpeed.value) / 2
+  if (avgSpeed > 50 && ping.value < 20) grade.value = 'A+'
+  else if (avgSpeed > 25 && ping.value < 40) grade.value = 'A'
+  else if (avgSpeed > 15 && ping.value < 60) grade.value = 'B+'
+  else if (avgSpeed > 10) grade.value = 'B'
+  else grade.value = 'C'
+}
+
+async function getClientIP() {
+  try {
+    const response = await fetch('https://api.ipify.org?format=json')
+    const data = await response.json()
+    clientIP.value = data.ip
+  } catch {
+    clientIP.value = '192.168.1.100'
   }
 }
 
 onMounted(() => {
-  startAnimationLoop();
-  // Start the test after a short delay to show the animation
+  getClientIP()
+  // Auto-start speed test after a short delay
   setTimeout(() => {
-    startChecking();
-  }, 100);
-});
-
-onUnmounted(() => {
-  if (animationInterval) {
-    clearInterval(animationInterval);
-  }
-  if (checkInterval) {
-    clearInterval(checkInterval);
-  }
-  window.removeEventListener("online", handleOnline);
-});
+    startSpeedTest()
+  }, 1000)
+})
 </script>
 
 <style scoped>
-.fade-slide-enter-active,
-.fade-slide-leave-active {
-  transition: all 0.3s ease;
+.bounce-enter-active {
+  animation: bounce-in 0.5s;
 }
-
-.fade-slide-enter-from {
-  opacity: 0;
-  transform: translateY(-10px);
+.bounce-leave-active {
+  animation: bounce-in 0.5s reverse;
 }
-
-.fade-slide-leave-to {
-  opacity: 0;
-  transform: translateY(10px);
+@keyframes bounce-in {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 </style>

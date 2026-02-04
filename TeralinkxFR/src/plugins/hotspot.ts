@@ -29,13 +29,13 @@ const hotspotPlugin = {
       ip: window.hotspotContext?.ip || localStorage.getItem('hs_ip') || '',
       ...(window.hotspotContext || {})
     });
-    // console.log('Hotspot context check if available in hotspot.ts:',window.hotspotContext)
+    console.log('🔌 Hotspot plugin initialized:', { ip: hotspot.ip, mac: hotspot.mac })
 
     // For Options API
     app.config.globalProperties.$hotspot = hotspot;
 
-    // For Composition API
-    provide(HotSpotKey, hotspot);
+    // For Composition API - provide at app level
+    app.provide(HotSpotKey, hotspot);
 
     // Persist data
     if (hotspot.mac) localStorage.setItem('hs_mac', hotspot.mac);

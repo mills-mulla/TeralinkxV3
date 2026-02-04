@@ -4,6 +4,8 @@ from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
 from django.contrib.auth import get_user_model
+from django.core.validators import MinValueValidator
+from django.core.exceptions import ValidationError
 import uuid
 
 from core.models import TimeStampedModel
@@ -77,7 +79,8 @@ class ClientH(TimeStampedModel):
         max_digits=10, 
         decimal_places=2, 
         default=0,
-        help_text="Current account balance"
+        help_text="Current account balance",
+        validators=[MinValueValidator(Decimal('0.00'))]  # Prevent negative balances
     )
     credit_limit = models.DecimalField(
         max_digits=10, 
@@ -150,6 +153,10 @@ class ClientH(TimeStampedModel):
         auto_now=True,
         help_text="Last login time across all devices"
     )
+    last_seen = models.DateTimeField(
+        auto_now=True,
+        help_text="Last activity timestamp for notifications and availability tracking"
+    )
     last_balance_update = models.DateTimeField(
         auto_now=True,
         help_text="When balance was last updated"
@@ -160,6 +167,23 @@ class ClientH(TimeStampedModel):
         null=True,
         help_text="User profile picture"
     )
+    
+    # REWARD SYSTEM FIELDS
+    reward_points = models.IntegerField(default=0, help_text="Current reward points balance")
+    reward_tier = models.CharField(
+        max_length=20,
+        choices=[('bronze', 'Bronze'), ('silver', 'Silver'), ('gold', 'Gold'), ('platinum', 'Platinum')],
+        default='bronze',
+        help_text="Current reward tier"
+    )
+    total_points_earned = models.IntegerField(default=0, help_text="Lifetime points earned")
+    total_points_redeemed = models.IntegerField(default=0, help_text="Lifetime points redeemed")
+
+    def save(self, *args, **kwargs):
+        """Override save to prevent negative balance"""
+        if self.balance < 0:
+            raise ValidationError(f"Balance cannot be negative. Current value: {self.balance}")
+        super().save(*args, **kwargs)
 
     def __str__(self):
         """String representation of the client"""
@@ -167,6 +191,47 @@ class ClientH(TimeStampedModel):
 
     
 
+    @property
+    def is_online(self):
+        """Check if user is currently online (last seen within 5 minutes)"""
+        if not self.last_seen:
+            return False
+        return timezone.now() - self.last_seen < timedelta(minutes=5)
+    
+    @property
+    def is_recently_active(self):
+        """Check if user was active within last 30 minutes"""
+        if not self.last_seen:
+            return False
+        return timezone.now() - self.last_seen < timedelta(minutes=30)
+    
+    @property
+    def balance_status(self):
+        """Get balance status based on fixed ranges"""
+        if self.balance < 10:
+            return 'low'     # Red - 0-9
+        elif self.balance < 30:
+            return 'medium'  # Orange - 10-29
+        else:
+            return 'good'    # Green - 30+
+    
+    @property
+    def availability_status(self):
+        """Get user availability status for notifications"""
+        if not self.last_seen:
+            return 'unknown'
+        
+        time_diff = timezone.now() - self.last_seen
+        
+        if time_diff < timedelta(minutes=5):
+            return 'online'
+        elif time_diff < timedelta(minutes=30):
+            return 'recently_active'
+        elif time_diff < timedelta(hours=24):
+            return 'away'
+        else:
+            return 'offline'
+    
     @property
     def is_eligible_for_credit(self):
         """Check if user is eligible for credit purchases based on tier"""
@@ -359,10 +424,105 @@ class ClientH(TimeStampedModel):
             'newest_session': active_sessions.order_by('-login_time').first(),
             'total_data_used': active_sessions.aggregate(total=Sum('data_used'))['total'] or 0,
         }
+    
+    def award_points(self, points, transaction_type, description, related_voucher=None, related_coupon=None):
+        """Award points to user with tier multipliers"""
+        # Apply tier multipliers
+        multipliers = {'bronze': 1, 'silver': 1.2, 'gold': 1.5, 'platinum': 2}
+        final_points = int(points * multipliers.get(self.reward_tier, 1))
+        
+        self.reward_points += final_points
+        self.total_points_earned += final_points
+        self.save()
+        
+        # Create transaction record
+        from packages.models import PointTransaction
+        PointTransaction.objects.create(
+            user=self,
+            transaction_type=transaction_type,
+            points=final_points,
+            description=description,
+            related_voucher=related_voucher,
+            related_coupon=related_coupon
+        )
+        
+        # Check for tier upgrade
+        self.update_reward_tier()
+        
+        return final_points
+    
+    def redeem_points(self, points, description, related_coupon=None):
+        """Redeem points from user balance"""
+        if self.reward_points < points:
+            return False, "Insufficient points"
+        
+        self.reward_points -= points
+        self.total_points_redeemed += points
+        self.save()
+        
+        # Create transaction record
+        from packages.models import PointTransaction
+        PointTransaction.objects.create(
+            user=self,
+            transaction_type='redeemed_coupon',
+            points=-points,
+            description=description,
+            related_coupon=related_coupon
+        )
+        
+        return True, "Points redeemed successfully"
+    
+    def update_reward_tier(self):
+        """Update user tier based on total points earned"""
+        old_tier = self.reward_tier
+        
+        if self.total_points_earned >= 15000:
+            self.reward_tier = 'platinum'
+        elif self.total_points_earned >= 5000:
+            self.reward_tier = 'gold'
+        elif self.total_points_earned >= 1000:
+            self.reward_tier = 'silver'
+        else:
+            self.reward_tier = 'bronze'
+        
+        if old_tier != self.reward_tier:
+            self.save()
+            # Award tier upgrade bonus
+            tier_bonuses = {'silver': 100, 'gold': 300, 'platinum': 500}
+            if self.reward_tier in tier_bonuses:
+                self.award_points(
+                    tier_bonuses[self.reward_tier],
+                    'earned_achievement',
+                    f'Tier upgrade to {self.reward_tier.title()}'
+                )
+    
+    @property
+    def next_tier_points(self):
+        """Points needed for next tier"""
+        tier_thresholds = {'bronze': 1000, 'silver': 5000, 'gold': 15000, 'platinum': None}
+        next_threshold = tier_thresholds.get(self.reward_tier)
+        if next_threshold:
+            return max(0, next_threshold - self.total_points_earned)
+        return 0
+    
+    @property
+    def tier_progress_percentage(self):
+        """Progress percentage to next tier"""
+        tier_ranges = {
+            'bronze': (0, 1000),
+            'silver': (1000, 5000),
+            'gold': (5000, 15000),
+            'platinum': (15000, 15000)
+        }
+        
+        start, end = tier_ranges.get(self.reward_tier, (0, 1000))
+        if self.reward_tier == 'platinum':
+            return 100
+        
+        progress = ((self.total_points_earned - start) / (end - start)) * 100
+        return min(100, max(0, progress))
         
     class Meta:
-        # Use default app label ('users') so string
-        # relations like 'users.ClientH' resolve correctly.
         indexes = [
             models.Index(fields=['account']),
             models.Index(fields=['status']),
@@ -371,6 +531,12 @@ class ClientH(TimeStampedModel):
             models.Index(fields=['current_location']),
             models.Index(fields=['balance']),
             models.Index(fields=['last_login']),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(balance__gte=0),
+                name='positive_balance_constraint'
+            )
         ]
         verbose_name = "Client"
         verbose_name_plural = "Clients"

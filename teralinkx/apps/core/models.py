@@ -30,14 +30,6 @@ class StatusTrackedModel(models.Model):
 class NetworkDetectionLog(models.Model):
     """Log network detection requests for security auditing"""
     
-    class Meta:
-        db_table = 'network_detection_logs'
-        indexes = [
-            models.Index(fields=['client_ip', 'detected_at']),
-            models.Index(fields=['session_fingerprint']),
-            models.Index(fields=['detected_at']),
-        ]
-    
     client_ip = models.GenericIPAddressField(null=True, blank=True)
     client_mac = models.CharField(max_length=17, null=True, blank=True)
     hotspot_name = models.CharField(max_length=100, null=True, blank=True)
@@ -50,3 +42,12 @@ class NetworkDetectionLog(models.Model):
     
     def __str__(self):
         return f"{self.client_ip} - {self.hotspot_name} - {self.detected_at}"
+    
+    class Meta:
+        app_label = 'core'
+        db_table = 'network_detection_logs'
+        indexes = [
+            models.Index(fields=['client_ip', 'detected_at']),
+            models.Index(fields=['session_fingerprint']),
+            models.Index(fields=['detected_at']),
+        ]

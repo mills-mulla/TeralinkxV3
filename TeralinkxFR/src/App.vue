@@ -1,23 +1,33 @@
 <template>
-  <!-- App wrapper with responsive dark/light background -->
-  <div class="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-white transition-colors duration-300" id="app">
+  <!-- App wrapper with Connected page gradient theme -->
+  <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 text-gray-800 dark:text-white transition-all duration-300 flex flex-col" id="app">
     
     <NotificationHandler />
-    <router-view />
+    <ToastContainer />
+    
+    <!-- Main content area -->
+    <div class="flex-1">
+      <router-view />
+    </div>
+    
+    <!-- Global Footer -->
+    <Footer />
   </div>
 </template>
 
-<script>
+<script setup>
+import { onMounted } from 'vue'
 import NotificationHandler from './components/NotificationHandler.vue'
+import ToastContainer from './components/ToastContainer.vue'
+import Footer from './components/Footer.vue'
+import { useTheme } from './composables/useTheme'
 
+// Initialize theme on app mount
+const { updateTheme } = useTheme()
 
-export default {
-  name: 'App',
-  components: {
-    NotificationHandler,
-    
-  }
-}
+onMounted(() => {
+  updateTheme()
+})
 </script>
 
 <style>

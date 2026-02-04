@@ -1,18 +1,18 @@
-# apps/finance/admin.py
 from django.contrib import admin
 from django.utils import timezone
-from django.db.models import Sum, Count
+from django.db.models import Sum, Count, Avg
 from django.utils.html import format_html
 from django.urls import reverse
 from django.http import HttpResponseRedirect
 from django.contrib import messages
 from django_json_widget.widgets import JSONEditorWidget
 from django.db import models
+from django.db.models.functions import ExtractHour
 import json
 from .models import (
     Currency, ExchangeRate, PaymentGateway, PaymentTransaction,
     BalanceTransaction, TransactionQueue, Investment, Expense,
-    FinancialReport, RevenueStream,Department,BudgetCategory
+    FinancialReport, RevenueStream, Department, BudgetCategory
 )
 
 
@@ -516,12 +516,6 @@ class TransactionQueueAdmin(admin.ModelAdmin):
     generate_failure_report.short_description = "Generate failure report"
 
 
-from django.contrib import admin
-from django.utils.html import format_html
-from django.db.models import Sum, Count
-from django.contrib import messages
-import json
-
 @admin.register(Investment)
 class InvestmentAdmin(admin.ModelAdmin):
     list_display = [
@@ -704,9 +698,9 @@ class ExpenseAdmin(admin.ModelAdmin):
     total_amount_display.short_description = 'Total Amount (incl. tax)'
     
     def monthly_depreciation_display(self, obj):
-        if not obj.is_capex or obj.monthly_depreciation is None:
-            return "N/A (OPEX)"
-        return f"KES {obj.monthly_depreciation:,.2f}/month"
+        if obj.is_capex:
+            return f"KES {obj.monthly_depreciation:,.2f}/month"
+        return "N/A (OPEX)"
     monthly_depreciation_display.short_description = 'Monthly Depreciation'
     
     def approval_status_badge(self, obj):
@@ -735,12 +729,6 @@ class ExpenseAdmin(admin.ModelAdmin):
             return format_html('<span style="color: orange;">✓ Requires Approval</span>')
         return "Auto-approved"
     requires_approval_display.short_description = 'Approval Required'
-    
-    def monthly_depreciation_display(self, obj):
-        if obj.is_capex:
-            return f"KES {obj.monthly_depreciation:,.2f}/month"
-        return "N/A (OPEX)"
-    monthly_depreciation_display.short_description = 'Monthly Depreciation'
     
     def approve_expenses(self, request, queryset):
         for expense in queryset:
@@ -899,7 +887,7 @@ class RevenueStreamAdmin(admin.ModelAdmin):
     readonly_fields = [
         'current_month_revenue_display', 'revenue_growth_display', 
         'target_achievement_display', 'clv_display', 'cac_display',
-        'churn_rate_display'
+        'churn_rate_display', 'kpis_preview'
     ]
     actions = [
         'activate_streams', 'deactivate_streams', 'update_kpis', 
@@ -926,7 +914,7 @@ class RevenueStreamAdmin(admin.ModelAdmin):
         }),
         ('Advanced Metrics', {
             'fields': (
-                'clv_display', 'cac_display', 'churn_rate_display', 'kpis_preview'
+                'clv_display', 'cac_display', 'churn_rate_display'
             ),
             'classes': ('collapse',)
         })

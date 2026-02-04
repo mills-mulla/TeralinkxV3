@@ -459,15 +459,26 @@ const testDNS = async () => {
   testingDNS.value = true
   dnsStatus.value = 'testing'
   
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 5000)
+  
   try {
-    // Test DNS resolution
-    await fetch('https://api.ipify.org?format=json', { mode: 'no-cors' })
+    // Test DNS resolution with timeout
+    await fetch('https://1.1.1.1/dns-query?name=example.com&type=A', { 
+      signal: controller.signal,
+      mode: 'cors'
+    })
     dnsStatus.value = 'success'
     showSuccess('DNS resolution successful')
   } catch (error) {
+    if (error.name === 'AbortError') {
+      showError('DNS test timeout')
+    } else {
+      showError('DNS resolution failed')
+    }
     dnsStatus.value = 'failed'
-    showError('DNS resolution failed')
   } finally {
+    clearTimeout(timeoutId)
     testingDNS.value = false
   }
 }
@@ -476,9 +487,13 @@ const testConnectivity = async () => {
   testingConnectivity.value = true
   connectivityStatus.value = 'testing'
   
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 8000)
+  
   try {
     const start = performance.now()
     const response = await fetch('https://httpbin.org/get', { 
+      signal: controller.signal,
       mode: 'cors',
       cache: 'no-cache'
     })
@@ -492,14 +507,22 @@ const testConnectivity = async () => {
     }
   } catch (error) {
     connectivityStatus.value = 'failed'
-    showError('Internet connectivity test failed')
+    if (error.name === 'AbortError') {
+      showError('Connectivity test timeout')
+    } else {
+      showError('Internet connectivity test failed')
+    }
   } finally {
+    clearTimeout(timeoutId)
     testingConnectivity.value = false
   }
 }
 
 const testLatency = async () => {
   testingLatency.value = true
+  
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 10000)
   
   try {
     const times = []
@@ -508,7 +531,8 @@ const testLatency = async () => {
     for (let i = 0; i < 3; i++) {
       const start = performance.now()
       await fetch('https://httpbin.org/delay/0', { 
-        mode: 'no-cors',
+        signal: controller.signal,
+        mode: 'cors',
         cache: 'no-store'
       })
       const end = performance.now()
@@ -524,15 +548,35 @@ const testLatency = async () => {
     
     showSuccess(`Average latency: ${latency.value}ms`)
   } catch (error) {
-    showError('Latency test failed')
+    if (error.name === 'AbortError') {
+      showError('Latency test timeout')
+    } else {
+      showError('Latency test failed')
+    }
   } finally {
+    clearTimeout(timeoutId)
     testingLatency.value = false
   }
 }
 
 const applyManualOverride = () => {
+  // Validate IP address format
+  const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/
+  // Validate MAC address format
+  const macRegex = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/
+  
+  if (manualIP.value && !ipRegex.test(manualIP.value)) {
+    showError('Invalid IP address format')
+    return
+  }
+  
+  if (manualMAC.value && !macRegex.test(manualMAC.value)) {
+    showError('Invalid MAC address format')
+    return
+  }
+  
   if (manualIP.value || manualMAC.value) {
-    // This would update the network store
+    // This would update the network store with validated data
     showSuccess('Manual override applied')
     showManualOverride.value = false
   }
@@ -545,9 +589,16 @@ const resetManualOverride = () => {
 }
 
 const exportData = () => {
-  const data = {
+  const sanitizedData = {
     timestamp: new Date().toISOString(),
-    network: props.network,
+    network: {
+      source: props.network.source,
+      isConnected: props.network.isConnected,
+      hasHotspotData: props.network.hasHotspotData,
+      connectionTested: props.network.connectionTested,
+      lastTest: props.network.lastTest
+      // Exclude sensitive IP/MAC data
+    },
     diagnostics: {
       dns: dnsStatus.value,
       connectivity: connectivityStatus.value,
@@ -555,12 +606,14 @@ const exportData = () => {
     }
   }
   
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+  const blob = new Blob([JSON.stringify(sanitizedData, null, 2)], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
   a.download = `teralinkx-network-${new Date().toISOString().slice(0, 10)}.json`
+  document.body.appendChild(a)
   a.click()
+  document.body.removeChild(a)
   URL.revokeObjectURL(url)
   
   showSuccess('Network data exported')

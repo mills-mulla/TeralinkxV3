@@ -52,31 +52,20 @@ const IMAGE_BASE_URL = import.meta.env.VITE_API_PROD_ADS_URL?.replace(/\/+$/, ''
 
 async function fetchAds() {
   try {
-    const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/activeads/`, {
-      headers: {
-        Authorization: `Token ${localStorage.getItem('authToken')}`
-      }
-    })
+    const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/ads/activeads/`)
 
-    ads.value = response.data.map(ad => {
-      let imagePath = ''
-      try {
-        const parsed = new URL(ad.image)
-        imagePath = parsed.pathname + parsed.search // keep query if any
-      } catch {
-        imagePath = ad.image.startsWith('/') ? ad.image : '/' + ad.image
-      }
+    ads.value = response.data.ads.map(ad => ({
+      image: ad.image,
+      alt: ad.title,
+      caption: ad.caption,
+      id: ad.id,
+      cta_text: ad.cta_text,
+      cta_url: ad.cta_url
+    }))
 
-      return {
-        image: `${IMAGE_BASE_URL}${imagePath}`,
-        alt: ad.title,
-        caption: ad.caption
-      }
-    })
-
-    // console.log("✅ Ads fetched successfully:", ads.value)
+    console.log("✅ Ads fetched successfully:", ads.value.length, "ads")
   } catch (err) {
-    console.error("❌ Failed to fetch ads:", err)
+    console.error("❌ Failed to fetch ads:", err.response?.data || err.message)
   }
 }
 

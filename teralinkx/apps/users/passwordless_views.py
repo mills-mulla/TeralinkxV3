@@ -170,6 +170,10 @@ class PasswordlessAuthView(APIView):
             password = validated_data.get('password')
             current_mac = validated_data.get('current_mac')
             current_ip = validated_data.get('current_ip') or client_ip
+            device_info = validated_data.get('device_info')
+            
+            logger.info(f"PasswordlessAuth - Device info received: {device_info}")
+            logger.info(f"PasswordlessAuth - User agent: {user_agent[:100]}...")
             
             # Use PasswordlessService for authentication
             result = PasswordlessService.passwordless_authenticate(
@@ -179,6 +183,7 @@ class PasswordlessAuthView(APIView):
                 current_ip=current_ip,
                 ap_identifier=ap_identifier,
                 user_agent=user_agent,
+                device_info=device_info,
                 request_metadata={
                     'user_agent': user_agent,
                     'client_ip': client_ip,

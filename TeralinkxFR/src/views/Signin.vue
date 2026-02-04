@@ -1,39 +1,34 @@
 <template>
-  <div class="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-white to-blue-50 dark:from-gray-900 dark:to-gray-800 px-4">
-    <!-- Developer Tools Toggle -->
-    <div class="absolute top-4 right-4">
-      <button
-        @click="toggleDevTools"
-        class="p-2 bg-gray-800 dark:bg-gray-700 text-white rounded-lg text-xs font-mono hover:bg-gray-900 transition-all shadow-md"
-        title="Toggle Developer Tools (Shift+D)"
-      >
-        <span v-if="!devStore.showDevTools">DEV</span>
-        <span v-else class="text-green-400">● DEV</span>
-      </button>
-    </div>
+  <!-- Auth Loader - shown while checking existing credentials -->
+  <AuthLoader v-if="isCheckingCredentials" />
+  
+  <!-- Main Signin Form - shown after credential check -->
+  <div v-else class="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 px-4">
+
 
     <!-- Main Auth Card -->
-    <div class="w-full max-w-md bg-white dark:bg-gray-900 shadow-2xl rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
+    <div class="w-full max-w-xs bg-white dark:bg-gray-900 shadow-xl rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
       <!-- Logo Header -->
-      <div class=" dark:from-blue-800 dark:to-blue-900 p-2 flex justify-center">
+      <div class="p-3 flex justify-center">
         <div class="text-center">
-          <img src="../assets/teralinkx2.png" alt="Teralinkx Waves" class="h-60 " />
-          <h6 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Sign In</h6>
-          <p class="text-black-100 text-sm mt-2">High-Speed Internet Access</p>
+          <img src="../assets/teralinkx2.png" alt="Teralinkx Waves" class="h-32 mx-auto" />
+          <h6 class="text-lg font-bold text-gray-900 dark:text-gray-100">Sign In</h6>
+          <p class="text-black-100 text-xs mt-1">High-Speed Internet Access</p>
         </div>
       </div>
 
       <!-- Auth Form -->
-      <form @submit.prevent="handleManualAuth" class="p-6 space-y-6">
+      <form @submit.prevent="handleManualAuth" class="p-4 space-y-4">
         <!-- Connection Status -->
         <ConnectionStatus 
-          :ip="networkStore.ip"
-          :mac="networkStore.mac"
-          :source="networkStore.source"
-          :isConnected="networkStore.isConnected"
+          :ip="hotspot.ip"
+          :mac="hotspot.mac"
+          :source="hotspot.ip ? 'hotspot' : 'fallback'"
+          :isConnected="!!(hotspot.ip && hotspot.mac)"
           @simulate="simulateNetworkData"
           @test="testBackend"
         />
+
 
         <!-- Error Display -->
         <AuthError 
@@ -63,18 +58,14 @@
               Phone Number
             </label>
             <div class="relative">
-              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <span class="text-gray-500 dark:text-gray-400">+254</span>
-              </div>
               <input
                 v-model="phone"
                 type="tel"
-                placeholder="712345678"
+                placeholder="0712345678 or 712345678"
                 @input="validatePhone"
                 @blur="handlePhoneBlur"
                 :disabled="authStore.loading || isAutoProcessing"
-                class="w-full pl-14 px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition disabled:opacity-50 disabled:cursor-not-allowed"
-                maxlength="9"
+                class="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition disabled:opacity-50 disabled:cursor-not-allowed text-center"
                 autocomplete="tel"
               />
               <div v-if="isValidPhone && !authStore.loading && !isAutoProcessing" class="absolute inset-y-0 right-3 flex items-center">
@@ -90,7 +81,7 @@
               </div>
             </div>
             <p class="text-xs text-gray-500 dark:text-gray-400">
-              Enter your 9-digit Kenyan number
+              Enter Kenyan number (0712345678, 712345678, or 254712345678)
             </p>
           </div>
 
@@ -190,18 +181,15 @@
           </div>
         </div>
 
-        <!-- Test Authentication (Dev Only) -->
-        <DevAuthTools v-if="devStore.showDevTools" @test="handleTestAuth" />
+
       </form>
 
       <!-- Footer -->
-      <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
+      <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
         <p class="text-center text-xs text-gray-500 dark:text-gray-400">
           © {{ new Date().getFullYear() }} Teralinkx Waves. All rights reserved.
         </p>
-        <p v-if="devStore.showDevTools" class="text-center text-xs text-gray-500 dark:text-gray-400 mt-1">
-          v{{ appVersion }} | Env: {{ envName }}
-        </p>
+
       </div>
     </div>
 
@@ -218,8 +206,7 @@
       @close="showConnectionDetails = false"
     />
 
-    <!-- Developer Console -->
-    <DevConsole v-if="devStore.showConsole" />
+
   </div>
 </template>
 
@@ -228,27 +215,30 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useNetworkStore } from '../stores/network'
-import { useDevStore } from '../stores/dev'
+
 import { useToast } from '../composables/useToast'
+import { useHotspot } from '@/plugins/hotspot'
+import { storage } from '../utils/storage'
 
 // Components
+import AuthLoader from '../components/AuthLoader.vue'
 import ConnectionStatus from '../components/auth/ConnectionStatus.vue'
 import AuthError from '../components/auth/AuthError.vue'
-import DevAuthTools from '../components/dev/DevAuthTools.vue'
 import ForgotPasswordModal from '../components/auth/ForgotPasswordModal.vue'
 import ConnectionDetailsModal from '../components/network/ConnectionDetailsModal.vue'
-import DevConsole from '../components/dev/DevConsole.vue'
 
 // Store instances
 const authStore = useAuthStore()
 const networkStore = useNetworkStore()
-const devStore = useDevStore()
+
+const hotspot = useHotspot()
 
 // Router and composables
 const router = useRouter()
 const { showSuccess, showError, showInfo } = useToast()
 
 // Component state
+const isCheckingCredentials = ref(true)
 const phone = ref('')
 const password = ref('')
 const showPassword = ref(false)
@@ -259,14 +249,13 @@ const accountInfo = ref(null)
 const isAutoProcessing = ref(false)
 const hasCheckedAccount = ref(false)
 
-const appVersion = import.meta.env.VITE_APP_VERSION || '1.0.0'
-const envName = import.meta.env.VITE_ENV_NAME || 'development'
-const isDevelopment = import.meta.env.DEV || envName === 'development'
+
 
 // Computed properties
 const isValidPhone = computed(() => {
-  const cleaned = phone.value.replace(/\D/g, '')
-  return cleaned.length === 9
+  const normalized = normalizeKenyanPhone(phone.value)
+  // Validate +254XXXXXXXXX format
+  return /^\+254[0-9]{9}$/.test(normalized)
 })
 
 const canSubmit = computed(() => {
@@ -276,14 +265,23 @@ const canSubmit = computed(() => {
 })
 
 const showNetworkWarning = computed(() => {
-  return networkStore.source === 'detection_failed' || 
-         networkStore.source === 'fallback' ||
-         (!networkStore.ip && !networkStore.mac)
+  return !hotspot.ip || !hotspot.mac
 })
+
+// Debounced account check to prevent race conditions
+let accountCheckTimeout = null
 
 // Watch for phone changes - only check account, don't auto-submit
 watch(phone, (newPhone) => {
-  if (newPhone.length === 9) {
+  // Clear any pending account check
+  if (accountCheckTimeout) {
+    clearTimeout(accountCheckTimeout)
+    accountCheckTimeout = null
+  }
+  
+  // Check if normalized phone is valid length
+  const normalized = normalizeKenyanPhone(newPhone)
+  if (normalized && /^\+254[0-9]{9}$/.test(normalized)) {
     // Reset states when phone changes
     showPasswordField.value = false
     password.value = ''
@@ -291,10 +289,11 @@ watch(phone, (newPhone) => {
     hasCheckedAccount.value = false
     isAutoProcessing.value = false
     
-    // Auto-check account after brief delay
-    setTimeout(() => {
+    // Debounced account check to prevent race conditions
+    accountCheckTimeout = setTimeout(() => {
       checkAccountStatus()
-    }, 300)
+      accountCheckTimeout = null
+    }, 500)
   } else {
     // Clear account info if phone is incomplete
     accountInfo.value = null
@@ -304,32 +303,133 @@ watch(phone, (newPhone) => {
 })
 
 // Helper functions
+// Device detection helper functions
+const getWebGLInfo = () => {
+  try {
+    const canvas = document.createElement('canvas')
+    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
+    if (!gl) return null
+    
+    return {
+      vendor: gl.getParameter(gl.VENDOR),
+      renderer: gl.getParameter(gl.RENDERER),
+      version: gl.getParameter(gl.VERSION)
+    }
+  } catch (e) {
+    return null
+  }
+}
+
+const getBatteryInfo = async () => {
+  try {
+    if ('getBattery' in navigator) {
+      const battery = await navigator.getBattery()
+      return {
+        charging: battery.charging,
+        level: Math.round(battery.level * 100)
+      }
+    }
+  } catch (e) {
+    // Battery API not available or blocked
+  }
+  return null
+}
+
 const generateFallbackMac = () => {
-  const randomHex = () => Math.floor(Math.random() * 256).toString(16).padStart(2, '0')
-  return `02:00:00:${randomHex()}:${randomHex()}:${randomHex()}`
+  // Generate cryptographically secure random MAC with locally administered bit set
+  const getRandomByte = () => {
+    const array = new Uint8Array(1)
+    crypto.getRandomValues(array)
+    return array[0]
+  }
+  
+  const bytes = Array.from({ length: 6 }, () => getRandomByte())
+  bytes[0] = (bytes[0] & 0xFE) | 0x02 // Set locally administered bit, clear multicast bit
+  
+  return bytes.map(b => b.toString(16).padStart(2, '0')).join(':')
 }
 
 const generateFallbackIP = () => {
-  return `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255) + 1}`
+  // Generate random private IP in multiple ranges to avoid predictability
+  const ranges = [
+    { base: '10.0', range: 255 },
+    { base: '172.16', range: 15 },
+    { base: '192.168', range: 255 }
+  ]
+  
+  const selectedRange = ranges[Math.floor(Math.random() * ranges.length)]
+  const subnet = Math.floor(Math.random() * selectedRange.range)
+  const host = Math.floor(Math.random() * 254) + 1
+  
+  return `${selectedRange.base}.${subnet}.${host}`
 }
 
 // Methods
+const checkExistingCredentials = async () => {
+  try {
+    // Check if user has valid stored credentials
+    const hasValidSession = await authStore.checkStoredSession()
+    
+    if (hasValidSession) {
+      // Seamlessly redirect to dashboard
+      router.push({ name: 'dashboard' })
+      return
+    }
+  } catch (error) {
+    console.warn('Session check failed:', error)
+  } finally {
+    // Always hide loader after check
+    setTimeout(() => {
+      isCheckingCredentials.value = false
+    }, 1000) // Minimum 1 second for better UX
+  }
+}
+
 const validatePhone = () => {
-  phone.value = phone.value.replace(/\D/g, '').slice(0, 9)
+  // Just basic validation during typing, don't format yet
+  const input = phone.value.trim()
+  if (!input) return false
+  
+  const cleaned = input.replace(/\D/g, '')
+  // Allow reasonable lengths while typing
+  return cleaned.length >= 9 && cleaned.length <= 12
+}
+
+const normalizeKenyanPhone = (input) => {
+  if (!input) return ''
+  
+  // Remove all non-digits
+  const cleaned = input.replace(/\D/g, '')
+  
+  // Handle different input patterns
+  if (cleaned.startsWith('0') && cleaned.length === 10) {
+    // 0712345678 → +254712345678
+    return '+254' + cleaned.substring(1)
+  }
+  if (cleaned.startsWith('254') && cleaned.length === 12) {
+    // 254712345678 → +254712345678
+    return '+' + cleaned
+  }
+  if (cleaned.length === 9) {
+    // 712345678 → +254712345678
+    return '+254' + cleaned
+  }
+  
+  // Return original for validation to handle
+  return input
 }
 
 const handlePhoneBlur = () => {
+  // Normalize phone when user finishes entering (on blur)
+  const normalized = normalizeKenyanPhone(phone.value)
+  phone.value = normalized
+  
   if (isValidPhone.value && !hasCheckedAccount.value) {
     checkAccountStatus()
   }
 }
 
-const toggleDevTools = () => {
-  devStore.toggleDevTools()
-  if (devStore.showDevTools) {
-    showSuccess('Developer tools enabled')
-  }
-}
+
 
 const simulateNetworkData = () => {
   networkStore.simulateData()
@@ -351,74 +451,135 @@ const checkAccountStatus = async () => {
   hasCheckedAccount.value = true
   
   try {
-    // Call backend to check account status with fallback data
-    const response = await authStore.checkAccountStatus({
-      phone: `254${phone.value}`,
-      current_ip: networkStore.ip || generateFallbackIP(),
-      current_mac: networkStore.mac || generateFallbackMac()
-    })
+    const payload = {
+      phone: normalizeKenyanPhone(phone.value),
+      current_ip: hotspot.ip || generateFallbackIP(),
+      current_mac: hotspot.mac || generateFallbackMac()
+    }
+    
+
+    
+    // Call backend to check account status with hotspot data
+    const response = await authStore.checkAccountStatus(payload)
     
     // Update UI based on response
     accountInfo.value = {
       exists: response.exists,
       requires_password: response.requires_password,
       requires_otp: response.requires_otp,
+      failed_attempts: response.failed_attempts || 0,
+      account_locked: response.account_locked || false,
       message: response.message
     }
     
-    console.log('Account check result:', response)
-    
-    // If account exists and doesn't require password, auto-signin
-    if (response.exists && !response.requires_password && !response.requires_otp) {
-      // Auto-signin for passwordless accounts
-      console.log('Auto-signin for passwordless account')
-      isAutoProcessing.value = true
-      await performAuth() // This will auto-signin
-    } else if (response.exists && response.requires_password) {
-      // Show password field for accounts with passwords
-      showPasswordField.value = true
-      showInfo('This account requires password authentication')
-    } else if (response.requires_otp) {
-      // Handle OTP accounts
-      showInfo('OTP verification required')
+    // Handle account locked status
+    if (response.account_locked) {
+      showError('Account is temporarily locked due to too many failed login attempts. Please contact support.')
+      return
     }
-    // For new accounts (response.exists === false), user must click Sign In
+    
+    // Only auto-signin for existing accounts WITHOUT password (desired behavior)
+    if (response.exists && !response.requires_password && !response.requires_otp) {
+      // Existing passwordless account - AUTO-SIGNIN
+      showInfo('Welcome back! Signing you in...')
+      isAutoProcessing.value = true
+      
+      // Delay slightly for better UX
+      setTimeout(async () => {
+        await performAuth(true) // Auto-signin
+      }, 500)
+      
+    } else if (response.exists && response.requires_password) {
+      // Existing account WITH password - show password field, WAIT for manual signin
+      showPasswordField.value = true
+      
+      let message = 'Please enter your password to continue'
+      if (response.failed_attempts > 0) {
+        message += ` (${response.failed_attempts} failed attempts)`
+      }
+      showInfo(message)
+      
+    } else if (response.requires_otp) {
+      // OTP required
+      showInfo('OTP verification will be required')
+      
+    } else {
+      // NEW ACCOUNT - show confirmation message with formatted phone
+      const formattedPhone = normalizeKenyanPhone(phone.value)
+      showInfo(`New account will be created for ${formattedPhone}. Click "Sign In" to continue.`)
+    }
     
   } catch (error) {
-    console.log('Account check failed:', error.message)
+    
+    // Handle specific validation errors
+    if (error.response && error.response.status === 400) {
+      const errorData = error.response.data
+      if (errorData.current_ip || errorData.current_mac) {
+        showError('Network connection error. Please try again or contact support if issues persist.')
+        return
+      }
+    }
+    
     accountInfo.value = {
       exists: false,
       requires_password: false,
       requires_otp: false,
-      message: 'New account will be created'
+      failed_attempts: 0,
+      account_locked: false,
+      message: `New account will be created for ${normalizeKenyanPhone(phone.value)}`
     }
+    // Don't auto-signin on error
   }
 }
 
 const performAuth = async (isAuto = false) => {
-  const formattedPhone = `254${phone.value}`
+  const formattedPhone = normalizeKenyanPhone(phone.value)
   
-  // Prepare authentication payload with fallback data
+  // Collect comprehensive device information
+  const deviceInfo = {
+    userAgent: navigator.userAgent,
+    platform: navigator.platform,
+    language: navigator.language,
+    screenWidth: screen.width,
+    screenHeight: screen.height,
+    screenDepth: screen.colorDepth,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    touchPoints: navigator.maxTouchPoints || 0,
+    deviceMemory: navigator.deviceMemory,
+    hardwareConcurrency: navigator.hardwareConcurrency,
+    connectionType: navigator.connection?.effectiveType,
+    connectionDownlink: navigator.connection?.downlink,
+    isTouch: 'ontouchstart' in window,
+    isMobile: window.matchMedia('(pointer: coarse)').matches,
+    isTablet: window.matchMedia('(min-width: 768px) and (pointer: coarse)').matches,
+    pixelRatio: window.devicePixelRatio,
+    orientation: screen.orientation?.type || 'unknown',
+    cookieEnabled: navigator.cookieEnabled,
+    doNotTrack: navigator.doNotTrack,
+    webGL: getWebGLInfo(),
+    battery: await getBatteryInfo()
+  }
+  
+  // Prepare authentication payload with enhanced device data
   const payload = {
     phone: formattedPhone,
-    current_mac: networkStore.mac || generateFallbackMac(),
-    current_ip: networkStore.ip || generateFallbackIP(),
-    device_info: navigator.userAgent,
+    current_mac: hotspot.mac || generateFallbackMac(),
+    current_ip: hotspot.ip || generateFallbackIP(),
+    device_info: deviceInfo,
     timestamp: new Date().toISOString()
   }
+  
+
   
   // Only include password if required
   if (showPasswordField.value) {
     payload.password = password.value
   }
   
-  console.log('🔐 Auth payload:', payload)
-  
   try {
     // Call authentication
     authStore.loading = true
     const result = await authStore.passwordlessAuthenticate(payload)
-    console.log('📊 Auth result:', result)
     
     if (result.success) {
       if (result.requires_otp) {
@@ -436,22 +597,67 @@ const performAuth = async (isAuto = false) => {
           ? '🎉 Welcome to Teralinkx!' 
           : '👋 Welcome back!'
         showSuccess(message)
-        // Ensure we actually navigate to dashboard
-        console.log('Redirecting to dashboard...')
-        router.push({ name: 'dashboard' })
+        
+        // Check for post-login redirect
+        const redirectPath = sessionStorage.getItem('postLoginRedirect')
+        if (redirectPath) {
+          sessionStorage.removeItem('postLoginRedirect')
+          router.push(redirectPath)
+        } else {
+          router.push({ name: 'dashboard' })
+        }
       }
     } else {
       // Handle specific error cases
-      if (result.requires_password && !showPasswordField.value) {
+      if (result.error_type === 'invalid_password') {
+        // Clear password field for retry
+        password.value = ''
+        
+        // Show specific error message with attempt count
+        let errorMessage = 'Invalid password. Please try again.'
+        if (result.failed_attempts && result.failed_attempts > 1) {
+          errorMessage += ` (Attempt ${result.failed_attempts}/5)`
+        }
+        
+        if (result.account_locked) {
+          errorMessage = 'Account temporarily locked due to too many failed attempts. Please contact support.'
+          showPasswordField.value = false // Hide password field if locked
+        }
+        
+        showError(errorMessage)
+        
+        // Focus password field for retry (if not locked)
+        if (!result.account_locked) {
+          setTimeout(() => {
+            const passwordInput = document.querySelector('input[type="password"]')
+            if (passwordInput) passwordInput.focus()
+          }, 100)
+        }
+        
+      } else if (result.error_type === 'account_suspended') {
+        showError(result.message || 'Account has been suspended. Please contact support.')
+        showPasswordField.value = false // Hide password field
+        
+      } else if (result.requires_password && !showPasswordField.value) {
         showPasswordField.value = true
         showInfo('This account requires password authentication')
+        
       } else {
-        showError(result.message || 'Authentication failed')
+        showError(result.message || 'Authentication failed. Please try again.')
       }
     }
     
   } catch (error) {
-    console.error('❌ Auth error:', error)
+    
+    // Handle specific validation errors
+    if (error.response && error.response.status === 400) {
+      const errorData = error.response.data
+      if (errorData.current_ip || errorData.current_mac) {
+        showError('Network connection error. Please try again or contact support if issues persist.')
+        return
+      }
+    }
+    
     showError(error.message || 'Authentication failed. Please try again.')
   } finally {
     authStore.loading = false
@@ -460,8 +666,6 @@ const performAuth = async (isAuto = false) => {
 }
 
 const handleManualAuth = async () => {
-  console.log('✅ Manual sign in clicked - Phone:', phone.value)
-  
   if (!isValidPhone.value) {
     showError('Please enter a valid 9-digit Kenyan phone number')
     return
@@ -472,12 +676,8 @@ const handleManualAuth = async () => {
     return
   }
 
-  // Development mode: bypass network check
-  const shouldCheckNetwork = !isDevelopment
-  
-  if (shouldCheckNetwork && !networkStore.isConnected) {
+  if (!hotspot.ip || !hotspot.mac) {
     showError('Please connect to Teralinkx WiFi first')
-    console.log('Not connected to WiFi')
     return
   }
 
@@ -488,64 +688,160 @@ const forgotPassword = () => {
   showForgotPasswordModal.value = true
 }
 
-const handleTestAuth = (type) => {
-  if (type === 'success') {
-    phone.value = '712345678'
-    showSuccess('Test phone loaded')
+const attemptAutoSignIn = async () => {
+  try {
     
-    // Simulate account check
-    setTimeout(() => {
-      accountInfo.value = {
-        exists: true,
-        requires_password: false,
-        requires_otp: false,
-        message: 'Test account ready for passwordless login'
+    const payload = {
+      current_mac: hotspot.mac,
+      current_ip: hotspot.ip,
+      location_id: 1, // Default location
+      device_info: {
+        userAgent: navigator.userAgent,
+        platform: navigator.platform,
+        language: navigator.language,
+        timestamp: new Date().toISOString()
       }
-      // Auto-signin for test
-      isAutoProcessing.value = true
-      setTimeout(() => {
-        performAuth(true)
-      }, 500)
-    }, 500)
-  } else {
-    authStore.setError('Test authentication error')
+    }
+    
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/auth/device-auto/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    })
+    
+    const data = await response.json()
+    
+    if (response.ok && data.success) {
+      
+      // Store authentication data using the same format as passwordless auth
+      if (data.auth) {
+        // Use the same token storage as passwordless auth
+        authStore.token = data.auth.access
+        authStore.refreshToken = data.auth.refresh
+        authStore.user = {
+          id: data.user.id,
+          username: data.user.username,
+          email: data.user.email,
+          phone: data.client.phone_number,
+          client: data.client,
+          device: data.device,
+          session: data.session
+        }
+        
+        // Persist to storage
+        storage.set('auth_token', data.auth.access)
+        storage.set('refresh_token', data.auth.refresh)
+        storage.set('user', authStore.user)
+        storage.set('last_activity', Date.now())
+      } else {
+        // Fallback for old format (backward compatibility)
+        authStore.setAuthData({
+          token: data.token,
+          account: data.account,
+          user_id: data.user_id
+        })
+      }
+      
+      showSuccess(`✨ ${data.message}`)
+      
+      // Navigate to dashboard
+      const redirectPath = sessionStorage.getItem('postLoginRedirect')
+      if (redirectPath) {
+        sessionStorage.removeItem('postLoginRedirect')
+        router.push(redirectPath)
+      } else {
+        router.push({ name: 'dashboard' })
+      }
+      
+      return true // Auto sign-in successful
+      
+    } else {
+      
+      // Handle network validation errors
+      if (response.status === 400 && (data.error?.includes('IP') || data.error?.includes('MAC'))) {
+        showError('Network connection error. Please try again or contact support if issues persist.')
+        return false
+      }
+      
+      if (data.error_type === 'device_not_trusted' && data.suggested_phone) {
+        // Pre-fill phone number for manual auth
+        phone.value = data.suggested_phone
+        showInfo('Please sign in manually to trust this device for future auto sign-in')
+      }
+      
+      return false // Auto sign-in failed, continue with manual auth
+    }
+    
+  } catch (error) {
+    return false // Auto sign-in failed, continue with manual auth
   }
 }
 
-// Setup dev shortcuts handler
-let devKeyHandler = null
+
+
+
 
 // Lifecycle
-onMounted(() => {
+onMounted(async () => {
+  // First check for existing credentials
+  await checkExistingCredentials()
+  
   // Initialize network detection (non-blocking)
   networkStore.initialize().catch(error => {
-    console.warn('Network initialization warning:', error.message)
     // Continue anyway - fallback data will be used
   })
   
-  // Check existing session
+  // Try auto sign-in first (before manual auth)
+  if (hotspot.mac && hotspot.ip) {
+    const autoAuthResult = await attemptAutoSignIn()
+    if (autoAuthResult) {
+      // Auto sign-in successful, exit early
+      return
+    }
+  }
+  
+  // Check existing session and handle redirect reasons
   if (authStore.isAuthenticated) {
-    console.log('User already authenticated, redirecting to dashboard')
     router.push({ name: 'dashboard' })
-  }
-  
-  // Setup dev shortcuts
-  devKeyHandler = (e) => {
-    if (e.shiftKey && e.key === 'D') {
-      toggleDevTools()
+  } else {
+    // Check for session expiry or logout reasons
+    const urlParams = new URLSearchParams(window.location.search)
+    const reason = urlParams.get('reason')
+    const redirectPath = urlParams.get('redirect')
+    
+    if (reason) {
+      // Show user-friendly message about why they need to sign in again
+      setTimeout(() => {
+        if (reason.includes('expired')) {
+          showInfo('Your session has expired. Please sign in again to continue.')
+        } else if (reason.includes('authentication')) {
+          showError('Authentication error occurred. Please sign in again.')
+        } else {
+          showInfo(`${reason}. Please sign in to continue.`)
+        }
+        
+        // Store redirect path for after successful login
+        if (redirectPath && redirectPath !== '/') {
+          sessionStorage.setItem('postLoginRedirect', redirectPath)
+        }
+      }, 500)
+      
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname)
     }
-    if (e.shiftKey && e.key === 'C' && devStore.showDevTools) {
-      showConnectionDetails.value = !showConnectionDetails.value
-    }
   }
-  
-  window.addEventListener('keydown', devKeyHandler)
+
 })
 
 onUnmounted(() => {
-  if (devKeyHandler) {
-    window.removeEventListener('keydown', devKeyHandler)
+  // Clean up timeout if component unmounts
+  if (accountCheckTimeout) {
+    clearTimeout(accountCheckTimeout)
+    accountCheckTimeout = null
   }
+
 })
 </script>
 

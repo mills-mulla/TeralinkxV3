@@ -372,8 +372,14 @@ class VoucherManager:
         )
         
         with transaction.atomic():
-            deduction = Decimal(transaction_record.used_credit or transaction_record.price)
-            client.balance -= deduction
+            # 🔴 FIX: Only deduct balance if credit was actually used
+            if transaction_record.used_credit and transaction_record.used_credit > 0:
+                deduction = Decimal(transaction_record.used_credit)
+                client.balance -= deduction
+                logger.info(f"BALANCE DEDUCTION: Deducted {deduction} credit for {client.account}")
+            else:
+                logger.info(f"NO BALANCE DEDUCTION: Pure M-Pesa payment for {client.account}")
+            
             client.total_spent += Decimal(transaction_record.price)
             client.active_voucher = voucher_code
             client.voucher_expiry = dispatch_voucher.expires_at
@@ -507,19 +513,34 @@ class PaymentProcessor:
             metadata={'hotspot_ip': hotspot_ip}
         )
         
-        # ✅ Idempotency check
+        # Skip idempotency check for real-time payment status
         if idempotency_key:
             is_duplicate, cached_response = IdempotencyManager.check_and_set(idempotency_key)
             if is_duplicate:
                 logger.info(f"Returning cached response for: {idempotency_key}")
                 return cached_response
         
-        # Get transaction
+        # Get transaction (pending or completed)
         transaction_record = TransactionQueue.get_pending_by_checkout_id(checkout_request_id)
         
         if not transaction_record:
+            # Check if transaction was already completed
+            try:
+                transaction_record = TransactionQueue.objects.get(checkout_request_id=checkout_request_id)
+                if transaction_record.status == 'processed':
+                    # Return success for already completed transaction
+                    return {
+                        'success': True,
+                        'payment_status': 'completed',
+                        'status': 'completed',
+                        'transaction_id': checkout_request_id,
+                        'message': 'Payment already completed'
+                    }
+            except TransactionQueue.DoesNotExist:
+                pass
+            
             PaymentMetrics.record_payment_failure('transaction_not_found')
-            raise ValueError(f"No pending transaction found: {checkout_request_id}")
+            raise ValueError(f"Transaction not found: {checkout_request_id}")
         
         # ✅ Verify ownership
         PaymentProcessor.verify_transaction_ownership(transaction_record, user)
@@ -612,6 +633,7 @@ class PaymentProcessor:
             
             return {
                 'success': True,
+                'payment_status': 'completed',
                 'status': 'completed',
                 'transaction_id': transaction_record.checkout_request_id,
                 'voucher_code': dispatch_voucher.voucher_code,
@@ -653,6 +675,7 @@ class PaymentProcessor:
         
         return {
             'success': False,
+            'payment_status': 'pending',
             'status': 'pending',
             'result_code': mpesa_response.get('ResultCode'),
             'description': mpesa_response.get('ResultDesc', 'Payment is being processed')
@@ -692,7 +715,7 @@ class PaymentNotifier:
     def notify_payment_success(user_context, transaction_record, dispatch_voucher):
         user = user_context['user']
         
-        create_and_notify(user, "✅ Payment Successful", "success")
+        create_and_notify(user.user if hasattr(user, 'user') else user, "✅ Payment Successful", "success")
         
         voucher_message = f"""
 🎉 **Voucher Activated!**
@@ -708,18 +731,18 @@ class PaymentNotifier:
 - Duration: {dispatch_voucher.package.duration}
 """
         
-        create_and_notify(user, voucher_message, "success")
+        create_and_notify(user.user if hasattr(user, 'user') else user, voucher_message, "success")
     
     @staticmethod
     def notify_payment_pending(user_context):
         user = user_context['user']
-        create_and_notify(user, "⏳ Payment Pending", "info")
+        create_and_notify(user.user if hasattr(user, 'user') else user, "⏳ Payment Pending", "info")
     
     @staticmethod
     def notify_payment_failure(user_context, transaction_record, error):
         user = user_context['user']
-        create_and_notify(user, f"❌ Payment Failed: {error}", "error")
-        create_and_notify(user, "Your account has been refunded.", "info")
+        create_and_notify(user.user if hasattr(user, 'user') else user, f"❌ Payment Failed: {error}", "error")
+        create_and_notify(user.user if hasattr(user, 'user') else user, "Your account has been refunded.", "info")
 
 
 # ============================================================================
@@ -729,8 +752,7 @@ class PaymentNotifier:
 @api_view(['GET'])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
-@throttle_classes([PaymentStatusThrottle, BurstPaymentStatusThrottle])
-def payment_status(request):
+def payment_status(request, checkout_request_id):
     """
     ✅ Production-Ready Payment Status Endpoint
     
@@ -746,40 +768,32 @@ def payment_status(request):
     - Audit trail
     """
     
-    # ✅ Request validation
-    serializer = PaymentStatusRequestSerializer(data=request.GET)
-    if not serializer.is_valid():
+    # Basic validation
+    if not checkout_request_id or not checkout_request_id.strip():
         return Response({
             'success': False,
-            'error': 'Invalid request parameters',
-            'details': serializer.errors,
+            'error': 'Invalid checkout request ID',
             'code': 'VALIDATION_ERROR'
         }, status=status.HTTP_400_BAD_REQUEST)
     
-    validated_data = serializer.validated_data
-    checkout_request_id = validated_data['request_id']
-    ##hotspot_ip = validated_data.get('hotspot_ip')
-    idempotency_key = validated_data.get('idempotency_key')
+    checkout_request_id = checkout_request_id.strip()
     
-    # Generate idempotency key if not provided
-    if not idempotency_key:
-        idempotency_key = IdempotencyManager.generate_key(
-            checkout_request_id,
-            request.user.id
-        )
+    # Generate idempotency key for logging only
+    idempotency_key = f"{checkout_request_id}_{request.user.id}"
     
     try:
         user_context = JWTUserDataExtractor.extract_user_data(request)
-        hotspot_ip = user_context['jwt_payload']['last_login_ip']
+        hotspot_ip = user_context['jwt_payload'].get('last_login_ip', '192.168.1.100')
+        
         result = PaymentProcessor.process_payment_status(
             checkout_request_id=checkout_request_id,
             user_context=user_context,
             hotspot_ip=hotspot_ip,
-            idempotency_key=idempotency_key
+            idempotency_key=None  # Disable caching for real-time updates
         )
         
         response_data = {
-            'success': result['success'],
+            'success': result.get('success', False),
             'timestamp': timezone.now().isoformat(),
             'user': {
                 'account': user_context['account'],
@@ -801,8 +815,16 @@ def payment_status(request):
                 'package': result['package']
             }
         
-        http_status = status.HTTP_200_OK if result['success'] else status.HTTP_202_ACCEPTED
+        http_status = status.HTTP_200_OK if result.get('success') else status.HTTP_202_ACCEPTED
         return Response(response_data, status=http_status)
+        
+    except ValueError as e:
+        logger.error(f"JWT extraction error: {e}")
+        return Response({
+            'success': False,
+            'error': 'Authentication data invalid',
+            'code': 'AUTH_ERROR'
+        }, status=status.HTTP_400_BAD_REQUEST)
         
     except PermissionError as e:
         return Response({

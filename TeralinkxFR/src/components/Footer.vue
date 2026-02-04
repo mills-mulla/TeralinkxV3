@@ -1,5 +1,5 @@
 <template>
-  <footer class="w-full bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-white py-2 px-2 text-sm transition-colors duration-300">
+  <footer class="w-full bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 text-gray-800 dark:text-white py-2 px-2 text-sm transition-colors duration-300 border-t border-blue-100 dark:border-gray-600">
     <div class="max-w-md mx-auto flex flex-col space-y-2 items-center text-center">
       
      
