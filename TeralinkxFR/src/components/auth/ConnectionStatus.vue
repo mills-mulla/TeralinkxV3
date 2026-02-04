@@ -21,22 +21,6 @@
         </h3>
       </div>
     </div>
-    <div class="flex items-center justify-center space-x-2">
-      <div 
-        class="w-1 h-1 rounded-full"
-        :class="{
-          'bg-green-500': ip,
-          'bg-gray-300 dark:bg-gray-600': !ip
-        }"
-      ></div>
-      <div 
-        class="w-1 h-1 rounded-full"
-        :class="{
-          'bg-green-500': mac,
-          'bg-gray-300 dark:bg-gray-600': !mac
-        }"
-      ></div>
-    </div>
   </div>
 </template>
 

@@ -2,18 +2,48 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="pragma" content="no-cache" />
+  <meta http-equiv="expires" content="-1" />
   <link rel="icon" href="/assets/teralinkx2-D-ymN_3H.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Teralinkx Waves - Login</title>
-  <link rel="stylesheet" crossorigin href="/assets/index-SjT8YZBd.css">
+  
   
   <script>
-    // Always redirect to SPA
-    function redirectToApp() {
-      window.location.href = '/index.html#/';
+    // Extract MikroTik variables using template syntax
+    function setupMikroTikVariables() {
+      // MikroTik template variables
+      const mac = '$(mac)';
+      const ip = '$(ip)';
+      const username = '$(username)';
+      
+      // Simply use the values directly since they're already processed by MikroTik
+      const macProcessed = mac || '';
+      const ipProcessed = ip || '';
+      const usernameProcessed = username || '';
+      
+      // Set global variables for Vue app
+      window.hotspotContext = { 
+        mac: macProcessed, 
+        ip: ipProcessed,
+        username: usernameProcessed
+      };
+      
+      // Store in sessionStorage (survives redirects)
+      sessionStorage.setItem('hotspotContext', JSON.stringify(window.hotspotContext));
+      
+      // Store in localStorage for persistence
+      if (macProcessed) localStorage.setItem('hs_mac', macProcessed);
+      if (ipProcessed) localStorage.setItem('hs_ip', ipProcessed);
     }
 
-    // Redirect after page loads
+    // Redirect to SPA with variables preserved
+    function redirectToApp() {
+      setupMikroTikVariables();
+      window.location.replace('/index.html#/');
+    }
+
+    // Setup on page load
     window.addEventListener('DOMContentLoaded', redirectToApp);
   </script>
 </head>

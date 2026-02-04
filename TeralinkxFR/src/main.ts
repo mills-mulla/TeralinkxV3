@@ -36,16 +36,28 @@ app.use(pinia)
 app.use(router)
 
 // Install HotSpot plugin with initialization check
-if (window.hotspotContext) {
-  app.use(hotspotPlugin)
+// Check sessionStorage first for real MikroTik data
+let savedContext = null;
+try {
+  savedContext = JSON.parse(sessionStorage.getItem('hotspotContext') || '{}');
+} catch (e) {
+  // Ignore parsing errors
+}
+
+if (savedContext?.mac && savedContext?.ip) {
+  // Use real MikroTik data from sessionStorage
+  window.hotspotContext = savedContext;
+  app.use(hotspotPlugin);
+} else if (window.hotspotContext?.mac && window.hotspotContext?.ip) {
+  // Use existing window context
+  app.use(hotspotPlugin);
 } else {
   // Initialize with fallback data if needed
   window.hotspotContext = {
-    mac: '',
-    ip: '',
-    
-  }
-  app.use(hotspotPlugin)
+    mac: '00:11:22:33:44:55',
+    ip: '192.168.88.100',
+  };
+  app.use(hotspotPlugin);
 }
 
 // Initialize auth store after pinia is set up

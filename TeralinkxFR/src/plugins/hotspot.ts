@@ -5,7 +5,6 @@ import { reactive, provide, inject, type App } from 'vue';
 interface HotSpotContext {
   mac: string;
   ip: string;
-  
 }
 
 declare global {
@@ -13,7 +12,6 @@ declare global {
     hotspotContext?: {
       mac: string;
       ip: string;
-     
     };
   }
 }
@@ -23,13 +21,19 @@ const HotSpotKey = Symbol('hotspot');
 // Main plugin object
 const hotspotPlugin = {
   install(app: App) {
-    // Initialize with reactive data
+    // Try to restore from sessionStorage first
+    let savedContext = null;
+    try {
+      savedContext = JSON.parse(sessionStorage.getItem('hotspotContext') || '{}');
+    } catch (e) {
+      // Ignore parsing errors
+    }
+    
+    // Initialize with reactive data - try sessionStorage, then window, then localStorage
     const hotspot = reactive<HotSpotContext>({
-      mac: window.hotspotContext?.mac || localStorage.getItem('hs_mac') || '',
-      ip: window.hotspotContext?.ip || localStorage.getItem('hs_ip') || '',
-      ...(window.hotspotContext || {})
+      mac: savedContext?.mac || window.hotspotContext?.mac || localStorage.getItem('hs_mac') || '',
+      ip: savedContext?.ip || window.hotspotContext?.ip || localStorage.getItem('hs_ip') || '',
     });
-    console.log('🔌 Hotspot plugin initialized:', { ip: hotspot.ip, mac: hotspot.mac })
 
     // For Options API
     app.config.globalProperties.$hotspot = hotspot;

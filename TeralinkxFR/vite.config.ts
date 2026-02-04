@@ -40,10 +40,20 @@ export default defineConfig(({ mode }) => {
       minify: 'terser',
       sourcemap: false,
       rollupOptions: {
+        input: {
+          main: fileURLToPath(new URL('./index.html', import.meta.url)),
+          login: fileURLToPath(new URL('./src/assets/flash/hotspot/login.html', import.meta.url))
+        },
         output: {
-          manualChunks: {
-            vendor: ['vue', 'vue-router', 'pinia'],
-            ui: ['@headlessui/vue']
+          manualChunks: (id) => {
+            if (id.includes('node_modules')) {
+              if (id.includes('vue') || id.includes('pinia') || id.includes('vue-router')) {
+                return 'vendor'
+              }
+              if (id.includes('@headlessui')) {
+                return 'ui'
+              }
+            }
           }
         }
       }
