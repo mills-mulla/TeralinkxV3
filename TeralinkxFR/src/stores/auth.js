@@ -685,10 +685,21 @@ export const useAuthStore = defineStore('auth', () => {
       }, ACTIVITY_THRESHOLD)
     }
     
-    // Track user activity
-    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click']
+    // Single throttled event handler for all activity events
+    let throttleTimer = null
+    const throttledHandler = () => {
+      if (!throttleTimer) {
+        throttleTimer = setTimeout(() => {
+          resetActivityTimer()
+          throttleTimer = null
+        }, 1000) // Throttle to once per second
+      }
+    }
+    
+    // Track user activity with single handler
+    const events = ['mousedown', 'keypress', 'scroll', 'touchstart']
     events.forEach(event => {
-      document.addEventListener(event, resetActivityTimer, { passive: true })
+      document.addEventListener(event, throttledHandler, { passive: true, once: false })
     })
     
     // Initial timer

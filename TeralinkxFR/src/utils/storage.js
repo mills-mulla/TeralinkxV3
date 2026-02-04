@@ -57,21 +57,15 @@ export const storage = {
   // Clear all app storage
   clear() {
     try {
+      // Get all keys first to avoid index shifting during removal
+      const sessionKeys = Object.keys(sessionStorage).filter(key => key.startsWith(PREFIX))
+      const localKeys = Object.keys(localStorage).filter(key => key.startsWith(PREFIX))
+      
       // Clear sessionStorage
-      for (let i = 0; i < sessionStorage.length; i++) {
-        const key = sessionStorage.key(i)
-        if (key.startsWith(PREFIX)) {
-          sessionStorage.removeItem(key)
-        }
-      }
+      sessionKeys.forEach(key => sessionStorage.removeItem(key))
       
       // Clear localStorage
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i)
-        if (key.startsWith(PREFIX)) {
-          localStorage.removeItem(key)
-        }
-      }
+      localKeys.forEach(key => localStorage.removeItem(key))
       
       return true
     } catch (error) {

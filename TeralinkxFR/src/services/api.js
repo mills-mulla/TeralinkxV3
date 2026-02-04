@@ -124,13 +124,17 @@ const gracefulLogout = (reason = 'Session expired') => {
   
   // Show user-friendly message
   if (window.showToast) {
-    window.showToast(`${reason}. Please sign in again.`, 'info')
+    const sanitizedReason = String(reason).replace(/<[^>]*>/g, '').slice(0, 100);
+    window.showToast(`${sanitizedReason}. Please sign in again.`, 'info')
   }
   
   // Redirect to signin with reason
   const currentPath = window.location.pathname
   if (currentPath !== '/' && currentPath !== '/signin') {
-    window.location.href = `/?reason=${encodeURIComponent(reason)}&redirect=${encodeURIComponent(currentPath)}`
+    // Sanitize reason to prevent XSS
+    const sanitizedReason = reason.replace(/[<>"'&]/g, '')
+    const sanitizedPath = currentPath.replace(/[<>"'&]/g, '')
+    window.location.href = `/?reason=${encodeURIComponent(sanitizedReason)}&redirect=${encodeURIComponent(sanitizedPath)}`
   }
 }
 
@@ -275,8 +279,23 @@ api.interceptors.response.use(
   }
 )
 
-// Set up proactive refresh interval (every 2 minutes)
-setInterval(proactiveRefresh, 2 * 60 * 1000)
+// Set up proactive refresh interval (every 2 minutes) - with cleanup
+let refreshInterval = null
+
+// Initialize interval only when needed
+export const initializeProactiveRefresh = () => {
+  if (!refreshInterval) {
+    refreshInterval = setInterval(proactiveRefresh, 2 * 60 * 1000)
+  }
+}
+
+// Cleanup function for memory management
+export const cleanupProactiveRefresh = () => {
+  if (refreshInterval) {
+    clearInterval(refreshInterval)
+    refreshInterval = null
+  }
+}
 
 // Error handling helper
 export const handleError = (error) => {

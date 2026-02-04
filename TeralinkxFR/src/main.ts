@@ -12,6 +12,7 @@ import { useTheme } from './composables/useTheme'
 
 // Import the enhanced HotSpot plugin
 import hotspotPlugin from './plugins/hotspot'
+import { initializeProactiveRefresh } from './services/api'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -66,6 +67,9 @@ const authStore = useAuthStore()
 authStore.initialize()
 
 app.mount('#app')
+
+// Initialize API proactive refresh after app is mounted
+initializeProactiveRefresh()
 
 // Type augmentation for TypeScript support
 declare global {

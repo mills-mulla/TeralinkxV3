@@ -6,11 +6,11 @@ export function useRenewPackage() {
   const errorMessage = ref(null)
   const showRenewComponent = ref(false)
   const selectedVoucher = ref(null)
-  const isloading = ref(false)
+  const isLoading = ref(false)
 
   const renew = async (voucher, pingUserId) => {
     loadingId.value = voucher.dispatch_voucher_code
-    isloading.value = true
+    isLoading.value = true
     errorMessage.value = null
 
     try {
@@ -27,9 +27,20 @@ export function useRenewPackage() {
       selectedVoucher.value = voucher
       showRenewComponent.value = true
     } catch (err) {
-      errorMessage.value = err.response?.data?.error || 'Renew failed'
+      if (err.code === 'ECONNABORTED') {
+        errorMessage.value = 'Request timeout. Please try again.'
+      } else if (err.code === 'ERR_NETWORK') {
+        errorMessage.value = 'Network error. Check your connection.'
+      } else if (err.response?.status === 401) {
+        errorMessage.value = 'Authentication failed. Please login again.'
+      } else if (err.response?.status >= 500) {
+        errorMessage.value = 'Server error. Please try again later.'
+      } else {
+        errorMessage.value = err.response?.data?.error || 'Renew failed'
+      }
     } finally {
-      isloading.value = false
+      isLoading.value = false
+      loadingId.value = null
     }
   }
 
@@ -39,6 +50,6 @@ export function useRenewPackage() {
     errorMessage,
     showRenewComponent,
     selectedVoucher,
-    isloading,
+    isLoading,
   }
 }

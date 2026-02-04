@@ -20,14 +20,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
 
 # Development settings
-DEBUG = True  # Force debug mode for development
+DEBUG = False  # Production ready
 
 # Security
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-fallback-key-for-dev-only')
 
 ALLOWED_HOSTS = [
+    'test.teralinkxwaves.uk',
     'login.teralinkxwaves.uk',
-    'service.teralinkxwaves.uk',
+    'service.teralinkxwaves.uk', 
     'teralinkxwaves.uk',
     'teralinkxwaves.co.ke',
     'teralinkxwaves.spot',
@@ -38,7 +39,7 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
     '192.168.8.8',
     '10.0.0.1',
-    '0.0.0.0',  # Added for Docker compatibility
+    '0.0.0.0',
 ]
 
 # Apps
@@ -76,14 +77,14 @@ INSTALLED_APPS = [
     'ads',
 ]
 
-# Middleware
+# Middleware - JWT-only, CSRF disabled
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    # 'django.middleware.csrf.CsrfViewMiddleware',  # Disabled for JWT-only API
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'core.middleware.last_seen_middleware.LastSeenMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -141,12 +142,11 @@ TEMPLATES = [
     },
 ]
 
-# Database - SQLite for development
+# Database - PostgreSQL for production
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    }
+    'default': dj_database_url.parse(
+        os.environ.get('DATABASE_URL', 'postgresql://teralinkx:justboot@db:5432/teralinkx')
+    )
 }
 
 # Password validation
@@ -166,22 +166,17 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# REST Framework
+# REST Framework - JWT-only authentication
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.authentication.TokenAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
-        'rest_framework.permissions.AllowAny', 
     ],
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',
-        'rest_framework.renderers.BrowsableAPIRenderer',  # Enable browsable API in development
     )
-    
 }
 
 # JWT Configuration
@@ -214,15 +209,16 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 ###############################################################
 ##################### CORS Configuration ######################
-# For development
-CORS_ALLOW_ALL_ORIGINS = True 
+# Production CORS settings
+CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
-    'http://localhost:5173',
+    'https://test.teralinkxwaves.uk',
+    'https://teralinkxwaves.uk',
+    'https://login.teralinkxwaves.uk', 
+    'https://service.teralinkxwaves.uk',
+    'http://localhost:5173',  # Dev frontend
     'http://127.0.0.1:5173',
-    'http://192.168.88.16:5173',
-] 
-
-#for production
+]
 CORS_ALLOW_CREDENTIALS = True
 # CORS_ALLOWED_ORIGINS = [
 #     'http://teralinkxwaves.uk',
@@ -271,49 +267,45 @@ CORS_ALLOW_METHODS = [
     'PUT',
 ]
 CSRF_TRUSTED_ORIGINS = [
-    'http://teralinkxwaves.uk',
-    'http://login.teralinkxwaves.uk',
-    'http://service.teralinkxwaves.uk',
-    'http://teralinkxwaves.spot',
-    'http://teralinkxwaves.co.ke',
-    'http://localhost:8000',
-    'http://127.0.0.1:8000',
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'http://192.168.8.8:5173',
-    'http://192.168.88.16:8200',
-    'http://192.168.88.16',
-    'http://10.0.0.1',
-    'http://0.0.0.0:8000',
+    'https://test.teralinkxwaves.uk',
+    'https://teralinkxwaves.uk',
+    'https://login.teralinkxwaves.uk',
+    'https://service.teralinkxwaves.uk',
+    'http://localhost:8100',  # V3 port
+    'http://127.0.0.1:8100',
 ]
 
-# Cache
+# Cache - Redis for production
 CACHES = {
     "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",  # Use local memory cache for development
-        "LOCATION": "unique-snowflake",
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://redis:6379/1",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
     }
 }
 
-# Alternative Redis cache for development (if you have Redis running)
-# CACHES = {
-#     "default": {
-#         "BACKEND": "django_redis.cache.RedisCache",
-#         "LOCATION": "redis://127.0.0.1:6379/1",
-#         "OPTIONS": {
-#             "CLIENT_CLASS": "django_redis.client.DefaultClient",
-#         }
-#     }
-# }
-
-# Celery - development settings
-CELERY_BROKER_URL = 'redis://localhost:6379/0'  # Local Redis
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+# Celery Configuration - Docker optimized
+CELERY_BROKER_URL = 'redis://redis:6379/0'
+CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers.DatabaseScheduler'
+
+# Task timeout and cleanup settings
+CELERY_TASK_SOFT_TIME_LIMIT = 300  # 5 minutes soft limit
+CELERY_TASK_TIME_LIMIT = 600       # 10 minutes hard limit
+CELERY_TASK_ACKS_LATE = True       # Acknowledge after task completion
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1  # Process one task at a time
+
+# Result backend cleanup
+CELERY_RESULT_EXPIRES = 3600        # Results expire after 1 hour
+CELERY_TASK_RESULT_EXPIRES = 3600   # Task results expire after 1 hour
+CELERY_RESULT_BACKEND_ALWAYS_RETRY = True
+CELERY_RESULT_BACKEND_MAX_RETRIES = 10
 
 # Email - console backend for development
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

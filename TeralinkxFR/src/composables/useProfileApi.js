@@ -4,6 +4,11 @@ export function useProfileApi() {
   const authStore = useAuthStore()
 
   const apiRequest = async (url, options = {}) => {
+    // Validate URL to prevent SSRF attacks
+    if (!url.startsWith('/api/')) {
+      throw new Error('Invalid API endpoint')
+    }
+    
     const response = await fetch(url, {
       headers: {
         ...authStore.authHeaders,

@@ -20,18 +20,18 @@ export const useCustomToast = () => {
     toasts.value.push(toast)
     
     if (duration > 0) {
-      // Start progress animation
-      setTimeout(() => {
+      // Use single timeout for both progress and removal
+      const progressTimer = setTimeout(() => {
         const toastElement = toasts.value.find(t => t.id === id)
         if (toastElement) {
           toastElement.progress = 100
+          // Schedule removal after progress completes
+          setTimeout(() => removeToast(id), 100)
         }
       }, 100)
       
-      // Auto remove
-      setTimeout(() => {
-        removeToast(id)
-      }, duration + 100)
+      // Store timer reference for potential cleanup
+      toast.timer = progressTimer
     }
     
     return id
@@ -40,6 +40,11 @@ export const useCustomToast = () => {
   const removeToast = (id) => {
     const index = toasts.value.findIndex(t => t.id === id)
     if (index > -1) {
+      const toast = toasts.value[index]
+      // Clear any pending timer
+      if (toast.timer) {
+        clearTimeout(toast.timer)
+      }
       toasts.value.splice(index, 1)
     }
   }

@@ -4,7 +4,8 @@ from .authentications import who, TeralinkxWaves, how
 from .helpers import get_db_url,check_expired_vouchers
 from decimal import Decimal
 from celery import shared_task
-from .models import Queue, ClientH,DispatchVoucher,ActiveUser,DHCPLease , alternateSessions
+from .models import ClientH,DispatchVoucher,ActiveUser,DHCPLease , alternateSessions
+from apps.finance.models import TransactionQueue
 from .views.queryDaraja import query_stk_status
 from django.db import transaction
 from .views.moitoring import monitor_user
@@ -49,12 +50,12 @@ def task_query_unprocessed_checkoutrqs():
 
 def get_pending_transactions():
     """
-    Retrieves a list of pending transactions from the Queue.
+    Retrieves a list of pending transactions from the TransactionQueue.
 
     Returns:
         list: Pending transaction records.
     """
-    return Queue.objects.filter(method='mpesa', status="Pending...")
+    return TransactionQueue.objects.filter(method='mpesa', status__in=['pending', 'Pending...'])
 
 
 def process_transaction(queue_record):
@@ -80,19 +81,19 @@ def is_transaction_expired(queue_record):
     Checks if the transaction has been pending for more than 2 minutes.
 
     Args:
-        queue_record (Queue): The transaction record to check.
+        queue_record (TransactionQueue): The transaction record to check.
 
     Returns:
         bool: True if the transaction is expired, False otherwise.
     """
-    return timezone.now() > queue_record.queue_time + timezone.timedelta(minutes=5 ,seconds=30)
+    return timezone.now() > queue_record.created_at + timezone.timedelta(minutes=2)
 
 def refund_transaction(queue_record):
     """
     Refunds the transaction and updates the client's balance.
 
     Args:
-        queue_record (Queue): The transaction record to refund.
+        queue_record (TransactionQueue): The transaction record to refund.
     """
     try:
         # Retrieve the client
@@ -207,5 +208,5 @@ def task_update_active_users():
 
 @shared_task
 def task_delete_pending():
-    deleted_count, _ = Queue.objects.filter(status="Pending...").delete()
+    deleted_count, _ = TransactionQueue.objects.filter(status__in=['pending', 'Pending...']).delete()
     logger.info(f"Deleted {deleted_count} pending records.")

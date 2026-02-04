@@ -81,25 +81,51 @@ export default createStore<State>({
       notificationSocket.onmessage = (event: MessageEvent) => {
         try {
           const data = JSON.parse(event.data);
-          if (data?.message?.message) {
-            const messageContent = data.message.message;
-            const notificationId = Date.now();
-            commit('addNotification', { 
-              content: messageContent, 
-              id: notificationId,
-              ...data.message // Include any additional data
-            });
-
-            if (data.message.action) {
-              dispatch('handleNotificationAction', data.message.action);
-            }
-
-            setTimeout(() => {
-              commit('removeNotification', notificationId);
-            }, 10000);
+          
+          // Validate data structure and sanitize
+          if (!data || typeof data !== 'object' || !data.message) {
+            console.warn('Invalid message structure received');
+            return;
           }
+          
+          const message = data.message;
+          if (!message.message || typeof message.message !== 'string') {
+            console.warn('Invalid message content received');
+            return;
+          }
+          
+          // Sanitize message content
+          const messageContent = String(message.message).slice(0, 1000); // Limit length
+          const notificationId = Date.now();
+          
+          // Only include safe properties
+          const safeNotification = {
+            content: messageContent,
+            id: notificationId,
+            timestamp: message.timestamp || new Date().toISOString()
+          };
+          
+          commit('addNotification', safeNotification);
+
+          // Validate action before processing
+          if (message.action && typeof message.action === 'object' && 
+              typeof message.action.type === 'string') {
+            const allowedActions = ['RELOAD_PAGE', 'CLOSE_COMPONENT'];
+            if (allowedActions.includes(message.action.type)) {
+              dispatch('handleNotificationAction', message.action);
+            }
+          }
+
+          setTimeout(() => {
+            commit('removeNotification', notificationId);
+          }, 10000);
         } catch (error) {
-          console.error("Error processing WebSocket message:", error);
+          if (error instanceof SyntaxError) {
+            console.error("Invalid JSON received from WebSocket:", event.data);
+          } else {
+            console.error("Error processing WebSocket message:", error);
+          }
+          // Continue operation despite error
         }
       };
 
@@ -146,38 +172,48 @@ export default createStore<State>({
       }
     },
 
-    getAccountInfo({ commit }): Promise<AccountInfo> {
-      return new Promise((resolve, reject) => {
-        const phone_local = localStorage.getItem('account');
-        console.log('Retrieved phone number from localStorage:', phone_local);
+    async getAccountInfo({ commit }): Promise<AccountInfo> {
+      const phoneNumber = localStorage.getItem('account');
+      const sanitizedPhone = phoneNumber ? phoneNumber.replace(/[\r\n\t]/g, '') : null;
+      console.log('Retrieved phone number from localStorage:', sanitizedPhone);
 
-        if (!phone_local) {
-          reject('Phone number not found in local storage');
-          return;
-        }
+      if (!phoneNumber) {
+        throw new Error('Phone number not found in local storage');
+      }
 
-        const requestData = JSON.stringify({ phone: phone_local });
-        
-        axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/getclient/`, requestData, {
+      const requestData = JSON.stringify({ phone: phoneNumber });
+      
+      try {
+        const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/getclient/`, requestData, {
           headers: {
             'Content-Type': 'application/json',
             'X-CSRFToken': localStorage.getItem('csrfToken') || '',
             Authorization: `Token ${localStorage.getItem('authToken')}`
           },
-        })
-        .then((response) => {
-          if (response.status === 200) {
-            commit('setAccountInfo', response.data);
-            resolve(response.data);
-          } else {
-            reject('Unexpected response from server');
-          }
-        })
-        .catch((error) => {
-          console.error('Failed to retrieve account info:', error);
-          reject(error);
         });
-      });
+
+        if (response.status === 200) {
+          commit('setAccountInfo', response.data);
+          return response.data;
+        } else {
+          throw new Error(`Unexpected response status: ${response.status}`);
+        }
+      } catch (error: any) {
+        if (error.code === 'ECONNABORTED') {
+          throw new Error('Request timeout. Please try again.');
+        } else if (error.code === 'ERR_NETWORK') {
+          throw new Error('Network error. Check your connection.');
+        } else if (error.response?.status === 401) {
+          throw new Error('Authentication failed. Please login again.');
+        } else if (error.response?.status === 404) {
+          throw new Error('Account not found.');
+        } else if (error.response?.status >= 500) {
+          throw new Error('Server error. Please try again later.');
+        } else {
+          console.error('Failed to retrieve account info:', error);
+          throw new Error(error.response?.data?.message || 'Failed to retrieve account info');
+        }
+      }
     }
   },
   getters: {

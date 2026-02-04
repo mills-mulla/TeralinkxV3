@@ -62,10 +62,25 @@ export function useBuyPackage() {
         throw new Error('Unexpected server response')
       }
     } catch (error) {
-      errorMessage.value = error?.response?.data?.message || error.message || 'Purchase failed'
+      if (error.code === 'ECONNABORTED') {
+        errorMessage.value = 'Request timeout. Please try again.'
+      } else if (error.code === 'ERR_NETWORK') {
+        errorMessage.value = 'Network error. Check your connection.'
+      } else if (error.response?.status === 401) {
+        errorMessage.value = 'Authentication failed. Please login again.'
+      } else if (error.response?.status === 402) {
+        errorMessage.value = 'Insufficient balance for this package.'
+      } else if (error.response?.status === 404) {
+        errorMessage.value = 'Package not found or no longer available.'
+      } else if (error.response?.status >= 500) {
+        errorMessage.value = 'Server error. Please try again later.'
+      } else {
+        errorMessage.value = error?.response?.data?.message || error.message || 'Purchase failed'
+      }
       toast.error(errorMessage.value)
     } finally {
       loadingId.value = null
+      isloading.value = false
     }
   }
 

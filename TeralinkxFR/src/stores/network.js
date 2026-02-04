@@ -52,63 +52,67 @@ export const useNetworkStore = defineStore('network', () => {
   }
 
   const getFallbackIP = () => {
-    // Try multiple fallback methods
     try {
-      // Method 1: Check local storage for previous IP
       const savedIP = localStorage.getItem('last_known_ip')
       if (savedIP && savedIP.startsWith('192.168.')) {
         return savedIP
       }
-
-      // Method 2: Common local IP ranges
-      const commonIPs = [
-        '192.168.1.100',
-        '192.168.0.100',
-        '10.0.0.100',
-        '172.16.0.100'
-      ]
-
-      // Try to ping each IP to see which one responds
-      return commonIPs[0] // For now, return first common IP
+      return '192.168.1.100'
     } catch (error) {
-      return '192.168.1.100' // Ultimate fallback
+      return '192.168.1.100'
     }
   }
 
-  // Improved WebRTC IP detection with multiple fallbacks
+  // Improved WebRTC IP detection with proper cleanup
   const getLocalIP = () => {
-    return new Promise((resolve, reject) => {
-      // Skip WebRTC if not in secure context (HTTPS/localhost)
+    return new Promise((resolve) => {
       const isLocalhost = window.location.hostname === 'localhost' || 
                          window.location.hostname === '127.0.0.1'
       const isSecure = window.location.protocol === 'https:' || isLocalhost
       
       if (!isSecure) {
-        console.warn('WebRTC requires HTTPS. Using fallback IP.')
         resolve(getFallbackIP())
         return
       }
 
+      let pc = null
+      let timeoutId = null
+      let resolved = false
+
+      const cleanup = () => {
+        if (timeoutId) {
+          clearTimeout(timeoutId)
+          timeoutId = null
+        }
+        if (pc) {
+          pc.onicecandidate = null
+          pc.close()
+          pc = null
+        }
+      }
+
+      const resolveOnce = (value) => {
+        if (!resolved) {
+          resolved = true
+          cleanup()
+          resolve(value)
+        }
+      }
+
       try {
-        const pc = new RTCPeerConnection({ 
-          iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' }
-          ] 
+        pc = new RTCPeerConnection({ 
+          iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] 
         })
 
         pc.createDataChannel('')
         
         pc.onicecandidate = (event) => {
           if (!event.candidate) {
-            // ICE gathering complete
             setTimeout(() => {
-              if (!ip.value) {
-                // No IP found via WebRTC, use fallback
-                pc.close()
+              if (!resolved) {
                 const fallbackIP = getFallbackIP()
                 localStorage.setItem('last_known_ip', fallbackIP)
-                resolve(fallbackIP)
+                resolveOnce(fallbackIP)
               }
             }, 500)
             return
@@ -116,65 +120,36 @@ export const useNetworkStore = defineStore('network', () => {
 
           const candidate = event.candidate.candidate
           if (candidate) {
-            // Match IPv4 addresses in local ranges
             const regex = /([0-9]{1,3}(\.[0-9]{1,3}){3})/
             const match = candidate.match(regex)
             
             if (match) {
               const foundIP = match[1]
-              // Filter for local/private IPs
               if (foundIP.startsWith('192.168.') || 
                   foundIP.startsWith('10.') || 
-                  foundIP.startsWith('172.16.') ||
-                  foundIP.startsWith('172.17.') ||
-                  foundIP.startsWith('172.18.') ||
-                  foundIP.startsWith('172.19.') ||
-                  foundIP.startsWith('172.20.') ||
-                  foundIP.startsWith('172.21.') ||
-                  foundIP.startsWith('172.22.') ||
-                  foundIP.startsWith('172.23.') ||
-                  foundIP.startsWith('172.24.') ||
-                  foundIP.startsWith('172.25.') ||
-                  foundIP.startsWith('172.26.') ||
-                  foundIP.startsWith('172.27.') ||
-                  foundIP.startsWith('172.28.') ||
-                  foundIP.startsWith('172.29.') ||
-                  foundIP.startsWith('172.30.') ||
-                  foundIP.startsWith('172.31.') ||
-                  foundIP === '127.0.0.1') {
+                  (foundIP.startsWith('172.') && 
+                   parseInt(foundIP.split('.')[1]) >= 16 && 
+                   parseInt(foundIP.split('.')[1]) <= 31)) {
                 
-                pc.onicecandidate = null
-                pc.close()
                 localStorage.setItem('last_known_ip', foundIP)
-                resolve(foundIP)
+                resolveOnce(foundIP)
               }
             }
           }
         }
 
         pc.createOffer()
-          .then(offer => {
-            return pc.setLocalDescription(offer)
-          })
-          .catch(error => {
-            console.warn('WebRTC offer error:', error)
-            pc.close()
-            resolve(getFallbackIP())
-          })
+          .then(offer => pc.setLocalDescription(offer))
+          .catch(() => resolveOnce(getFallbackIP()))
 
-        // Timeout after 2 seconds (reduced from 3)
-        setTimeout(() => {
-          if (pc.iceConnectionState !== 'closed') {
-            pc.onicecandidate = null
-            pc.close()
-            const fallbackIP = getFallbackIP()
-            localStorage.setItem('last_known_ip', fallbackIP)
-            resolve(fallbackIP)
-          }
+        timeoutId = setTimeout(() => {
+          const fallbackIP = getFallbackIP()
+          localStorage.setItem('last_known_ip', fallbackIP)
+          resolveOnce(fallbackIP)
         }, 2000)
 
       } catch (error) {
-        console.error('WebRTC setup failed:', error)
+        cleanup()
         resolve(getFallbackIP())
       }
     })
@@ -194,13 +169,12 @@ export const useNetworkStore = defineStore('network', () => {
         source.value = 'mikrotik_hotspot'
         
         if (hasHotspotData.value) {
-          console.log('✅ Mikrotik hotspot data detected')
           isLoading.value = false
           return true
         }
       }
 
-      // Try direct URL parameters (common in captive portals)
+      // Try URL parameters
       const urlParams = new URLSearchParams(window.location.search)
       const paramIP = urlParams.get('ip') || urlParams.get('client_ip')
       const paramMAC = urlParams.get('mac') || urlParams.get('client_mac')
@@ -214,24 +188,20 @@ export const useNetworkStore = defineStore('network', () => {
         return true
       }
 
-      // Fallback to WebRTC with improved error handling
+      // Fallback to WebRTC
       const webRTCIP = await getLocalIP()
       ip.value = webRTCIP
       mac.value = generatePlaceholderMac()
       source.value = 'webrtc_fallback'
       hasHotspotData.value = false
       
-      console.log(`📶 Network detected via ${source.value}: ${ip.value}, ${mac.value}`)
-      
       isLoading.value = false
       return true
       
     } catch (error) {
-      console.error('Network detection failed:', error)
       error.value = error.message
       source.value = 'detection_failed'
       
-      // Set fallback values so app can continue
       ip.value = getFallbackIP()
       mac.value = generatePlaceholderMac()
       hasHotspotData.value = false
@@ -263,14 +233,12 @@ export const useNetworkStore = defineStore('network', () => {
   }
 
   const initialize = async () => {
-    // Don't reinitialize if already has data
     if (ip.value && mac.value) {
       return
     }
     
     await detectNetwork()
     
-    // Test backend connection in background (non-blocking)
     setTimeout(() => {
       testConnection().catch(() => {
         console.log('Backend test failed - running in offline mode')
@@ -290,25 +258,8 @@ export const useNetworkStore = defineStore('network', () => {
   }
 
   return {
-    // State
-    ip,
-    mac,
-    source,
-    hasHotspotData,
-    connectionTested,
-    lastTest,
-    isLoading,
-    error,
-    
-    // Getters
-    isConnected,
-    connectionStatus,
-    
-    // Actions
-    detectNetwork,
-    testConnection,
-    simulateData,
-    initialize,
-    reset
+    ip, mac, source, hasHotspotData, connectionTested, lastTest, isLoading, error,
+    isConnected, connectionStatus,
+    detectNetwork, testConnection, simulateData, initialize, reset
   }
 })

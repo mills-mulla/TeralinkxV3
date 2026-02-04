@@ -8,26 +8,22 @@ export const useDeviceAuth = () => {
 
   // Generate fallback network data
   const generateFallbackMac = () => {
-    const getRandomByte = () => {
-      const array = new Uint8Array(1)
-      crypto.getRandomValues(array)
-      return array[0]
-    }
-    const bytes = Array.from({ length: 6 }, () => getRandomByte())
+    const bytes = new Uint8Array(6)
+    crypto.getRandomValues(bytes)
     bytes[0] = (bytes[0] & 0xFE) | 0x02
-    return bytes.map(b => b.toString(16).padStart(2, '0')).join(':')
+    return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join(':')
   }
 
   const generateFallbackIP = () => {
     const ranges = [
-      { base: '10.0', range: 255 },
-      { base: '172.16', range: 15 },
-      { base: '192.168', range: 255 }
+      [10, 0, 255],
+      [172, 16, 31], 
+      [192, 168, 255]
     ]
-    const selectedRange = ranges[Math.floor(Math.random() * ranges.length)]
-    const subnet = Math.floor(Math.random() * selectedRange.range)
+    const [base1, base2, maxRange] = ranges[Math.floor(Math.random() * 3)]
+    const subnet = Math.floor(Math.random() * (maxRange - base2 + 1)) + base2
     const host = Math.floor(Math.random() * 254) + 1
-    return `${selectedRange.base}.${subnet}.${host}`
+    return `${base1}.${subnet}.0.${host}`
   }
 
   // Fast device auto-auth

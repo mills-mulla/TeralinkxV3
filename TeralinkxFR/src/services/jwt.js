@@ -2,7 +2,16 @@
 export const jwtService = {
   decode(token) {
     try {
-      const base64Url = token.split('.')[1]
+      if (!token || typeof token !== 'string') {
+        return null
+      }
+      
+      const parts = token.split('.')
+      if (parts.length !== 3) {
+        return null
+      }
+      
+      const base64Url = parts[1]
       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
       const jsonPayload = decodeURIComponent(
         atob(base64)
@@ -67,11 +76,16 @@ export const jwtService = {
       'location_id'
     ]
     
-    const decoded = this.decode(token)
-    if (!decoded) return false
-    
-    return requiredClaims.every(claim => 
-      decoded[claim] !== undefined && decoded[claim] !== null
-    )
+    try {
+      const decoded = this.decode(token)
+      if (!decoded) return false
+      
+      return requiredClaims.every(claim => 
+        decoded[claim] !== undefined && decoded[claim] !== null
+      )
+    } catch (error) {
+      console.error('Error checking required claims:', error)
+      return false
+    }
   }
 }

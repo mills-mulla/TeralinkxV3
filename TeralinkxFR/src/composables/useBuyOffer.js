@@ -62,10 +62,25 @@ export function useBuyOffer() {
         throw new Error('Unexpected response status')
       }
     } catch (err) {
-      error.value = err.response?.data?.message || err.message || 'Failed to process offer purchase'
+      if (err.code === 'ECONNABORTED') {
+        error.value = 'Request timeout. Please try again.'
+      } else if (err.code === 'ERR_NETWORK') {
+        error.value = 'Network error. Check your connection.'
+      } else if (err.response?.status === 401) {
+        error.value = 'Authentication failed. Please login again.'
+      } else if (err.response?.status === 402) {
+        error.value = 'Insufficient balance for this purchase.'
+      } else if (err.response?.status === 404) {
+        error.value = 'Offer not found or no longer available.'
+      } else if (err.response?.status >= 500) {
+        error.value = 'Server error. Please try again later.'
+      } else {
+        error.value = err.response?.data?.message || err.message || 'Failed to process offer purchase'
+      }
       toast.error(error.value)
     } finally {
       loading.value = false
+      isloading.value = false
     }
   }
 
