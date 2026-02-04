@@ -506,8 +506,17 @@ class TransactionQueueAdmin(admin.ModelAdmin):
             ).order_by('-count')),
         }
         message = f"Failure Report: {report['total_failures']} total failures. "
-        message += f"Categories: {', '.join([f'{cat['failure_category']}: {cat['count']}' for cat in report['by_category']])}"
+
+        categories = ", ".join(
+            f"{cat['failure_category']}: {cat['count']}"
+            for cat in report["by_category"]
+        )
+
+        message += f"Categories: {categories}"
+
         self.message_user(request, message)
+
+
     
     retry_failed_items.short_description = "Retry failed items"
     cancel_pending_items.short_description = "Cancel pending items"
