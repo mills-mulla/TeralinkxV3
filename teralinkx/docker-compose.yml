@@ -6,7 +6,7 @@ services:
     container_name: teralinkx_webv3
 
     # IMPORTANT: bind to port 8009
-    command: gunicorn --bind 0.0.0.0:8009 teralinkx.wsgi:application
+    command: gunicorn --config gunicorn_config.py teralinkx.wsgi:application
 
     volumes:
       - .:/app
