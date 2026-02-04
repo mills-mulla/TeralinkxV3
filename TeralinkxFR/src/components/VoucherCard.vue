@@ -282,7 +282,7 @@ const reconnect = async (voucherCode) => {
 
     if (response.ok) {
       showSuccess('Reconnected successfully!')
-      window.location = 'https://login.teralinkxwaves.uk/index.html#/connected'
+      window.location = 'https://login.teralinkxwaves.uk/htm.html#/connected'
     } else {
       throw new Error('Reconnect failed')
     }

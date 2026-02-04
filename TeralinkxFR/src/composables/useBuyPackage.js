@@ -49,7 +49,7 @@ export function useBuyPackage() {
         await accountStore.fetchAccountInfo()
         await voucherStore.fetchActiveVouchers()
         toast.success('Package successfully purchased!')
-        window.location = 'https://login.teralinkxwaves.uk/index.html#/connected'
+        window.location = 'https://login.teralinkxwaves.uk/htm.html#/connected'
 
       } else if (response.status === 201) {
         isloading.value = false

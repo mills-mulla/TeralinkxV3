@@ -5,7 +5,7 @@ import os
 cpu_count = multiprocessing.cpu_count()
 workers = min(max((cpu_count * 2) + 1, 3), 8)  # 3-8 workers range
 
-bind = "0.0.0.0:8100"  # V3 port to avoid V2 conflict
+bind = "0.0.0.0:8009"  # V3 port to avoid V2 conflict
 worker_class = "gthread"
 threads = 4
 max_requests = 1000
