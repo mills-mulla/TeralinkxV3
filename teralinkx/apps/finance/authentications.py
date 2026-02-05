@@ -558,7 +558,14 @@ class ReconnectAPIView(APIView):
     
     def post(self, request):
         # Get client from JWT token
-        client = request.user
+        try:
+            client = ClientH.objects.get(user=request.user)
+        except ClientH.DoesNotExist:
+            return Response(
+                {'error': 'Client profile not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
         voucher_code = request.data.get('voucher_code')
         ip_address = request.data.get('bound_ip')
         
