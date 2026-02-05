@@ -212,9 +212,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Production CORS settings
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
-    'http://teralinkxwaves.uk',
-    'http://login.teralinkxwaves.uk',
-    'http://service.teralinkxwaves.uk',
+    'https://teralinkxwaves.uk',
+    'https://login.teralinkxwaves.uk',
+    'https://service.teralinkxwaves.uk',
     'http://teralinkxwaves.spot',
     'http://teralinkxwaves.co.ke',
     'http://localhost:8009',
