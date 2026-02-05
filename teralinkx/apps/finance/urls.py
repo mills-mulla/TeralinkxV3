@@ -7,6 +7,7 @@ from finance.payment_gateway import (
 from .querycheckout import payment_status, payment_health_check
 from .credit_balance import BalancePurchaseAPIView, balance_health_check
 from .unified_payment import UnifiedPaymentAPIView
+from .authentication import ConnectAPIView,ReconnectAPIView,DisconnectAPIView
 
 
 urlpatterns = [
@@ -17,4 +18,10 @@ urlpatterns = [
     path('payment-health/', payment_health_check, name='payment_health'),
     path('balance-purchase/', BalancePurchaseAPIView.as_view(), name='balance_purchase_v3'),
     path('balance-health/', balance_health_check, name='balance_health'),
+
+    #hotspot authentication
+    path('connect/', ConnectAPIView.as_view(), name='connect'),
+    path('reconnect/', ReconnectAPIView.as_view(), name='reconnect'),
+    path('disconnect/', DisconnectAPIView.as_view(), name='disconnect'),
+    
 ]
