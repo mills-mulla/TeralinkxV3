@@ -614,6 +614,39 @@ class PaymentProcessor:
                 hotspot_ip=hotspot_ip
             )
             
+            # 🎁 AWARD REWARD POINTS FOR M-PESA PURCHASE
+            # Only M-Pesa and M-Pesa + balance purchases earn points
+            try:
+                from core.services.rewards_service import RewardsService
+                
+                payment_method = getattr(transaction_record, 'method', 'mpesa')
+                
+                # Only award points for M-Pesa payments (pure or mixed)
+                if payment_method in ['mpesa', 'mixed']:
+                    # For mixed payments, award points based on M-Pesa amount only
+                    if payment_method == 'mixed' and transaction_record.used_credit:
+                        # Award points only for the M-Pesa portion
+                        mpesa_amount = transaction_record.price - Decimal(transaction_record.used_credit)
+                        points_awarded = RewardsService.award_purchase_points(
+                            user=user_context['client'],
+                            amount_spent=mpesa_amount,
+                            voucher=dispatch_voucher
+                        )
+                        logger.info(f"Awarded {points_awarded} reward points for M-Pesa portion ({mpesa_amount}) to {user_context['account']}")
+                    else:
+                        # Pure M-Pesa payment - award points for full amount
+                        points_awarded = RewardsService.award_purchase_points(
+                            user=user_context['client'],
+                            amount_spent=transaction_record.price,
+                            voucher=dispatch_voucher
+                        )
+                        logger.info(f"Awarded {points_awarded} reward points for M-Pesa payment to {user_context['account']}")
+                else:
+                    logger.info(f"No reward points awarded for {payment_method} payment (policy)")
+            except Exception as e:
+                logger.error(f"Failed to award reward points: {e}")
+                # Don't fail the purchase if rewards fail
+            
             transaction_record.mark_processed()
             
             AuditLogger.log_payment_success(
