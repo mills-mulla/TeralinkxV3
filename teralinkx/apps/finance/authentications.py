@@ -547,31 +547,30 @@ class ConnectAPIView(APIView):
 
 class ReconnectAPIView(APIView):
     """
-    Reconnect device to hotspot
+    Reconnect device to hotspot using JWT authentication
     
     Expected POST data:
-    - account: Client account number
     - voucher_code: Voucher code (optional, uses active voucher if not provided)
     - ip_address: Device IP address (required)
     """
-    permission_classes = [AllowAny]
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
     
     def post(self, request):
-        account = request.data.get('account')
+        # Get client from JWT token
+        client = request.user
         voucher_code = request.data.get('voucher_code')
-        ip_address = request.data.get('ip_address')
+        ip_address = request.data.get('bound_ip')
         
-        if not account or not ip_address:
+        if not ip_address:
             return Response(
-                {'error': 'Account and IP address are required'},
+                {'error': 'IP address is required'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        logger.info(f"Reconnect request - Account: {account}, IP: {ip_address}")
+        logger.info(f"Reconnect request - Account: {client.account}, IP: {ip_address}")
         
         try:
-            client = ClientH.objects.get(account=account)
-            
             # Use provided voucher_code or client's active voucher
             actual_voucher = voucher_code or client.active_voucher
             if not actual_voucher:
@@ -581,7 +580,7 @@ class ReconnectAPIView(APIView):
                 )
             
             # Validate voucher
-            is_valid, error_response = validate_voucher(account, actual_voucher)
+            is_valid, error_response = validate_voucher(client.account, actual_voucher)
             if not is_valid:
                 return error_response
             
@@ -602,7 +601,7 @@ class ReconnectAPIView(APIView):
                             ip=ip_address
                         )
                         
-                        logger.info(f"Reconnect successful (attempt {attempt}) - Account: {account}")
+                        logger.info(f"Reconnect successful (attempt {attempt}) - Account: {client.account}")
                         
                         return Response({
                             'status': 'reconnected',
@@ -619,7 +618,7 @@ class ReconnectAPIView(APIView):
                     if attempt < max_retries:
                         time.sleep(1)  # Wait before retry
                     else:
-                        logger.error(f"All reconnect attempts failed for account {account}")
+                        logger.error(f"All reconnect attempts failed for account {client.account}")
                         return Response(
                             {
                                 'error': 'Reconnection failed after 3 attempts',
@@ -628,11 +627,6 @@ class ReconnectAPIView(APIView):
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR
                         )
             
-        except ClientH.DoesNotExist:
-            return Response(
-                {'error': 'Account not found'},
-                status=status.HTTP_404_NOT_FOUND
-            )
         except Exception as e:
             logger.error(f"Reconnection error: {e}", exc_info=True)
             return Response(
@@ -871,17 +865,3 @@ who = RouterConfig.DEFAULT_CONFIG['username']
 how = RouterConfig.DEFAULT_CONFIG['password']
 
 
-# Legacy views for backward compatibility
-class Connect(ConnectAPIView):
-    """Legacy view name for backward compatibility"""
-    pass
-
-
-class Reconnect(ReconnectAPIView):
-    """Legacy view name for backward compatibility"""
-    pass
-
-
-class Disconnect(DisconnectAPIView):
-    """Legacy view name for backward compatibility"""
-    pass

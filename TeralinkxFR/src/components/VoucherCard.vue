@@ -270,7 +270,7 @@ const hotspot = useHotspot()
 
 const reconnect = async (voucherCode) => {
   try {
-    const response = await fetch('/api/reconnect/', {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/reconnect/`, {
       method: 'POST',
       headers: {
         ...authStore.authHeaders,
