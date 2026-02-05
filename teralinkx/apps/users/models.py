@@ -872,7 +872,68 @@ class UserDevice(TimeStampedModel):
             }
         )
     
-    def get_connection_statistics(self, days=30):
+    def update_device_info_from_request(self, request):
+        """
+        Update device information from HTTP request using rich User-Agent parsing
+        
+        Args:
+            request: Django HttpRequest object
+        """
+        from core.utils.device_parser import DeviceParser
+        
+        # Parse device information from request
+        device_info = DeviceParser.get_device_info_from_request(request)
+        
+        # Update device fields with parsed information
+        self.device_type = self._map_device_type(device_info['device_type'])
+        self.device_platform = self._map_platform(device_info['platform'])
+        self.device_model = device_info['model']
+        self.device_manufacturer = device_info['manufacturer']
+        
+        # Generate better device name
+        if device_info['manufacturer'] != 'Unknown' and device_info['model'] != 'Unknown Model':
+            self.device_name = DeviceParser.generate_device_name(device_info, self.user.display_name)
+        
+        # Store additional identification data
+        self.device_identification = {
+            'user_agent': device_info['user_agent'],
+            'browser': device_info['browser_info'],
+            'os': device_info['os_info'],
+            'device_details': device_info['device_details'],
+            'language': device_info.get('language', ''),
+            'last_updated': timezone.now().isoformat()
+        }
+        
+        self.save()
+        
+        return device_info
+    
+    def _map_device_type(self, parsed_type):
+        """Map parsed device type to model choices"""
+        type_mapping = {
+            'mobile': 'phone',
+            'tablet': 'tablet',
+            'desktop': 'desktop',
+            'smart_tv': 'tv',
+            'gaming_console': 'gaming',
+            'unknown': 'other'
+        }
+        return type_mapping.get(parsed_type, 'other')
+    
+    def _map_platform(self, parsed_platform):
+        """Map parsed platform to model choices"""
+        platform_lower = parsed_platform.lower()
+        
+        if 'windows' in platform_lower:
+            return 'windows'
+        elif 'mac' in platform_lower or 'ios' in platform_lower:
+            return 'macos' if 'mac' in platform_lower else 'ios'
+        elif 'android' in platform_lower:
+            return 'android'
+        elif 'linux' in platform_lower:
+            return 'linux'
+        else:
+            return 'other'
         """
         Get connection statistics for the device over a specified period.
         

@@ -495,9 +495,9 @@ class ConnectAPIView(APIView):
                     client.voucher_expiry = voucher.expires_at
                     client.save()
                 
-                # Step 6: Create or update device session
+                # Step 6: Create or update device session with rich device info
                 if mac_address:
-                    device, _ = UserDevice.objects.get_or_create(
+                    device, device_created = UserDevice.objects.get_or_create(
                         mac_address=mac_address,
                         defaults={
                             'user': client,
@@ -506,13 +506,16 @@ class ConnectAPIView(APIView):
                         }
                     )
                     
+                    # Update device with rich information from request
+                    device_info = device.update_device_info_from_request(request)
+                    
                     # Update device presence
                     device.update_presence(
                         ip_address=actual_ip,
                         location=client.current_location
                     )
                     
-                    # Create session
+                    # Create session with User-Agent
                     UserSession.objects.create(
                         user=client,
                         device=device,
@@ -521,7 +524,8 @@ class ConnectAPIView(APIView):
                         location=client.current_location,
                         session_type='hotspot_login',
                         active_voucher=voucher_code,
-                        voucher_expires=voucher.expires_at if 'voucher' in locals() else None
+                        voucher_expires=voucher.expires_at if 'voucher' in locals() else None,
+                        user_agent=request.META.get('HTTP_USER_AGENT', '')
                     )
                 
                 return Response({

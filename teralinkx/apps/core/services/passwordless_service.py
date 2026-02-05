@@ -250,7 +250,7 @@ class PasswordlessService:
                                 location=client.current_location,
                                 conflict_resolution='transfer',
                                 user_agent=user_agent,
-                                device_info=device_info
+                                device_info=device_info  # Pass the rich device_info
                             )
                         )
                         
@@ -401,7 +401,7 @@ class PasswordlessService:
                             location=location,
                             conflict_resolution='transfer',
                             user_agent=user_agent,
-                            device_info=device_info
+                            device_info=device_info  # Pass the rich device_info
                         )
                     )
                     

@@ -303,37 +303,6 @@ watch(phone, (newPhone) => {
 })
 
 // Helper functions
-// Device detection helper functions
-const getWebGLInfo = () => {
-  try {
-    const canvas = document.createElement('canvas')
-    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
-    if (!gl) return null
-    
-    return {
-      vendor: gl.getParameter(gl.VENDOR),
-      renderer: gl.getParameter(gl.RENDERER),
-      version: gl.getParameter(gl.VERSION)
-    }
-  } catch (e) {
-    return null
-  }
-}
-
-const getBatteryInfo = async () => {
-  try {
-    if ('getBattery' in navigator) {
-      const battery = await navigator.getBattery()
-      return {
-        charging: battery.charging,
-        level: Math.round(battery.level * 100)
-      }
-    }
-  } catch (e) {
-    // Battery API not available or blocked
-  }
-  return null
-}
 
 const generateFallbackMac = () => {
   // Generate cryptographically secure random MAC with locally administered bit set
@@ -535,38 +504,11 @@ const checkAccountStatus = async () => {
 const performAuth = async (isAuto = false) => {
   const formattedPhone = normalizeKenyanPhone(phone.value)
   
-  // Collect comprehensive device information
-  const deviceInfo = {
-    userAgent: navigator.userAgent,
-    platform: navigator.platform,
-    language: navigator.language,
-    screenWidth: screen.width,
-    screenHeight: screen.height,
-    screenDepth: screen.colorDepth,
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    touchPoints: navigator.maxTouchPoints || 0,
-    deviceMemory: navigator.deviceMemory,
-    hardwareConcurrency: navigator.hardwareConcurrency,
-    connectionType: navigator.connection?.effectiveType,
-    connectionDownlink: navigator.connection?.downlink,
-    isTouch: 'ontouchstart' in window,
-    isMobile: window.matchMedia('(pointer: coarse)').matches,
-    isTablet: window.matchMedia('(min-width: 768px) and (pointer: coarse)').matches,
-    pixelRatio: window.devicePixelRatio,
-    orientation: screen.orientation?.type || 'unknown',
-    cookieEnabled: navigator.cookieEnabled,
-    doNotTrack: navigator.doNotTrack,
-    webGL: getWebGLInfo(),
-    battery: await getBatteryInfo()
-  }
-  
-  // Prepare authentication payload with enhanced device data
+  // Prepare authentication payload
   const payload = {
     phone: formattedPhone,
     current_mac: hotspot.mac || generateFallbackMac(),
-    current_ip: hotspot.ip || generateFallbackIP(),
-    device_info: deviceInfo,
-    timestamp: new Date().toISOString()
+    current_ip: hotspot.ip || generateFallbackIP()
   }
   
 
@@ -694,13 +636,7 @@ const attemptAutoSignIn = async () => {
     const payload = {
       current_mac: hotspot.mac,
       current_ip: hotspot.ip,
-      location_id: 1, // Default location
-      device_info: {
-        userAgent: navigator.userAgent,
-        platform: navigator.platform,
-        language: navigator.language,
-        timestamp: new Date().toISOString()
-      }
+      location_id: 1 // Default location
     }
     
     const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/auth/device-auto/`, {

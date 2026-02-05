@@ -597,7 +597,33 @@ class ClientService:
         return client, client_created
 
     @staticmethod
-    def detect_device_type_and_info(device_info: Dict[str, Any]) -> Dict[str, str]:
+    def _map_device_type(parsed_type):
+        """Map parsed device type to model choices"""
+        type_mapping = {
+            'mobile': 'phone',
+            'tablet': 'tablet',
+            'desktop': 'desktop',
+            'smart_tv': 'tv',
+            'gaming_console': 'gaming',
+            'unknown': 'other'
+        }
+        return type_mapping.get(parsed_type, 'other')
+    
+    @staticmethod
+    def _map_platform(parsed_platform):
+        """Map parsed platform to model choices"""
+        platform_lower = parsed_platform.lower()
+        
+        if 'windows' in platform_lower:
+            return 'windows'
+        elif 'mac' in platform_lower or 'ios' in platform_lower:
+            return 'macos' if 'mac' in platform_lower else 'ios'
+        elif 'android' in platform_lower:
+            return 'android'
+        elif 'linux' in platform_lower:
+            return 'linux'
+        else:
+            return 'other'
         """
         Enhanced device detection using comprehensive device information.
         
@@ -1296,6 +1322,24 @@ class ClientService:
                     if device_info:
                         processed_device_info = ClientService.detect_device_type_and_info(device_info)
                         logger.info(f"[Step 6] Enhanced device detection: {processed_device_info.get('device_type')} {processed_device_info.get('device_manufacturer')} {processed_device_info.get('device_model')}")
+                    elif user_agent:
+                        # Use our new DeviceParser for rich User-Agent parsing
+                        from core.utils.device_parser import DeviceParser
+                        device_info_from_ua = DeviceParser.parse_user_agent(user_agent)
+                        processed_device_info = {
+                            'device_type': ClientService._map_device_type(device_info_from_ua['device_type']),
+                            'device_platform': ClientService._map_platform(device_info_from_ua['platform']),
+                            'device_model': device_info_from_ua['model'],
+                            'device_manufacturer': device_info_from_ua['manufacturer'],
+                            'device_identification': {
+                                'user_agent': device_info_from_ua['user_agent'],
+                                'browser': device_info_from_ua['browser_info'],
+                                'os': device_info_from_ua['os_info'],
+                                'device_details': device_info_from_ua['device_details'],
+                                'last_updated': timezone.now().isoformat()
+                            }
+                        }
+                        logger.info(f"[Step 6] User-Agent device detection: {processed_device_info.get('device_type')} {processed_device_info.get('device_manufacturer')} {processed_device_info.get('device_model')}")
                     
                     device, is_device_owner, was_device_transferred = (
                         ClientService._handle_device_with_conflict_resolution(
