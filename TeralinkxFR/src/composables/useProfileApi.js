@@ -25,7 +25,7 @@ export function useProfileApi() {
   }
 
   const updateProfile = async (data) => {
-    return apiRequest('/api/profile/update/', {
+    return apiRequest(`${import.meta.env.VITE_API_BASE_URL}/api/profile/update/`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json'
@@ -41,7 +41,7 @@ export function useProfileApi() {
     const headers = { ...authStore.authHeaders }
     delete headers['Content-Type'] // Let browser set multipart boundary
 
-    const response = await fetch('/api/profile/image/', {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/profile/image/`, {
       method: 'POST',
       headers,
       body: formData
@@ -55,11 +55,11 @@ export function useProfileApi() {
   }
 
   const getDevices = async () => {
-    return apiRequest('/api/devices/')
+    return apiRequest(`${import.meta.env.VITE_API_BASE_URL}/api/devices/`)
   }
 
   const updateDevice = async (deviceId, data) => {
-    return apiRequest(`/api/devices/${deviceId}/update/`, {
+    return apiRequest(`${import.meta.env.VITE_API_BASE_URL}/api/devices/${deviceId}/update/`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json'
@@ -69,19 +69,19 @@ export function useProfileApi() {
   }
 
   const blockDevice = async (deviceId) => {
-    return apiRequest(`/api/devices/${deviceId}/block/`, {
+    return apiRequest(`${import.meta.env.VITE_API_BASE_URL}/api/devices/${deviceId}/block/`, {
       method: 'POST'
     })
   }
 
   const unblockDevice = async (deviceId) => {
-    return apiRequest(`/api/devices/${deviceId}/unblock/`, {
+    return apiRequest(`${import.meta.env.VITE_API_BASE_URL}/api/devices/${deviceId}/unblock/`, {
       method: 'POST'
     })
   }
 
   const trustDevice = async (deviceId, trusted) => {
-    return apiRequest(`/api/devices/${deviceId}/trust/`, {
+    return apiRequest(`${import.meta.env.VITE_API_BASE_URL}/api/devices/${deviceId}/trust/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -91,13 +91,13 @@ export function useProfileApi() {
   }
 
   const removeDevice = async (deviceId) => {
-    return apiRequest(`/api/devices/${deviceId}/remove/`, {
+    return apiRequest(`${import.meta.env.VITE_API_BASE_URL}/api/devices/${deviceId}/remove/`, {
       method: 'DELETE'
     })
   }
 
   const getAccountStats = async () => {
-    return apiRequest('/api/profile/stats/')
+    return apiRequest(`${import.meta.env.VITE_API_BASE_URL}/api/profile/stats/`)
   }
 
   return {

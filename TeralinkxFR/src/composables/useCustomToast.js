@@ -5,7 +5,7 @@ const toasts = ref([])
 let toastId = 0
 
 export const useCustomToast = () => {
-  const addToast = (message, type = 'info', title = null, duration = 5000) => {
+  const addToast = (message, type = 'info', title = null, duration = 7000) => {
     const id = ++toastId
     const toast = {
       id,
@@ -53,7 +53,7 @@ export const useCustomToast = () => {
     toasts.value = []
   }
 
-  const success = (message, title = null, duration = 5000) => {
+  const success = (message, title = null, duration = 7000) => {
     return addToast(message, 'success', title, duration)
   }
 
@@ -61,11 +61,11 @@ export const useCustomToast = () => {
     return addToast(message, 'error', title, duration)
   }
 
-  const warning = (message, title = null, duration = 6000) => {
+  const warning = (message, title = null, duration = 7000) => {
     return addToast(message, 'warning', title, duration)
   }
 
-  const info = (message, title = null, duration = 5000) => {
+  const info = (message, title = null, duration = 7000) => {
     return addToast(message, 'info', title, duration)
   }
 

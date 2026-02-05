@@ -14,7 +14,7 @@ export function useRenewPackage() {
     errorMessage.value = null
 
     try {
-        const response = await axios.post('/api/renew/', {
+        const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/renew/`, {
         headers: {
             'Content-Type': 'application/json',
             Authorization: `Token ${localStorage.getItem('authToken')}`

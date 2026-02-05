@@ -549,7 +549,7 @@ const uploadImage = async (file) => {
     const headers = { ...authStore.authHeaders }
     delete headers['Content-Type']
 
-    const response = await fetch('/api/profile/image/', {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/profile/image/`, {
       method: 'POST',
       headers,
       body: formData
@@ -579,7 +579,7 @@ const debouncedUpdate = (field, value) => {
 const updateField = async (field, value) => {
   try {
     saving.value = true
-    const response = await fetch('/api/profile/update/', {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/profile/update/`, {
       method: 'PATCH',
       headers: {
         ...authStore.authHeaders,
@@ -622,7 +622,7 @@ const refreshData = async () => {
 // Device management methods
 const loadDevices = async () => {
   try {
-    const response = await fetch('/api/devices/', {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/devices/`, {
       headers: authStore.authHeaders
     })
     
@@ -658,7 +658,7 @@ const startEditDevice = (device) => {
 
 const saveDeviceName = async (device) => {
   try {
-    const response = await fetch(`/api/devices/${device.id}/update/`, {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/devices/${device.id}/update/`, {
       method: 'PATCH',
       headers: {
         ...authStore.authHeaders,
@@ -686,7 +686,7 @@ const cancelEditDevice = (device) => {
 
 const blockDevice = async (device) => {
   try {
-    const response = await fetch(`/api/devices/${device.id}/block/`, {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/devices/${device.id}/block/`, {
       method: 'POST',
       headers: authStore.authHeaders
     })
@@ -703,7 +703,7 @@ const blockDevice = async (device) => {
 
 const unblockDevice = async (device) => {
   try {
-    const response = await fetch(`/api/devices/${device.id}/unblock/`, {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/devices/${device.id}/unblock/`, {
       method: 'POST',
       headers: authStore.authHeaders
     })
@@ -720,7 +720,7 @@ const unblockDevice = async (device) => {
 
 const trustDevice = async (device) => {
   try {
-    const response = await fetch(`/api/devices/${device.id}/trust/`, {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/devices/${device.id}/trust/`, {
       method: 'POST',
       headers: {
         ...authStore.authHeaders,
@@ -743,7 +743,7 @@ const removeDevice = async (device) => {
   if (!confirm(`Are you sure you want to remove ${device.device_name}?`)) return
   
   try {
-    const response = await fetch(`/api/devices/${device.id}/remove/`, {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/devices/${device.id}/remove/`, {
       method: 'DELETE',
       headers: authStore.authHeaders
     })

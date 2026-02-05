@@ -23,7 +23,7 @@ export function useRewards() {
   const fetchRewardSummary = async () => {
     try {
       loading.value = true
-      const response = await fetch('/api/rewards/summary/', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/rewards/summary/`, {
         headers: authStore.authHeaders
       })
       
@@ -41,7 +41,7 @@ export function useRewards() {
   
   const fetchAvailableRewards = async () => {
     try {
-      const response = await fetch('/api/rewards/available/', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/rewards/available/`, {
         headers: authStore.authHeaders
       })
       
@@ -56,7 +56,7 @@ export function useRewards() {
   
   const fetchPointHistory = async () => {
     try {
-      const response = await fetch('/api/rewards/history/', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/rewards/history/`, {
         headers: authStore.authHeaders
       })
       
@@ -72,7 +72,7 @@ export function useRewards() {
   const redeemReward = async (pointsCost, discountPercentage) => {
     try {
       loading.value = true
-      const response = await fetch('/api/rewards/redeem/', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/rewards/redeem/`, {
         method: 'POST',
         headers: {
           ...authStore.authHeaders,

@@ -24,19 +24,19 @@ export const useToast = () => {
     return id
   }
 
-  const showSuccess = (message, duration = 3000) => {
+  const showSuccess = (message, duration = 7000) => {
     return showToast(message, 'success', duration)
   }
 
-  const showError = (message, duration = 5000) => {
+  const showError = (message, duration = 7000) => {
     return showToast(message, 'error', duration)
   }
 
-  const showWarning = (message, duration = 4000) => {
+  const showWarning = (message, duration = 7000) => {
     return showToast(message, 'warning', duration)
   }
 
-  const showInfo = (message, duration = 4000) => {
+  const showInfo = (message, duration = 7000) => {
     return showToast(message, 'info', duration)
   }
 
