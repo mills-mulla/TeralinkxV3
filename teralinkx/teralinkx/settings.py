@@ -212,31 +212,35 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Production CORS settings
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
-    'https://test.teralinkxwaves.uk',
-    'https://teralinkxwaves.uk',
-    'https://login.teralinkxwaves.uk', 
-    'https://service.teralinkxwaves.uk',
-    'http://localhost:5173',  # Dev frontend
+    'http://teralinkxwaves.uk',
+    'http://login.teralinkxwaves.uk',
+    'http://service.teralinkxwaves.uk',
+    'http://teralinkxwaves.spot',
+    'http://teralinkxwaves.co.ke',
+    'http://localhost:8009',
+    'http://127.0.0.1:8009',
+    'http://localhost:5173',
     'http://127.0.0.1:5173',
+    'http://192.168.88.16:8009',
+    'http://192.168.88.16:5173',
+    'http://192.168.88.16',
+    'http://10.0.0.1',
+    'http://0.0.0.0:8000',
 ]
-CORS_ALLOW_CREDENTIALS = True
+
 # CORS_ALLOWED_ORIGINS = [
-#     'http://teralinkxwaves.uk',
-#     'http://login.teralinkxwaves.uk',
-#     'http://service.teralinkxwaves.uk',
-#     'http://teralinkxwaves.spot',
-#     'http://teralinkxwaves.co.ke',
-#     'http://localhost:8000',
-#     'http://localhost:8200',
-#     'http://127.0.0.1:8000',
-#     'http://localhost:5173',
+#     'https://test.teralinkxwaves.uk',
+#     'https://teralinkxwaves.uk',
+#     'https://login.teralinkxwaves.uk', 
+#     'https://service.teralinkxwaves.uk',
+#     'http://localhost:5173',  # Dev frontend
 #     'http://127.0.0.1:5173',
-#     'http://192.168.88.16:8200',
-#     'http://192.168.8.8:5173',
-#     'http://192.168.88.16',
-#     'http://10.0.0.1',
-#     'http://0.0.0.0:8000',
+#     'http://192.168.88.16:5173', #V3 frontend
+
 # ]
+
+CORS_ALLOW_CREDENTIALS = True
+
 
 # Expose  headers to frontend
 CORS_EXPOSE_HEADERS = [
@@ -271,8 +275,8 @@ CSRF_TRUSTED_ORIGINS = [
     'https://teralinkxwaves.uk',
     'https://login.teralinkxwaves.uk',
     'https://service.teralinkxwaves.uk',
-    'http://localhost:8100',  # V3 port
-    'http://127.0.0.1:8100',
+    'http://192.168.88.16:8009',  # V3 port
+    'http://127.0.0.1:8009',
 ]
 
 # Cache - Redis for production
