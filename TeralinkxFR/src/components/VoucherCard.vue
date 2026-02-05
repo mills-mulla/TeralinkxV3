@@ -204,6 +204,7 @@ import { useDashboardStore } from '@/stores/dashboard'
 import { useAuthStore } from '@/stores/auth'
 import { useNetworkStore } from '@/stores/network'
 import { useToast } from '@/composables/useToast'
+import { useHotspot } from '@/plugins/hotspot'
 
 // Define emits to communicate with parent Dashboard
 const emit = defineEmits(['openRenewModal'])
@@ -265,6 +266,8 @@ const disconnectCurrentDevice = async (voucher) => {
   }
 }
 
+const hotspot = useHotspot()
+
 const reconnect = async (voucherCode) => {
   try {
     const response = await fetch('/api/reconnect/', {
@@ -275,8 +278,8 @@ const reconnect = async (voucherCode) => {
       },
       body: JSON.stringify({
         voucher_code: voucherCode,
-        bound_ip: networkStore.ip,
-        bound_mac: networkStore.mac
+        bound_ip: hotspot.ip,
+        bound_mac: hotspot.mac
       })
     })
 
