@@ -317,7 +317,7 @@ const renewVoucher = async (voucher) => {
     package_code: matchingPackage.code
   }
   
-  // Emit event to parent Dashboard to open BuyComponent
+  // Emit event to parent Dashboard to open BuyComponent for fresh data
   emit('openRenewModal', renewPackageDetails)
 }
 

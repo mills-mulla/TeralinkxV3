@@ -1172,15 +1172,36 @@ class PaymentCallbackAPIView(APIView):
                 
                 if dispatch_voucher:
                     # 🎁 AWARD REWARD POINTS FOR M-PESA PURCHASE
+                    # Only M-Pesa and M-Pesa + balance purchases earn points
+                    # Balance-only purchases do NOT earn points
                     try:
                         user_client = queue_item.user if queue_item else payment_transaction.user
                         if user_client:
-                            points_awarded = RewardsService.award_purchase_points(
-                                user=user_client,
-                                amount_spent=payment_transaction.amount,
-                                voucher=dispatch_voucher
-                            )
-                            logger.info(f"Awarded {points_awarded} reward points to {user_client.account}")
+                            # Determine payment method from queue item
+                            payment_method = getattr(queue_item, 'method', 'mpesa') if queue_item else 'mpesa'
+                            
+                            # Only award points for M-Pesa payments (pure or mixed)
+                            if payment_method in ['mpesa', 'mixed']:
+                                # For mixed payments, award points based on M-Pesa amount only
+                                if payment_method == 'mixed' and queue_item:
+                                    # Award points only for the M-Pesa portion
+                                    mpesa_amount = payment_transaction.amount  # This is the M-Pesa amount paid
+                                    points_awarded = RewardsService.award_purchase_points(
+                                        user=user_client,
+                                        amount_spent=mpesa_amount,
+                                        voucher=dispatch_voucher
+                                    )
+                                    logger.info(f"Awarded {points_awarded} reward points for M-Pesa portion ({mpesa_amount}) to {user_client.account}")
+                                else:
+                                    # Pure M-Pesa payment - award points for full amount
+                                    points_awarded = RewardsService.award_purchase_points(
+                                        user=user_client,
+                                        amount_spent=payment_transaction.amount,
+                                        voucher=dispatch_voucher
+                                    )
+                                    logger.info(f"Awarded {points_awarded} reward points for M-Pesa payment to {user_client.account}")
+                            else:
+                                logger.info(f"No reward points awarded for {payment_method} payment to {user_client.account} (policy)")
                     except Exception as e:
                         logger.error(f"Failed to award reward points: {e}")
                         # Don't fail the purchase if rewards fail

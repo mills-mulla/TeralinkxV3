@@ -636,7 +636,7 @@ const attemptAutoSignIn = async () => {
     const payload = {
       current_mac: hotspot.mac,
       current_ip: hotspot.ip,
-      location_id: 1 // Default location
+      location_id: 1 // Default location must be available
     }
     
     const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/auth/device-auto/`, {

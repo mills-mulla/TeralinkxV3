@@ -820,19 +820,10 @@ class BalancePurchaseProcessor:
             client_post_commit = ClientH.objects.get(id=client.id)
             logger.info(f"DEBUG: Client balance after explicit commit: {client_post_commit.balance}")
             
-            # 🎁 AWARD REWARD POINTS FOR PURCHASE (non-critical - separate transaction)
-            try:
-                # Use a separate transaction for rewards to prevent rollback of main purchase
-                with transaction.atomic():
-                    points_awarded = RewardsService.award_purchase_points(
-                        user=client,
-                        amount_spent=package.price,
-                        voucher=dispatch_voucher
-                    )
-                    logger.info(f"Awarded {points_awarded} reward points to {client.account}")
-            except Exception as e:
-                logger.error(f"Failed to award reward points to {client.account}: {e}")
-                # Don't let reward failures affect the main purchase
+            # 🎁 REWARD POINTS POLICY: Balance-only purchases do NOT earn points
+            # Only M-Pesa and M-Pesa + balance purchases earn reward points
+            # This encourages users to use M-Pesa for payments
+            logger.info(f"Balance-only purchase completed for {client.account} - NO reward points awarded (policy)")
             
             # Perform auto-login if requested and IP is available (non-critical - separate operation)
             auto_login_success = False
