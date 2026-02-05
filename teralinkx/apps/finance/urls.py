@@ -7,7 +7,7 @@ from finance.payment_gateway import (
 from .querycheckout import payment_status, payment_health_check
 from .credit_balance import BalancePurchaseAPIView, balance_health_check
 from .unified_payment import UnifiedPaymentAPIView
-from .authentication import ConnectAPIView,ReconnectAPIView,DisconnectAPIView
+from .authentications import ConnectAPIView,ReconnectAPIView,DisconnectAPIView
 
 
 urlpatterns = [
