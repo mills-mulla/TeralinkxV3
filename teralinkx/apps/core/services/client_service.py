@@ -624,7 +624,9 @@ class ClientService:
             return 'linux'
         else:
             return 'other'
-        """
+
+    @staticmethod
+    def detect_device_type_and_info(device_info: Dict) -> Dict[str, Any]:
         Enhanced device detection using comprehensive device information.
         
         Args:

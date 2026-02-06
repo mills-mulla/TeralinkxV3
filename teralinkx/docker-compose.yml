@@ -11,8 +11,7 @@ services:
     volumes:
       - .:/app
       - ./media:/app/media
-      - ./static:/app/static
-      - ./staticvolume:/app/staticfiles
+      - ./staticfiles:/app/staticfiles
 
     ports:
       - "8009:8009"
