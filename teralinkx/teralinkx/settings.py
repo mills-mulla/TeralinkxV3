@@ -144,8 +144,10 @@ TEMPLATES = [
 
 # Database - PostgreSQL for production
 DATABASES = {
-    'default': dj_database_url.parse(
-        os.environ.get('DATABASE_URL', 'postgresql://teralinkx:justboot@db:5432/teralinkxv3')
+    'default': dj_database_url.config(
+        default='postgres://teralinkx:justboot@db:5432/teralinkx',
+        conn_max_age=600,  # persistent connections
+        ssl_require=False  # set True in production if needed
     )
 }
 
