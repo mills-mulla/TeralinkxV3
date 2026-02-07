@@ -98,6 +98,9 @@ class DashboardAPIView(APIView):
                 
                 if computed_status == 'active':
                     from users.models import UserSession
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    
                     active_sessions = UserSession.objects.filter(
                         user=client,
                         active_voucher=voucher.voucher_code,
@@ -109,13 +112,20 @@ class DashboardAPIView(APIView):
                     request_ip = request.META.get('REMOTE_ADDR')
                     request_mac = request.META.get('HTTP_X_MAC_ADDRESS')  # If sent from frontend
                     
+                    logger.info(f"Checking device match for voucher {voucher.voucher_code}")
+                    logger.info(f"Request IP: {request_ip}, Request MAC: {request_mac}")
+                    logger.info(f"Active sessions: {active_sessions.count()}")
+                    
                     for session in active_sessions:
+                        logger.info(f"Session IP: {session.ip_address}, Device MAC: {session.device.mac_address}")
                         # Match by IP or MAC
                         if session.ip_address == request_ip:
                             current_device_session = session
+                            logger.info(f"✓ Matched by IP: {request_ip}")
                             break
                         if request_mac and session.device.mac_address == request_mac:
                             current_device_session = session
+                            logger.info(f"✓ Matched by MAC: {request_mac}")
                             break
                 
                 voucher_data = {
