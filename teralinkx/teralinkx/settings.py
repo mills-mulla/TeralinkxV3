@@ -145,7 +145,7 @@ TEMPLATES = [
 # Database - PostgreSQL for production
 DATABASES = {
     'default': dj_database_url.config(
-        default='postgres://teralinkx:justboot@db:5432/teralinkx',
+        default='postgres://teralinkx:justboot@192.168.88.16:5432/teralinkx',
         conn_max_age=600,  # persistent connections
         ssl_require=False  # set True in production if needed
     )
@@ -197,15 +197,12 @@ USE_I18N = True
 USE_TZ = True
 
 # Static files
-# URL Configuration
-FORCE_SCRIPT_NAME = '/beta'
-
-STATIC_URL = '/beta/static/'
+STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media files
-MEDIA_URL = '/beta/media/'
+MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Default primary key
@@ -365,3 +362,8 @@ LOGGING = {
         },
     },
 } 
+
+# ============================================================================
+# RADIUS API CONFIGURATION
+# ============================================================================
+RADIUS_API_URL = 'http://localhost:8010/api'

@@ -135,3 +135,39 @@ def mark_dispatch_as_expired(self, voucher_id):
     finally:
         import gc
         gc.collect()
+
+
+# ============================================================================
+# RADIUS USAGE SYNC TASKS
+# ============================================================================
+
+@shared_task(bind=True, soft_time_limit=300, time_limit=600)
+def sync_radius_usage_all(self):
+    """Sync usage for all active vouchers from FreeRADIUS (every 5 minutes)"""
+    try:
+        from .radius_sync import RadiusUsageSyncService
+        result = RadiusUsageSyncService.sync_active_vouchers()
+        logger.info(f"Radius sync complete: {result}")
+        return result
+    except Exception as e:
+        logger.error(f"Radius sync failed: {e}")
+        raise
+    finally:
+        import gc
+        gc.collect()
+
+
+@shared_task(bind=True, soft_time_limit=180, time_limit=300)
+def sync_radius_usage_critical(self):
+    """Sync usage for critical vouchers (>80% data used) (every 2 minutes)"""
+    try:
+        from .radius_sync import RadiusUsageSyncService
+        result = RadiusUsageSyncService.sync_critical_vouchers()
+        logger.info(f"Critical radius sync complete: {result}")
+        return result
+    except Exception as e:
+        logger.error(f"Critical radius sync failed: {e}")
+        raise
+    finally:
+        import gc
+        gc.collect()

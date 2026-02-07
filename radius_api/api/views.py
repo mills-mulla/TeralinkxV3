@@ -2,6 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.db import transaction
+from django.db.models import Sum, Count
 from .models import RadCheck, RadReply, RadUserGroup, RadGroupCheck, RadGroupReply, RadAcct, Nas, Voucher
 from .serializers import (
     CreateUserSerializer, UserSerializer, CreateProfileSerializer, 
@@ -242,6 +243,125 @@ class SessionAPIView(APIView):
         
         serializer = RadAcctSerializer(query, many=True)
         return Response({'sessions': serializer.data, 'count': query.count()})
+
+
+class VoucherUsageAPIView(APIView):
+    """Get aggregated usage data for voucher across all sessions"""
+    
+    def get(self, request):
+        """Get total usage for a voucher (username)"""
+        username = request.query_params.get('username')
+        
+        if not username:
+            return Response(
+                {'error': 'username parameter required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Aggregate all sessions for this voucher
+        sessions = RadAcct.objects.filter(username=username)
+        
+        if not sessions.exists():
+            return Response({
+                'username': username,
+                'total_sessions': 0,
+                'total_session_time': 0,
+                'total_downloaded': 0,
+                'total_uploaded': 0,
+                'total_data': 0,
+                'active_sessions': 0
+            })
+        
+        # Aggregate totals
+        totals = sessions.aggregate(
+            total_sessions=Count('radacctid'),
+            total_session_time=Sum('acctsessiontime'),
+            total_downloaded=Sum('acctinputoctets'),
+            total_uploaded=Sum('acctoutputoctets')
+        )
+        
+        # Count active sessions
+        active_count = sessions.filter(acctstoptime__isnull=True).count()
+        
+        # Calculate total data
+        total_data = (totals['total_downloaded'] or 0) + (totals['total_uploaded'] or 0)
+        
+        return Response({
+            'username': username,
+            'total_sessions': totals['total_sessions'] or 0,
+            'total_session_time': totals['total_session_time'] or 0,
+            'total_downloaded': totals['total_downloaded'] or 0,
+            'total_uploaded': totals['total_uploaded'] or 0,
+            'total_data': total_data,
+            'active_sessions': active_count
+        })
+
+
+class VoucherUsageBatchAPIView(APIView):
+    """Get usage data for multiple vouchers in one request"""
+    
+    def post(self, request):
+        """Batch get usage for multiple vouchers"""
+        usernames = request.data.get('usernames', [])
+        
+        if not usernames or not isinstance(usernames, list):
+            return Response(
+                {'error': 'usernames array required in request body'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if len(usernames) > 100:
+            return Response(
+                {'error': 'Maximum 100 usernames per batch request'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        results = []
+        
+        for username in usernames:
+            # Aggregate all sessions for this voucher
+            sessions = RadAcct.objects.filter(username=username)
+            
+            if not sessions.exists():
+                results.append({
+                    'username': username,
+                    'total_sessions': 0,
+                    'total_session_time': 0,
+                    'total_downloaded': 0,
+                    'total_uploaded': 0,
+                    'total_data': 0,
+                    'active_sessions': 0
+                })
+                continue
+            
+            # Aggregate totals
+            totals = sessions.aggregate(
+                total_sessions=Count('radacctid'),
+                total_session_time=Sum('acctsessiontime'),
+                total_downloaded=Sum('acctinputoctets'),
+                total_uploaded=Sum('acctoutputoctets')
+            )
+            
+            # Count active sessions
+            active_count = sessions.filter(acctstoptime__isnull=True).count()
+            
+            # Calculate total data
+            total_data = (totals['total_downloaded'] or 0) + (totals['total_uploaded'] or 0)
+            
+            results.append({
+                'username': username,
+                'total_sessions': totals['total_sessions'] or 0,
+                'total_session_time': totals['total_session_time'] or 0,
+                'total_downloaded': totals['total_downloaded'] or 0,
+                'total_uploaded': totals['total_uploaded'] or 0,
+                'total_data': total_data,
+                'active_sessions': active_count
+            })
+        
+        return Response({
+            'count': len(results),
+            'results': results
+        })
 
 
 class DisconnectAPIView(APIView):
