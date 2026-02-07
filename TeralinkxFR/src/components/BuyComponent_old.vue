@@ -380,7 +380,7 @@ function formatPhoneNumber() {
 const fetchAvailableCoupons = async () => {
   try {
     loading.value = true
-    const response = await fetch('/api/rewards/coupons/', {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/rewards/coupons/`, {
       headers: authStore.authHeaders
     })
     
