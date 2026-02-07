@@ -1190,24 +1190,6 @@ class UserSession(TimeStampedModel):
             severity='info',
             ip_address=self.ip_address,
             details={
-    
-    @classmethod
-    def verify_voucher_session(cls, mac_address, ip_address, start_time, end_time=None):
-        """Verify if device was using voucher during RADIUS session period"""
-        query = cls.objects.filter(
-            device__mac_address=mac_address,
-            session_type='voucher',
-            voucher_activated__lte=start_time,
-            voucher_expires__gte=start_time
-        )
-        
-        if ip_address:
-            query = query.filter(ip_address=ip_address)
-        
-        if end_time:
-            query = query.filter(voucher_expires__gte=end_time)
-        
-        return query.first()
                 'session_id': self.session_id,
                 'old_voucher': old_voucher,
                 'reason': reason,
