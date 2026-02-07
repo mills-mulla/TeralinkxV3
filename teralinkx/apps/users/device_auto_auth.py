@@ -123,28 +123,36 @@ class DeviceAutoAuthAPIView(APIView):
                 # Update device presence
                 device.update_presence(ip_address=ip_address, location=location)
                 
-                # Create or update session
-                session, session_created = UserSession.objects.get_or_create(
+                # Create or update web auth session (not RADIUS network sessions)
+                session = UserSession.objects.filter(
                     user=client,
                     device=device,
-                    is_active=True,
-                    defaults={
-                        'session_id': f"auto_{timezone.now().timestamp()}",
-                        'ip_address': ip_address,
-                        'location': location,
-                        'session_type': 'network',
-                        'request_metadata': device_info,
-                        'user_agent': request.META.get('HTTP_USER_AGENT', '')
-                    }
-                )
+                    session_type='web',
+                    is_active=True
+                ).first()
                 
-                if not session_created:
+                if session:
                     # Update existing session
                     session.ip_address = ip_address
                     session.location = location
                     session.last_activity = timezone.now()
                     session.request_metadata = device_info
                     session.save()
+                    logger.info(f"Using existing active session: {session.session_id} for device {mac_address}")
+                else:
+                    # Create new web auth session
+                    session = UserSession.objects.create(
+                        user=client,
+                        device=device,
+                        session_id=f"auto_{timezone.now().timestamp()}",
+                        ip_address=ip_address,
+                        location=location,
+                        session_type='web',
+                        is_active=True,
+                        request_metadata=device_info,
+                        user_agent=request.META.get('HTTP_USER_AGENT', '')
+                    )
+                    logger.info(f"Created new session: {session.session_id} for device {mac_address}")
                 
                 # Update client location and activity
                 client.current_location = location
