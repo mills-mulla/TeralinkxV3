@@ -56,7 +56,7 @@
                   </svg>
                 </button>
                 <!-- Connected Devices Icons -->
-                <div v-if="voucher.sessions?.active_devices?.length" class="flex space-x-1 ml-auto">
+                <div v-if="voucher.sessions?.active_devices?.length" class="flex space-x-2 ml-2">
                   <div 
                     v-for="device in voucher.sessions.active_devices" 
                     :key="device.session_id"
@@ -64,7 +64,7 @@
                     class="relative"
                   >
                     <!-- Device Icon -->
-                    <svg class="w-3 h-3" :class="device.is_current_device ? 'text-blue-500' : 'text-gray-400'" fill="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-6 h-6" :class="device.is_current_device ? 'text-blue-500' : 'text-gray-400'" fill="currentColor" viewBox="0 0 24 24">
                       <!-- Phone -->
                       <path v-if="device.device_type === 'phone'" d="M7 2a2 2 0 00-2 2v16a2 2 0 002 2h10a2 2 0 002-2V4a2 2 0 00-2-2H7zM6 4a1 1 0 011-1h10a1 1 0 011 1v16a1 1 0 01-1 1H7a1 1 0 01-1-1V4z"/>
                       <!-- Tablet -->
@@ -79,7 +79,7 @@
                       <path v-else d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                     </svg>
                     <!-- Current Device Indicator -->
-                    <div v-if="device.is_current_device" class="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <div v-if="device.is_current_device" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-white"></div>
                   </div>
                 </div>
               </div>

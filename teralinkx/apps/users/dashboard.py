@@ -105,11 +105,16 @@ class DashboardAPIView(APIView):
                         is_active=True
                     )
                     
-                    # Check if current device IP matches any active session
+                    # Check if current device matches any active session
                     request_ip = request.META.get('REMOTE_ADDR')
+                    request_mac = request.META.get('HTTP_X_MAC_ADDRESS')  # If sent from frontend
                     
                     for session in active_sessions:
+                        # Match by IP or MAC
                         if session.ip_address == request_ip:
+                            current_device_session = session
+                            break
+                        if request_mac and session.device.mac_address == request_mac:
                             current_device_session = session
                             break
                 
