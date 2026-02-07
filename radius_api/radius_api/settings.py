@@ -10,6 +10,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-radius-api-key-change
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = ['*']
+USE_X_FORWARDED_HOST = True
 
 INSTALLED_APPS = [
     'django.contrib.admin',
