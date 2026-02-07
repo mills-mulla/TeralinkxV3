@@ -12,9 +12,14 @@ services:
       - .:/app
       - ./media:/app/media
       - ./staticfiles:/app/staticfiles
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
 
     ports:
       - "8009:8009"
+
+    environment:
+      - TZ=Africa/Nairobi
 
     env_file:
       - .env
@@ -38,6 +43,10 @@ services:
       - ./freeradius/mods-available/sql:/etc/freeradius/mods-available/sql
       - ./freeradius/clients.conf:/etc/freeradius/clients.conf
       - ./freeradius/entrypoint.sh:/entrypoint.sh
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - TZ=Africa/Nairobi
     entrypoint: ["/entrypoint.sh"]
     restart: always
     networks:

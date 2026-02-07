@@ -701,7 +701,15 @@ class PaymentProcessor:
     
     @staticmethod
     def handle_pending_payment(user_context, transaction_record, mpesa_response):
-        transaction_record.gateway_result_data = mpesa_response
+        # Convert JsonResponse to dict if needed
+        if hasattr(mpesa_response, 'data'):
+            response_data = mpesa_response.data
+        elif isinstance(mpesa_response, dict):
+            response_data = mpesa_response
+        else:
+            response_data = {'raw_response': str(mpesa_response)}
+        
+        transaction_record.gateway_result_data = response_data
         transaction_record.save()
         
         PaymentNotifier.notify_payment_pending(user_context)
@@ -710,8 +718,8 @@ class PaymentProcessor:
             'success': False,
             'payment_status': 'pending',
             'status': 'pending',
-            'result_code': mpesa_response.get('ResultCode'),
-            'description': mpesa_response.get('ResultDesc', 'Payment is being processed')
+            'result_code': response_data.get('ResultCode'),
+            'description': response_data.get('ResultDesc', 'Payment is being processed')
         }
     
     @staticmethod
