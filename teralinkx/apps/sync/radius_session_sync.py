@@ -34,9 +34,8 @@ class RadiusSessionSyncService:
     
     @classmethod
     def sync_voucher_sessions(cls, voucher_code):
-        """Sync all active RADIUS sessions for a voucher to UserSession"""
+        """Sync all RADIUS sessions for a voucher to UserSession"""
         try:
-            # Get voucher
             voucher = DispatchVoucher.objects.get(voucher_code=voucher_code)
             
             # Get active RADIUS sessions from API
@@ -60,10 +59,17 @@ class RadiusSessionSyncService:
             
             # Sync each active device to UserSession
             for device_data in active_devices:
-                cls._sync_device_session(voucher, device_data)
+                cls._sync_device_session(voucher, device_data, is_active=True)
             
-            # Deactivate UserSessions that are no longer in RADIUS
-            cls._cleanup_stale_sessions(voucher, active_devices)
+            # Mark sessions as inactive if not in active_devices
+            active_session_ids = [d.get('session_id') for d in active_devices]
+            UserSession.objects.filter(
+                active_voucher=voucher_code,
+                session_type='network',
+                is_active=True
+            ).exclude(
+                session_id__in=active_session_ids
+            ).update(is_active=False)
             
             return True
             
@@ -75,12 +81,12 @@ class RadiusSessionSyncService:
             return False
     
     @classmethod
-    def _sync_device_session(cls, voucher, device_data):
+    def _sync_device_session(cls, voucher, device_data, is_active=True):
         """Sync single device session from RADIUS to UserSession"""
         mac_address = device_data.get('mac_address')
         ip_address = device_data.get('ip_address')
         radius_session_id = device_data.get('session_id')
-        login_time = device_data.get('login_time')  # API returns login_time
+        login_time = device_data.get('login_time')
         
         if not mac_address or not radius_session_id:
             return
@@ -98,13 +104,13 @@ class RadiusSessionSyncService:
         
         session_user = device.user
         
-        # Query by session_id (primary key from RADIUS)
+        # Query by session_id
         session = UserSession.objects.filter(session_id=radius_session_id).first()
         
         if session:
             # UPDATE existing
             session.ip_address = ip_address
-            session.is_active = True
+            session.is_active = is_active
             session.last_activity = timezone.now()
             session.save()
         else:
@@ -118,19 +124,6 @@ class RadiusSessionSyncService:
                 active_voucher=voucher.voucher_code,
                 voucher_activated=login_time,
                 session_type='network',
-                is_active=True
+                is_active=is_active
             )
-    
-    @classmethod
-    def _cleanup_stale_sessions(cls, voucher, active_devices):
-        """Deactivate UserSessions that are no longer in RADIUS"""
-        active_macs = [d.get('mac_address') for d in active_devices if d.get('mac_address')]
-        
-        # Deactivate sessions not in RADIUS
-        UserSession.objects.filter(
-            active_voucher=voucher.voucher_code,
-            session_type='network',
-            is_active=True
-        ).exclude(
-            device__mac_address__in=active_macs
-        ).update(is_active=False)
+
