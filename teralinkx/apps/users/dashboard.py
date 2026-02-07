@@ -101,18 +101,15 @@ class DashboardAPIView(APIView):
                     active_sessions = UserSession.objects.filter(
                         user=client,
                         active_voucher=voucher.voucher_code,
+                        session_type='voucher',
                         is_active=True
                     )
                     
-                    # Check if current session is using this voucher
+                    # Check if current device IP matches any active session
                     request_ip = request.META.get('REMOTE_ADDR')
-                    request_user_agent = request.META.get('HTTP_USER_AGENT', '').lower()
                     
-                    # Try to find current device session
                     for session in active_sessions:
-                        if (session.ip_address == request_ip or 
-                            session.device.device_name in request_user_agent or
-                            session.user_agent == request_user_agent):
+                        if session.ip_address == request_ip:
                             current_device_session = session
                             break
                 

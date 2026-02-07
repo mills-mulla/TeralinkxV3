@@ -1,0 +1,142 @@
+# apps/sync/radius_session_sync.py
+"""
+Sync RADIUS accounting sessions to UserSession model
+"""
+import logging
+import requests
+from django.conf import settings
+from django.utils import timezone
+from users.models import UserSession, UserDevice, ClientH
+from packages.models import DispatchVoucher
+
+logger = logging.getLogger(__name__)
+
+RADIUS_API_URL = getattr(settings, 'RADIUS_API_URL', 'http://radiusapi:8010/api')
+
+
+class RadiusSessionSyncService:
+    """Sync RADIUS sessions to UserSession model"""
+    
+    @classmethod
+    def sync_all_active_vouchers(cls):
+        """Sync all active vouchers' RADIUS sessions"""
+        active_vouchers = DispatchVoucher.objects.filter(status='active')
+        synced = 0
+        failed = 0
+        
+        for voucher in active_vouchers:
+            if cls.sync_voucher_sessions(voucher.voucher_code):
+                synced += 1
+            else:
+                failed += 1
+        
+        return {'synced': synced, 'failed': failed, 'total': active_vouchers.count()}
+    
+    @classmethod
+    def sync_voucher_sessions(cls, voucher_code):
+        """Sync all active RADIUS sessions for a voucher to UserSession"""
+        try:
+            # Get voucher
+            voucher = DispatchVoucher.objects.get(voucher_code=voucher_code)
+            
+            # Get active RADIUS sessions from API
+            response = requests.post(
+                f'{RADIUS_API_URL}/vouchers/usage/batch/',
+                json={'usernames': [voucher_code]},
+                headers={'Content-Type': 'application/json'},
+                timeout=10
+            )
+            
+            if response.status_code != 200:
+                logger.error(f"Failed to get RADIUS sessions for {voucher_code}")
+                return False
+            
+            data = response.json()
+            if not data.get('results'):
+                return True
+            
+            result = data['results'][0]
+            active_devices = result.get('active_devices', [])
+            
+            # Sync each active device to UserSession
+            for device_data in active_devices:
+                cls._sync_device_session(voucher, device_data)
+            
+            # Deactivate UserSessions that are no longer in RADIUS
+            cls._cleanup_stale_sessions(voucher, active_devices)
+            
+            return True
+            
+        except DispatchVoucher.DoesNotExist:
+            logger.error(f"Voucher {voucher_code} not found")
+            return False
+        except Exception as e:
+            logger.error(f"Failed to sync sessions for {voucher_code}: {e}")
+            return False
+    
+    @classmethod
+    def _sync_device_session(cls, voucher, device_data):
+        """Sync single device session from RADIUS to UserSession"""
+        mac_address = device_data.get('mac_address')
+        ip_address = device_data.get('ip_address')
+        radius_session_id = device_data.get('session_id')
+        session_start = device_data.get('start_time')
+        session_stop = device_data.get('stop_time')
+        data_usage = device_data.get('total_bytes', 0)
+        
+        if not mac_address or not radius_session_id:
+            return
+        
+        # Find device by MAC
+        device = UserDevice.objects.filter(mac_address=mac_address).first()
+        
+        if not device:
+            device = UserDevice.objects.create(
+                mac_address=mac_address,
+                user=voucher.user.client_profile,
+                device_name=f'Device {mac_address[-8:]}',
+                device_type='other'
+            )
+        
+        session_user = device.user
+        
+        # Query by session_id (primary key from RADIUS)
+        session = UserSession.objects.filter(session_id=radius_session_id).first()
+        
+        if session:
+            # UPDATE existing
+            session.data_used = data_usage
+            session.voucher_activated = session_start
+            session.last_activity = session_stop or timezone.now()
+            session.ip_address = ip_address
+            session.is_active = True
+            session.save()
+        else:
+            # CREATE new
+            UserSession.objects.create(
+                user=session_user,
+                device=device,
+                session_id=radius_session_id,
+                ip_address=ip_address,
+                location=voucher.location,
+                active_voucher=voucher.voucher_code,
+                voucher_activated=session_start,
+                last_activity=session_stop or timezone.now(),
+                session_type='network',
+                data_used=data_usage,
+                is_active=True
+            )
+    
+    @classmethod
+    def _cleanup_stale_sessions(cls, voucher, active_devices):
+        """Deactivate UserSessions that are no longer in RADIUS"""
+        active_macs = [d.get('mac_address') for d in active_devices if d.get('mac_address')]
+        
+        # Deactivate sessions not in RADIUS
+        UserSession.objects.filter(
+            active_voucher=voucher.voucher_code,
+            session_type='network',
+            is_active=True
+        ).exclude(
+            device__mac_address__in=active_macs
+        ).update(is_active=False)
