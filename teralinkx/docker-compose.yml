@@ -12,7 +12,6 @@ services:
       - .:/app
       - ./media:/app/media
       - ./staticfiles:/app/staticfiles
-      - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
 
     ports:
@@ -43,7 +42,6 @@ services:
       - ./freeradius/mods-available/sql:/etc/freeradius/mods-available/sql
       - ./freeradius/clients.conf:/etc/freeradius/clients.conf
       - ./freeradius/entrypoint.sh:/entrypoint.sh
-      - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
     environment:
       - TZ=Africa/Nairobi
