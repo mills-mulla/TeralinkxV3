@@ -108,30 +108,26 @@ class DashboardAPIView(APIView):
                         is_active=True
                     )
                     
-                    # Get real client IP (handle proxy/docker)
-                    request_ip = request.META.get('HTTP_X_FORWARDED_FOR')
-                    if request_ip:
-                        request_ip = request_ip.split(',')[0].strip()
-                    else:
-                        request_ip = request.META.get('REMOTE_ADDR')
-                    
-                    request_mac = request.META.get('HTTP_X_MAC_ADDRESS')
+                    # Get device MAC from request header
+                    request_mac = request.META.get('HTTP_X_DEVICE_MAC', '').strip()
                     
                     logger.info(f"Checking device match for voucher {voucher.voucher_code}")
-                    logger.info(f"Request IP: {request_ip}, Request MAC: {request_mac}")
+                    logger.info(f"Request MAC: {request_mac}")
                     logger.info(f"Active sessions: {active_sessions.count()}")
                     
-                    for session in active_sessions:
-                        logger.info(f"Session IP: {session.ip_address}, Device MAC: {session.device.mac_address}")
-                        # Match by IP or MAC
-                        if session.ip_address == request_ip:
-                            current_device_session = session
-                            logger.info(f"✓ Matched by IP: {request_ip}")
-                            break
-                        if request_mac and session.device.mac_address == request_mac:
-                            current_device_session = session
-                            logger.info(f"✓ Matched by MAC: {request_mac}")
-                            break
+                    # Match by MAC address
+                    if request_mac:
+                        for session in active_sessions:
+                            session_mac = session.device.mac_address.upper().replace(':', '').replace('-', '')
+                            clean_request_mac = request_mac.upper().replace(':', '').replace('-', '')
+                            logger.info(f"Comparing: Session MAC={session.device.mac_address} vs Request MAC={request_mac}")
+                            
+                            if session_mac == clean_request_mac:
+                                current_device_session = session
+                                logger.info(f"✓ Matched by MAC: {request_mac}")
+                                break
+                    else:
+                        logger.info("No MAC in request headers")
                 
                 voucher_data = {
                     "id": voucher.id,
