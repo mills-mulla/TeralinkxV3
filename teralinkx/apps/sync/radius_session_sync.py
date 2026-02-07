@@ -80,9 +80,7 @@ class RadiusSessionSyncService:
         mac_address = device_data.get('mac_address')
         ip_address = device_data.get('ip_address')
         radius_session_id = device_data.get('session_id')
-        session_start = device_data.get('start_time')
-        session_stop = device_data.get('stop_time')
-        data_usage = device_data.get('total_bytes', 0)
+        login_time = device_data.get('login_time')  # API returns login_time
         
         if not mac_address or not radius_session_id:
             return
@@ -105,11 +103,9 @@ class RadiusSessionSyncService:
         
         if session:
             # UPDATE existing
-            session.data_used = data_usage
-            session.voucher_activated = session_start
-            session.last_activity = session_stop or timezone.now()
             session.ip_address = ip_address
             session.is_active = True
+            session.last_activity = timezone.now()
             session.save()
         else:
             # CREATE new
@@ -120,10 +116,8 @@ class RadiusSessionSyncService:
                 ip_address=ip_address,
                 location=voucher.location,
                 active_voucher=voucher.voucher_code,
-                voucher_activated=session_start,
-                last_activity=session_stop or timezone.now(),
+                voucher_activated=login_time,
                 session_type='network',
-                data_used=data_usage,
                 is_active=True
             )
     
