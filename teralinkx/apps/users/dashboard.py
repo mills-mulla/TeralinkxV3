@@ -101,7 +101,7 @@ class DashboardAPIView(APIView):
                     active_sessions = UserSession.objects.filter(
                         user=client,
                         active_voucher=voucher.voucher_code,
-                        session_type='voucher',
+                        session_type='network',
                         is_active=True
                     )
                     
