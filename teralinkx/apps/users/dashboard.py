@@ -138,10 +138,10 @@ class DashboardAPIView(APIView):
                     },
                     # Session data (only for active vouchers)
                     "sessions": {
-                        "current_sessions": len(active_sessions),
+                        "current_sessions": voucher.session_count,
                         "device_limit": voucher.package.device_limit,
-                        "can_add_session": len(active_sessions) < voucher.package.device_limit and computed_status == 'active',
-                        "is_session_limit_reached": len(active_sessions) >= voucher.package.device_limit,
+                        "can_add_session": voucher.session_count < voucher.package.device_limit and computed_status == 'active',
+                        "is_session_limit_reached": voucher.session_count >= voucher.package.device_limit,
                         "is_current_device_connected": current_device_session is not None,
                         "current_session_id": current_device_session.session_id if current_device_session else None,
                         "active_devices": [
