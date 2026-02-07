@@ -31,24 +31,34 @@ services:
     image: freeradius/freeradius-server:latest
     container_name: freeradius_server
     ports:
-      - "1812:1812/udp"  # Authentication
-      - "1813:1813/udp"  # Accounting
-      - "3799:3799/udp"  # CoA (Change of Authorization)
+      - "1812:1812/udp"
+      - "1813:1813/udp"
+      - "3799:3799/udp"
     volumes:
-      - ./freeradius/mods-available:/etc/freeradius/mods-available
-      - ./freeradius/mods-enabled:/etc/freeradius/mods-enabled
-      - ./freeradius/sites-available:/etc/freeradius/sites-available
-      - ./freeradius/sites-enabled:/etc/freeradius/sites-enabled
-      - ./freeradius/clients.conf:/etc/freeradius/clients.conf
-    environment:
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_NAME=radius
-      - DB_USER=radius
-      - DB_PASS=radiuspass
+      - ./freeradius/config:/etc/freeradius
+      - ./freeradius/voucher_check.py:/etc/freeradius/mods-config/python/voucher_check.py
+    
     restart: always
     networks:
       - app_network
+      
+#   freeradius:
+#     image: freeradius/freeradius-server:latest
+#     container_name: freeradius_server
+#     ports:
+#       - "1812:1812/udp"
+#       - "1813:1813/udp"
+#       - "3799:3799/udp"
+#     volumes:
+#       - ./freeradius/mods-available/sql:/etc/freeradius/mods-available/sql
+#       - ./freeradius/mods-available/python_voucher:/etc/freeradius/mods-available/python_voucher
+#       - ./freeradius/voucher_check.py:/etc/freeradius/mods-config/python/voucher_check.py
+#       - ./freeradius/clients.conf:/etc/freeradius/clients.conf
+#       - ./freeradius/entrypoint.sh:/entrypoint.sh
+#     entrypoint: ["/entrypoint.sh"]
+#     restart: always
+#     networks:
+#       - app_network
 
 networks:
   app_network:

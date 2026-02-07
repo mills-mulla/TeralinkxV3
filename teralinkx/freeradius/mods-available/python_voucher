@@ -1,0 +1,5 @@
+# Python module configuration for voucher checking
+python voucher_check {
+    module = voucher_check
+    python_path = /etc/freeradius/3.0/mods-config/python
+}
