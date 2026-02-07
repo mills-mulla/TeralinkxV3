@@ -71,7 +71,7 @@ class RadiusUsageSyncService:
         try:
             voucher.download_bytes = usage_data.get('total_downloaded', 0)
             voucher.upload_bytes = usage_data.get('total_uploaded', 0)
-            voucher.session_count = usage_data.get('total_sessions', 0)
+            voucher.session_count = usage_data.get('active_sessions', 0)
             voucher.concurrent_sessions = usage_data.get('active_sessions', 0)
             
             # Update status if data exhausted
