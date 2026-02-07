@@ -346,14 +346,18 @@ class VoucherUsageBatchAPIView(APIView):
             active_sessions = sessions.filter(acctstoptime__isnull=True)
             active_count = active_sessions.count()
             
-            # Get active session details (IP, MAC)
+            # Get active session details (IP, MAC, data usage)
             active_devices = []
             for session in active_sessions:
                 active_devices.append({
                     'ip_address': str(session.framedipaddress) if session.framedipaddress else None,
                     'mac_address': session.callingstationid,
                     'session_id': session.acctsessionid,
-                    'login_time': session.acctstarttime.isoformat() if session.acctstarttime else None
+                    'login_time': session.acctstarttime.isoformat() if session.acctstarttime else None,
+                    'input_octets': session.acctinputoctets or 0,
+                    'output_octets': session.acctoutputoctets or 0,
+                    'total_octets': (session.acctinputoctets or 0) + (session.acctoutputoctets or 0),
+                    'session_time': session.acctsessiontime or 0
                 })
             
             # Calculate total data

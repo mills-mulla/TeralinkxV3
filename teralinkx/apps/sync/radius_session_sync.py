@@ -87,6 +87,7 @@ class RadiusSessionSyncService:
         ip_address = device_data.get('ip_address')
         radius_session_id = device_data.get('session_id')
         login_time = device_data.get('login_time')
+        total_octets = device_data.get('total_octets', 0)
         
         if not mac_address or not radius_session_id:
             return
@@ -111,6 +112,7 @@ class RadiusSessionSyncService:
             # UPDATE existing
             session.ip_address = ip_address
             session.is_active = is_active
+            session.data_used = total_octets
             session.last_activity = timezone.now()
             session.save()
         else:
@@ -124,6 +126,7 @@ class RadiusSessionSyncService:
                 active_voucher=voucher.voucher_code,
                 voucher_activated=login_time,
                 session_type='network',
+                data_used=total_octets,
                 is_active=is_active
             )
 
