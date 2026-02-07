@@ -342,8 +342,19 @@ class VoucherUsageBatchAPIView(APIView):
                 total_uploaded=Sum('acctoutputoctets')
             )
             
-            # Count active sessions
-            active_count = sessions.filter(acctstoptime__isnull=True).count()
+            # Count active sessions and get their details
+            active_sessions = sessions.filter(acctstoptime__isnull=True)
+            active_count = active_sessions.count()
+            
+            # Get active session details (IP, MAC)
+            active_devices = []
+            for session in active_sessions:
+                active_devices.append({
+                    'ip_address': str(session.framedipaddress) if session.framedipaddress else None,
+                    'mac_address': session.callingstationid,
+                    'session_id': session.acctsessionid,
+                    'login_time': session.acctstarttime.isoformat() if session.acctstarttime else None
+                })
             
             # Calculate total data
             total_data = (totals['total_downloaded'] or 0) + (totals['total_uploaded'] or 0)
@@ -355,7 +366,8 @@ class VoucherUsageBatchAPIView(APIView):
                 'total_downloaded': totals['total_downloaded'] or 0,
                 'total_uploaded': totals['total_uploaded'] or 0,
                 'total_data': total_data,
-                'active_sessions': active_count
+                'active_sessions': active_count,
+                'active_devices': active_devices
             })
         
         return Response({

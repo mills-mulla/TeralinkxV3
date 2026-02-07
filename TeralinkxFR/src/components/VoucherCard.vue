@@ -108,24 +108,27 @@
               <!-- Smart Connect/Disconnect Button -->
               <button
                 @click="() => toggleConnection(voucher)"
-                :disabled="!voucher.sessions?.can_add_session && !voucher.sessions?.is_current_device_connected"
+                :disabled="reconnectingVouchers.has(voucher.voucher_code)"
                 :class="[
-                  'px-3 py-1 text-xs rounded text-white',
-                  voucher.sessions?.is_current_device_connected 
-                    ? 'bg-red-600 hover:bg-red-700' 
-                    : voucher.sessions?.can_add_session 
-                      ? 'bg-green-600 hover:bg-green-700'
-                      : 'bg-gray-400 cursor-not-allowed'
+                  'px-3 py-1 text-xs rounded text-white flex items-center justify-center',
+                  reconnectingVouchers.has(voucher.voucher_code)
+                    ? 'bg-gray-400 cursor-wait'
+                    : voucher.sessions?.is_current_device_connected 
+                      ? 'bg-red-600 hover:bg-red-700' 
+                      : 'bg-green-600 hover:bg-green-700'
                 ]"
               >
-                <span v-if="voucher.sessions?.is_current_device_connected">
+                <!-- Loading Spinner -->
+                <svg v-if="reconnectingVouchers.has(voucher.voucher_code)" class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                
+                <span v-else-if="voucher.sessions?.is_current_device_connected">
                   DISCONNECT
                 </span>
-                <span v-else-if="voucher.sessions?.can_add_session">
-                  RECONNECT
-                </span>
                 <span v-else>
-                  SESSION LIMIT REACHED
+                  RECONNECT
                 </span>
               </button>
             </div>
@@ -212,7 +215,10 @@ const emit = defineEmits(['openRenewModal'])
 const dashboardStore = useDashboardStore()
 const authStore = useAuthStore()
 const networkStore = useNetworkStore()
-const { showSuccess, showError } = useToast()
+const { showSuccess, showError, showWarning } = useToast()
+
+// Loading state for reconnect button
+const reconnectingVouchers = ref(new Set())
 
 // Separate active and expired vouchers
 const activeVouchers = computed(() => 
@@ -233,15 +239,18 @@ const formatBytes = (bytes) => {
 }
 
 const toggleConnection = async (voucher) => {
+  if (reconnectingVouchers.value.has(voucher.voucher_code)) return
+  
   if (voucher.sessions?.is_current_device_connected) {
     await disconnectCurrentDevice(voucher)
-  } else if (voucher.sessions?.can_add_session) {
-    await reconnect(voucher.voucher_code)
+  } else {
+    await reconnect(voucher)
   }
 }
 
 const disconnectCurrentDevice = async (voucher) => {
   try {
+    reconnectingVouchers.value.add(voucher.voucher_code)
     const response = await fetch('/api/voucher/disconnect-current/', {
       method: 'POST',
       headers: {
@@ -255,21 +264,26 @@ const disconnectCurrentDevice = async (voucher) => {
     })
 
     if (response.ok) {
-      showSuccess('Disconnected from this device successfully!')
+      showSuccess('Disconnected successfully!')
       await dashboardStore.fetchDashboardData()
     } else {
-      throw new Error('Disconnect failed')
+      const data = await response.json()
+      showError(data.error || 'Failed to disconnect')
     }
   } catch (error) {
     console.error('Disconnect error:', error)
     showError('Failed to disconnect. Try again later.')
+  } finally {
+    reconnectingVouchers.value.delete(voucher.voucher_code)
   }
 }
 
 const hotspot = useHotspot()
 
-const reconnect = async (voucherCode) => {
+const reconnect = async (voucher) => {
   try {
+    reconnectingVouchers.value.add(voucher.voucher_code)
+    
     const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/reconnect/`, {
       method: 'POST',
       headers: {
@@ -277,21 +291,29 @@ const reconnect = async (voucherCode) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        voucher_code: voucherCode,
+        voucher_code: voucher.voucher_code,
         bound_ip: hotspot.ip,
         bound_mac: hotspot.mac
       })
     })
 
+    const data = await response.json()
+
     if (response.ok) {
       showSuccess('Reconnected successfully!')
-      window.location = 'https://login.teralinkxwaves.uk/htm.html#/connected'
+      setTimeout(() => {
+        window.location = 'https://login.teralinkxwaves.uk/htm.html#/connected'
+      }, 1000)
+    } else if (response.status === 403) {
+      showWarning(data.error || 'Session limit reached. Cannot reconnect.')
     } else {
-      throw new Error('Reconnect failed')
+      showError(data.error || 'Reconnect failed')
     }
   } catch (error) {
     console.error('Reconnect error:', error)
     showError('Reconnect failed. Try again later.')
+  } finally {
+    reconnectingVouchers.value.delete(voucher.voucher_code)
   }
 }
 
