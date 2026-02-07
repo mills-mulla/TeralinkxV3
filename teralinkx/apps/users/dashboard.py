@@ -108,9 +108,14 @@ class DashboardAPIView(APIView):
                         is_active=True
                     )
                     
-                    # Check if current device matches any active session
-                    request_ip = request.META.get('REMOTE_ADDR')
-                    request_mac = request.META.get('HTTP_X_MAC_ADDRESS')  # If sent from frontend
+                    # Get real client IP (handle proxy/docker)
+                    request_ip = request.META.get('HTTP_X_FORWARDED_FOR')
+                    if request_ip:
+                        request_ip = request_ip.split(',')[0].strip()
+                    else:
+                        request_ip = request.META.get('REMOTE_ADDR')
+                    
+                    request_mac = request.META.get('HTTP_X_MAC_ADDRESS')
                     
                     logger.info(f"Checking device match for voucher {voucher.voucher_code}")
                     logger.info(f"Request IP: {request_ip}, Request MAC: {request_mac}")
