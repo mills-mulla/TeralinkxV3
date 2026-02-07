@@ -171,7 +171,7 @@ services:
   radius_api:
     build:
       context: ../radius_api
-    container_name: radius_api
+    container_name: radiusapi
     command: python manage.py runserver 0.0.0.0:8010
     volumes:
       - ../radius_api:/app
