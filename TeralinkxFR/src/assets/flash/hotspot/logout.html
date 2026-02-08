@@ -1,0 +1,196 @@
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="/assets/TeralinkxWavesic.jpeg">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />   
+<meta http-equiv="pragma" content="no-cache">
+<meta http-equiv="expires" content="-1">
+<title>Internet hotspot - Log out</title>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+    
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+    
+    @media (prefers-color-scheme: dark) {
+        body {
+            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+        }
+    }
+    
+    .container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        max-width: 400px;
+        width: 100%;
+        padding: 30px 25px;
+        animation: slideIn 0.4s ease-out;
+    }
+    
+    @media (prefers-color-scheme: dark) {
+        .container {
+            background: #2d3748;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+    }
+    
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    h1 {
+        color: #1a202c;
+        font-size: 22px;
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 25px;
+    }
+    
+    @media (prefers-color-scheme: dark) {
+        h1 {
+            color: #f7fafc;
+        }
+    }
+    
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 25px;
+    }
+    
+    tr {
+        border-bottom: 1px solid #e2e8f0;
+    }
+    
+    @media (prefers-color-scheme: dark) {
+        tr {
+            border-bottom-color: #4a5568;
+        }
+    }
+    
+    tr:last-child {
+        border-bottom: none;
+    }
+    
+    td {
+        padding: 12px 0;
+        font-size: 14px;
+    }
+    
+    td:first-child {
+        color: #4a5568;
+        font-weight: 600;
+        width: 45%;
+    }
+    
+    @media (prefers-color-scheme: dark) {
+        td:first-child {
+            color: #a0aec0;
+        }
+    }
+    
+    td:last-child {
+        color: #2d3748;
+    }
+    
+    @media (prefers-color-scheme: dark) {
+        td:last-child {
+            color: #e2e8f0;
+        }
+    }
+    
+    form {
+        text-align: center;
+    }
+    
+    input[type="submit"] {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 12px 35px;
+        font-size: 15px;
+        font-weight: 600;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    input[type="submit"]:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.6);
+    }
+    
+    input[type="submit"]:active {
+        transform: translateY(0);
+    }
+    
+    .success-icon {
+        width: 50px;
+        height: 50px;
+        margin: 0 auto 18px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+    
+    .success-icon img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+</style>
+<script>
+    function openLogin() {
+        if (window.name != 'hotspot_logout') return true;
+        open('$(link-login)', '_blank', '');
+        window.close();
+        return false;
+    }
+</script>
+</head>
+
+<body>
+    <div class="container">
+        <div class="success-icon">
+            <img src="/assets/teralinkx2.png" alt="Teralinkx Waves">
+        </div>
+        <h1>You have logged out successfully!</h1> 
+        <table>  
+            <tr><td>Username</td><td>$(username)</td></tr>
+            <tr><td>IP address</td><td>$(ip)</td></tr>
+            <tr><td>MAC address</td><td>$(mac)</td></tr>
+            <tr><td>Session time</td><td>$(uptime)</td></tr>
+            $(if session-time-left)
+            <tr><td>Time left</td><td>$(session-time-left)</td></tr>
+            $(endif)
+            <tr><td>Data usage</td><td>$(bytes-in-nice) / $(bytes-out-nice)</td></tr>
+        </table>
+
+        <form action="$(link-login)" name="login" onSubmit="return openLogin()">
+            <input type="submit" value="Log In Again">
+        </form>
+    </div>
+</body>
+</html>

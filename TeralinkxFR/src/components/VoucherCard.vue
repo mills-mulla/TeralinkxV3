@@ -56,30 +56,34 @@
                   </svg>
                 </button>
                 <!-- Connected Devices Icons -->
-                <div v-if="voucher.sessions?.active_devices?.length" class="flex space-x-2 ml-2">
+                <div v-if="voucher.sessions?.active_devices?.length" class="flex space-x-1 ml-2">
                   <div 
                     v-for="device in voucher.sessions.active_devices" 
                     :key="device.session_id"
-                    :title="`${device.device_name} (${device.device_manufacturer} ${device.device_model}) - ${device.ip_address}`"
-                    class="relative"
+                    @click="showDeviceInfo(device)"
+                    class="relative cursor-pointer group"
                   >
                     <!-- Device Icon -->
-                    <svg class="w-6 h-6" :class="device.is_current_device ? 'text-blue-500' : 'text-gray-400'" fill="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-5 h-5 transition-transform group-hover:scale-110" :class="device.is_current_device ? 'text-green-500' : 'text-red-400'" fill="currentColor" viewBox="0 0 24 24">
                       <!-- Phone -->
-                      <path v-if="device.device_type === 'phone'" d="M7 2a2 2 0 00-2 2v16a2 2 0 002 2h10a2 2 0 002-2V4a2 2 0 00-2-2H7zM6 4a1 1 0 011-1h10a1 1 0 011 1v16a1 1 0 01-1 1H7a1 1 0 01-1-1V4z"/>
+                      <path v-if="device.device_type === 'phone'" d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/>
                       <!-- Tablet -->
-                      <path v-else-if="device.device_type === 'tablet'" d="M4 4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2h16v12H4V6z"/>
+                      <path v-else-if="device.device_type === 'tablet'" d="M21 4H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H3V6h18v12z"/>
                       <!-- Laptop -->
-                      <path v-else-if="device.device_type === 'laptop'" d="M4 5a2 2 0 00-2 2v8h20V7a2 2 0 00-2-2H4zM2 17h20v1a1 1 0 01-1 1H3a1 1 0 01-1-1v-1z"/>
+                      <path v-else-if="device.device_type === 'laptop'" d="M20 18c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z"/>
                       <!-- Desktop -->
-                      <path v-else-if="device.device_type === 'desktop'" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v12a1 1 0 01-1 1h-6v2h2a1 1 0 110 2H8a1 1 0 110-2h2v-2H4a1 1 0 01-1-1V4z"/>
+                      <path v-else-if="device.device_type === 'desktop'" d="M21 2H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7v2H8v2h8v-2h-2v-2h7c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H3V4h18v12z"/>
                       <!-- TV -->
-                      <path v-else-if="device.device_type === 'tv'" d="M21 3H3a1 1 0 00-1 1v11a1 1 0 001 1h6v2H7a1 1 0 100 2h10a1 1 0 100-2h-2v-2h6a1 1 0 001-1V4a1 1 0 00-1-1zM4 5h16v9H4V5z"/>
+                      <path v-else-if="device.device_type === 'tv'" d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/>
                       <!-- Default/Other -->
                       <path v-else d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                     </svg>
-                    <!-- Current Device Indicator -->
-                    <div v-if="device.is_current_device" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-white"></div>
+                    <!-- Tooltip on hover (desktop) -->
+                    <div class="hidden group-hover:block absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-2xs rounded whitespace-nowrap z-10">
+                      {{ device.device_name }}<br>
+                      {{ device.device_manufacturer }} {{ device.device_model }}<br>
+                      {{ device.ip_address }}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -222,6 +226,12 @@ const { showSuccess, showError, showWarning } = useToast()
 // Loading state for reconnect button
 const reconnectingVouchers = ref(new Set())
 
+// Show device info on touch/click
+const showDeviceInfo = (device) => {
+  const info = `${device.device_name}\n${device.device_manufacturer} ${device.device_model}\nIP: ${device.ip_address}`
+  showSuccess(info)
+}
+
 // Separate active and expired vouchers
 const activeVouchers = computed(() => 
   dashboardStore.vouchers.filter(voucher => !voucher.is_expired)
@@ -253,15 +263,14 @@ const toggleConnection = async (voucher) => {
 const disconnectCurrentDevice = async (voucher) => {
   try {
     reconnectingVouchers.value.add(voucher.voucher_code)
-    const response = await fetch('/api/voucher/disconnect-current/', {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/disconnect/`, {
       method: 'POST',
       headers: {
         ...authStore.authHeaders,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        voucher_code: voucher.voucher_code,
-        session_id: voucher.sessions?.current_session_id
+        mac_address: hotspot.mac
       })
     })
 

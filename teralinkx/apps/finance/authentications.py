@@ -17,6 +17,7 @@ from locations.models import Location
 
 # Import librouteros
 import librouteros
+import requests
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 logger = logging.getLogger(__name__)
@@ -403,6 +404,37 @@ def validate_device_access(client: ClientH, mac_address: str = None, ip_address:
         return False, "Device validation failed"
 
 
+def get_fresh_session_count(voucher_code: str) -> Optional[int]:
+    """
+    Query RADIUS API directly for current active session count
+    
+    Args:
+        voucher_code: Voucher code to check
+    
+    Returns:
+        Number of active sessions or None if error
+    """
+    try:
+        response = requests.post(
+            'http://radiusapi:8010/api/vouchers/usage/batch/',
+            json={'usernames': [voucher_code]},
+            headers={'Content-Type': 'application/json'},
+            timeout=5
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('results'):
+                return data['results'][0].get('active_sessions', 0)
+        
+        logger.warning(f"Failed to get fresh session count for {voucher_code}: {response.status_code}")
+        return None
+        
+    except Exception as e:
+        logger.error(f"Error querying RADIUS API for {voucher_code}: {e}")
+        return None
+
+
 # ============================================================================
 # HOTSPOT AUTHENTICATION VIEWS
 # ============================================================================
@@ -595,6 +627,34 @@ class ReconnectAPIView(APIView):
             if not is_valid:
                 return error_response
             
+            # Get voucher and check session limit with fresh RADIUS data
+            voucher = DispatchVoucher.objects.get(
+                voucher_code=actual_voucher,
+                user=client.user
+            )
+            
+            # Get fresh session count from RADIUS API
+            fresh_session_count = get_fresh_session_count(actual_voucher)
+            
+            if fresh_session_count is not None:
+                # Update voucher with fresh data
+                if voucher.session_count != fresh_session_count:
+                    logger.info(f"Updating session count for {actual_voucher}: {voucher.session_count} -> {fresh_session_count}")
+                    voucher.session_count = fresh_session_count
+                    voucher.save(update_fields=['session_count'])
+                
+                # Check if session limit is reached
+                if fresh_session_count >= voucher.package.device_limit:
+                    logger.warning(f"Session limit reached for {actual_voucher}: {fresh_session_count}/{voucher.package.device_limit}")
+                    return Response(
+                        {
+                            'error': 'Session limit reached',
+                            'current_sessions': fresh_session_count,
+                            'device_limit': voucher.package.device_limit
+                        },
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+            
             # Get router configuration based on client location
             router_config = RouterConfig.get_config(client.current_location)
             
@@ -613,6 +673,10 @@ class ReconnectAPIView(APIView):
                         )
                         
                         logger.info(f"Reconnect successful (attempt {attempt}) - Account: {client.account}")
+                        
+                        # Trigger immediate sync for this voucher
+                        from sync.radius_session_sync import RadiusSessionSyncService
+                        RadiusSessionSyncService.sync_voucher_sessions(actual_voucher)
                         
                         return Response({
                             'status': 'reconnected',
