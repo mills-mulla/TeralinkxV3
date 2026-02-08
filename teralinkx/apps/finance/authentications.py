@@ -799,14 +799,20 @@ class DisconnectAPIView(APIView):
                 
                 # Immediately decrement session count in DispatchVoucher
                 if client and client.active_voucher:
+                    logger.info(f"🔍 Attempting to decrement session count - Client: {client.account}, Active voucher: {client.active_voucher}")
                     try:
                         voucher = DispatchVoucher.objects.get(voucher_code=client.active_voucher)
+                        logger.info(f"📊 Before decrement - Voucher: {voucher.voucher_code}, Session count: {voucher.session_count}")
                         if voucher.session_count > 0:
                             voucher.session_count -= 1
                             voucher.save(update_fields=['session_count'])
-                            logger.info(f"Decremented session count for {client.active_voucher}: {voucher.session_count}")
+                            logger.info(f"✅ Decremented session count for {client.active_voucher}: {voucher.session_count}")
+                        else:
+                            logger.warning(f"⚠️ Session count already 0 for {client.active_voucher}")
                     except DispatchVoucher.DoesNotExist:
-                        logger.warning(f"Voucher {client.active_voucher} not found for session count update")
+                        logger.error(f"❌ Voucher {client.active_voucher} not found for session count update")
+                else:
+                    logger.warning(f"⚠️ Cannot decrement - Client: {client.account if client else 'None'}, Active voucher: {client.active_voucher if client else 'N/A'}")
             
             # Terminate local sessions
             sessions_terminated = 0
