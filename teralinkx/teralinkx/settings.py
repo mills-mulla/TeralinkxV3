@@ -258,7 +258,9 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
     'x-client-timestamp',  
     'x-session-id',       
     'x-client-version',   
-    'x-hotspot-name',     
+    'x-hotspot-name',
+    'x-device-mac',
+    'x-device-ip',
 ]
 
 
