@@ -721,6 +721,7 @@ class DisconnectAPIView(APIView):
         account = request.data.get('account')
         mac_address = request.data.get('mac_address')
         ip_address = request.data.get('ip_address')
+        voucher_code = request.data.get('voucher_code')  # Get voucher from frontend
         
         if not mac_address:
             return Response(
@@ -728,7 +729,7 @@ class DisconnectAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        logger.info(f"Disconnect request - MAC: {mac_address}, Account: {account}")
+        logger.info(f"Disconnect request - MAC: {mac_address}, Voucher: {voucher_code}, Account: {account}")
         
         try:
             # Get client if account provided
@@ -767,14 +768,17 @@ class DisconnectAPIView(APIView):
                 
                 # Find session by MAC or IP
                 session_to_remove = None
+                disconnected_voucher_code = None
                 for user in hotspot_users:
                     user_mac = user.get('mac-address', '')
                     user_ip = user.get('address', '')
                     user_id = user.get('.id', '')
+                    user_name = user.get('user', '')  # This is the voucher code
                     
                     if (mac_address and user_mac.lower() == mac_address.lower()) or \
                        (ip_address and user_ip == ip_address):
                         session_to_remove = user_id
+                        disconnected_voucher_code = user_name
                         break
                 
                 if not session_to_remove:

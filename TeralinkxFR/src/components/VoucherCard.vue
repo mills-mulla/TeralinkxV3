@@ -270,7 +270,8 @@ const disconnectCurrentDevice = async (voucher) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        mac_address: hotspot.mac
+        mac_address: hotspot.mac,
+        voucher_code: voucher.voucher_code
       })
     })
 
