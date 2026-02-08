@@ -312,6 +312,8 @@ const reconnect = async (voucher) => {
 
     if (response.ok) {
       showSuccess('Reconnected successfully!')
+      // Fetch dashboard data in background (don't block redirect)
+      dashboardStore.fetchDashboardData()
       setTimeout(() => {
         window.location = 'https://login.teralinkxwaves.uk/htm.html#/connected'
       }, 1000)
