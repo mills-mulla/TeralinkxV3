@@ -212,7 +212,7 @@ import { ref, computed } from 'vue'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useAuthStore } from '@/stores/auth'
 import { useNetworkStore } from '@/stores/network'
-import { useToast } from '@/composables/useCustomToast'
+import { useCustomToast } from '@/composables/useCustomToast'
 import { useHotspot } from '@/plugins/hotspot'
 
 // Define emits to communicate with parent Dashboard
@@ -221,7 +221,7 @@ const emit = defineEmits(['openRenewModal'])
 const dashboardStore = useDashboardStore()
 const authStore = useAuthStore()
 const networkStore = useNetworkStore()
-const { showSuccess, showError, showWarning } = useToast()
+const { success: showSuccess, error: showError, warning: showWarning } = useCustomToast()
 
 // Loading state for reconnect button
 const reconnectingVouchers = ref(new Set())
