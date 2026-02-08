@@ -212,7 +212,7 @@ import { ref, computed } from 'vue'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useAuthStore } from '@/stores/auth'
 import { useNetworkStore } from '@/stores/network'
-import { useToast } from '@/composables/useToast'
+import { useToast } from '@/composables/useCustomToast'
 import { useHotspot } from '@/plugins/hotspot'
 
 // Define emits to communicate with parent Dashboard

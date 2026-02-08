@@ -5,7 +5,7 @@ const toasts = ref([])
 let toastId = 0
 
 export const useCustomToast = () => {
-  const addToast = (message, type = 'info', title = null, duration = 7000) => {
+  const addToast = (message, type = 'info', title = null, duration = 6000) => {
     const id = ++toastId
     const toast = {
       id,
@@ -20,18 +20,17 @@ export const useCustomToast = () => {
     toasts.value.push(toast)
     
     if (duration > 0) {
-      // Use single timeout for both progress and removal
-      const progressTimer = setTimeout(() => {
+      // Animate progress bar over the full duration
+      setTimeout(() => {
         const toastElement = toasts.value.find(t => t.id === id)
         if (toastElement) {
           toastElement.progress = 100
-          // Schedule removal after progress completes
-          setTimeout(() => removeToast(id), 100)
         }
-      }, 100)
+      }, 50)
       
-      // Store timer reference for potential cleanup
-      toast.timer = progressTimer
+      // Remove toast after full duration
+      const timer = setTimeout(() => removeToast(id), duration)
+      toast.timer = timer
     }
     
     return id
@@ -53,19 +52,19 @@ export const useCustomToast = () => {
     toasts.value = []
   }
 
-  const success = (message, title = null, duration = 7000) => {
+  const success = (message, title = null, duration = 6000) => {
     return addToast(message, 'success', title, duration)
   }
 
-  const error = (message, title = null, duration = 7000) => {
+  const error = (message, title = null, duration = 6000) => {
     return addToast(message, 'error', title, duration)
   }
 
-  const warning = (message, title = null, duration = 7000) => {
+  const warning = (message, title = null, duration = 6000) => {
     return addToast(message, 'warning', title, duration)
   }
 
-  const info = (message, title = null, duration = 7000) => {
+  const info = (message, title = null, duration = 6000) => {
     return addToast(message, 'info', title, duration)
   }
 
