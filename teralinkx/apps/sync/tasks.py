@@ -146,9 +146,17 @@ def sync_radius_usage_all(self):
     """Sync usage for all active vouchers from FreeRADIUS (every 5 minutes)"""
     try:
         from .radius_sync import RadiusUsageSyncService
-        result = RadiusUsageSyncService.sync_active_vouchers()
-        logger.info(f"Radius sync complete: {result}")
-        return result
+        from .radius_session_sync import RadiusSessionSyncService
+        
+        # Sync usage data (download/upload bytes)
+        usage_result = RadiusUsageSyncService.sync_active_vouchers()
+        logger.info(f"Radius usage sync complete: {usage_result}")
+        
+        # Sync session data (create UserSession records)
+        session_result = RadiusSessionSyncService.sync_all_active_vouchers()
+        logger.info(f"Radius session sync complete: {session_result}")
+        
+        return {'usage': usage_result, 'sessions': session_result}
     except Exception as e:
         logger.error(f"Radius sync failed: {e}")
         raise

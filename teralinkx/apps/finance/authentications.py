@@ -664,9 +664,13 @@ class ReconnectAPIView(APIView):
                         
                         logger.info(f"Reconnect successful (attempt {attempt}) - Account: {client.account}")
                         
-                        # Trigger immediate sync for this voucher
+                        # Trigger immediate sync for this voucher and wait for completion
                         from sync.radius_session_sync import RadiusSessionSyncService
-                        RadiusSessionSyncService.sync_voucher_sessions(actual_voucher)
+                        sync_success = RadiusSessionSyncService.sync_voucher_sessions(actual_voucher)
+                        if sync_success:
+                            logger.info(f"Session sync completed for {actual_voucher}")
+                        else:
+                            logger.warning(f"Session sync failed for {actual_voucher}")
                         
                         return Response({
                             'status': 'reconnected',
