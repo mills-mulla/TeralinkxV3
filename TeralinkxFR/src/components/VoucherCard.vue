@@ -113,9 +113,11 @@
                   'px-3 py-1 text-xs rounded text-white flex items-center justify-center',
                   reconnectingVouchers.has(voucher.voucher_code)
                     ? 'bg-gray-400 cursor-wait'
-                    : voucher.sessions?.is_current_device_connected 
-                      ? 'bg-red-600 hover:bg-red-700' 
-                      : 'bg-green-600 hover:bg-green-700'
+                    : voucher.sessions?.is_current_device_connected
+                      ? 'bg-red-600 hover:bg-red-700'
+                      : voucher.sessions?.is_session_limit_reached
+                        ? 'bg-orange-500 hover:bg-orange-600'
+                        : 'bg-green-600 hover:bg-green-700'
                 ]"
               >
                 <!-- Loading Spinner -->

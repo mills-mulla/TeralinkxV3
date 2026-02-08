@@ -172,16 +172,18 @@ services:
     build:
       context: ../radius_api
     container_name: radiusapi
-    command: python manage.py runserver 0.0.0.0:8010
+    command: gunicorn --config gunicorn_config.py radius_api.wsgi:application
     volumes:
       - ../radius_api:/app
     ports:
       - "8010:8010"
-    environment:
-      - DJANGO_SETTINGS_MODULE=radius_api.settings
+    env_file:
+      - ../radius_api/.env
     depends_on:
       - db
     restart: always
+    cpus: 0.5
+    mem_limit: 512m
     networks:
       - app_network
 

@@ -61,7 +61,7 @@ DATABASES = {
         'NAME': 'radius',
         'USER': 'radius',
         'PASSWORD': 'radiuspass',
-        'HOST': '192.168.88.16',
+        'HOST': 'db',
         'PORT': '5432',
     }
 }

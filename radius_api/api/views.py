@@ -330,7 +330,9 @@ class VoucherUsageBatchAPIView(APIView):
                     'total_downloaded': 0,
                     'total_uploaded': 0,
                     'total_data': 0,
-                    'active_sessions': 0
+                    'active_sessions': 0,
+                    'active_devices': [],
+                    'stopped_sessions': []
                 })
                 continue
             
@@ -360,6 +362,29 @@ class VoucherUsageBatchAPIView(APIView):
                     'session_time': session.acctsessiontime or 0
                 })
             
+            # Get recently stopped sessions (last 5 minutes) for final data sync
+            from django.utils import timezone
+            from datetime import timedelta
+            five_minutes_ago = timezone.now() - timedelta(minutes=5)
+            stopped_sessions = sessions.filter(
+                acctstoptime__isnull=False,
+                acctstoptime__gte=five_minutes_ago
+            )
+            
+            stopped_devices = []
+            for session in stopped_sessions:
+                stopped_devices.append({
+                    'ip_address': str(session.framedipaddress) if session.framedipaddress else None,
+                    'mac_address': session.callingstationid,
+                    'session_id': session.acctsessionid,
+                    'login_time': session.acctstarttime.isoformat() if session.acctstarttime else None,
+                    'stop_time': session.acctstoptime.isoformat() if session.acctstoptime else None,
+                    'input_octets': session.acctinputoctets or 0,
+                    'output_octets': session.acctoutputoctets or 0,
+                    'total_octets': (session.acctinputoctets or 0) + (session.acctoutputoctets or 0),
+                    'session_time': session.acctsessiontime or 0
+                })
+            
             # Calculate total data
             total_data = (totals['total_downloaded'] or 0) + (totals['total_uploaded'] or 0)
             
@@ -371,7 +396,8 @@ class VoucherUsageBatchAPIView(APIView):
                 'total_uploaded': totals['total_uploaded'] or 0,
                 'total_data': total_data,
                 'active_sessions': active_count,
-                'active_devices': active_devices
+                'active_devices': active_devices,
+                'stopped_sessions': stopped_devices
             })
         
         return Response({

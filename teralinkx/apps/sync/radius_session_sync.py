@@ -56,19 +56,27 @@ class RadiusSessionSyncService:
             
             result = data['results'][0]
             active_devices = result.get('active_devices', [])
+            stopped_sessions = result.get('stopped_sessions', [])
             
             # Sync each active device to UserSession
             for device_data in active_devices:
                 cls._sync_device_session(voucher, device_data, is_active=True)
             
-            # Mark sessions as inactive if not in active_devices
+            # Sync stopped sessions with final data
+            for device_data in stopped_sessions:
+                cls._sync_device_session(voucher, device_data, is_active=False)
+            
+            # Mark sessions as inactive if not in active_devices or stopped_sessions
             active_session_ids = [d.get('session_id') for d in active_devices]
+            stopped_session_ids = [d.get('session_id') for d in stopped_sessions]
+            all_synced_session_ids = active_session_ids + stopped_session_ids
+            
             UserSession.objects.filter(
                 active_voucher=voucher_code,
                 session_type='network',
                 is_active=True
             ).exclude(
-                session_id__in=active_session_ids
+                session_id__in=all_synced_session_ids
             ).update(is_active=False)
             
             return True
