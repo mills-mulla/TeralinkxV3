@@ -1,6 +1,6 @@
 #config.yml
-tunnel: 6f679ca9-f5e2-483f-8b98-aff826026046
-credentials-file: /etc/cloudflared/6f679ca9-f5e2-483f-8b98-aff826026046.json
+tunnel: 1fb40a2f-56df-4268-b480-fad4fc059f22
+credentials-file: /etc/cloudflared/1fb40a2f-56df-4268-b480-fad4fc059f22.json
 
 # ingress:
 #   - hostname: teralinkxwaves.uk
