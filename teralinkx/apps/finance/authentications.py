@@ -801,22 +801,25 @@ class DisconnectAPIView(APIView):
                 
                 logger.info(f"Hotspot session removed - ID: {session_to_remove}, MAC: {mac_address}")
                 
-                # Immediately decrement session count in DispatchVoucher
-                if client and client.active_voucher:
-                    logger.info(f"🔍 Attempting to decrement session count - Client: {client.account}, Active voucher: {client.active_voucher}")
+                # Use voucher from frontend if provided, otherwise from MikroTik session
+                voucher_to_decrement = voucher_code or disconnected_voucher_code
+                
+                # Immediately decrement session count for the disconnected voucher
+                if voucher_to_decrement:
+                    logger.info(f"🔍 Attempting to decrement session count for voucher: {voucher_to_decrement}")
                     try:
-                        voucher = DispatchVoucher.objects.get(voucher_code=client.active_voucher)
+                        voucher = DispatchVoucher.objects.get(voucher_code=voucher_to_decrement)
                         logger.info(f"📊 Before decrement - Voucher: {voucher.voucher_code}, Session count: {voucher.session_count}")
                         if voucher.session_count > 0:
                             voucher.session_count -= 1
                             voucher.save(update_fields=['session_count'])
-                            logger.info(f"✅ Decremented session count for {client.active_voucher}: {voucher.session_count}")
+                            logger.info(f"✅ Decremented session count for {voucher_to_decrement}: {voucher.session_count}")
                         else:
-                            logger.warning(f"⚠️ Session count already 0 for {client.active_voucher}")
+                            logger.warning(f"⚠️ Session count already 0 for {voucher_to_decrement}")
                     except DispatchVoucher.DoesNotExist:
-                        logger.error(f"❌ Voucher {client.active_voucher} not found for session count update")
+                        logger.error(f"❌ Voucher {voucher_to_decrement} not found for session count update")
                 else:
-                    logger.warning(f"⚠️ Cannot decrement - Client: {client.account if client else 'None'}, Active voucher: {client.active_voucher if client else 'N/A'}")
+                    logger.warning(f"⚠️ Cannot decrement - No voucher code provided")
             
             # Terminate local sessions
             sessions_terminated = 0
