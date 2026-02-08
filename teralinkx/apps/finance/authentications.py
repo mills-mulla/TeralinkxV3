@@ -632,6 +632,7 @@ class ReconnectAPIView(APIView):
                 voucher_code=actual_voucher,
                 user=client.user
             )
+            voucher.refresh_from_db()  # Ensure fresh data
             
             # Check session limit using voucher.session_count (updated immediately on disconnect)
             if voucher.session_count >= voucher.package.device_limit:
