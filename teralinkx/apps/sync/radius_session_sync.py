@@ -79,6 +79,12 @@ class RadiusSessionSyncService:
                 session_id__in=all_synced_session_ids
             ).update(is_active=False)
             
+            # Update session_count: count distinct active devices (MACs)
+            unique_active_macs = set(d.get('mac_address') for d in active_devices if d.get('mac_address'))
+            voucher.session_count = len(unique_active_macs)
+            voucher.save(update_fields=['session_count'])
+            logger.info(f"✅ Updated {voucher_code} session_count to {voucher.session_count} (distinct devices)")
+            
             return True
             
         except DispatchVoucher.DoesNotExist:
