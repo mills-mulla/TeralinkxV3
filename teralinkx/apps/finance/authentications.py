@@ -627,33 +627,23 @@ class ReconnectAPIView(APIView):
             if not is_valid:
                 return error_response
             
-            # Get voucher and check session limit with fresh RADIUS data
+            # Get voucher and check session limit using local data
             voucher = DispatchVoucher.objects.get(
                 voucher_code=actual_voucher,
                 user=client.user
             )
             
-            # Get fresh session count from RADIUS API
-            fresh_session_count = get_fresh_session_count(actual_voucher)
-            
-            if fresh_session_count is not None:
-                # Update voucher with fresh data
-                if voucher.session_count != fresh_session_count:
-                    logger.info(f"Updating session count for {actual_voucher}: {voucher.session_count} -> {fresh_session_count}")
-                    voucher.session_count = fresh_session_count
-                    voucher.save(update_fields=['session_count'])
-                
-                # Check if session limit is reached
-                if fresh_session_count >= voucher.package.device_limit:
-                    logger.warning(f"Session limit reached for {actual_voucher}: {fresh_session_count}/{voucher.package.device_limit}")
-                    return Response(
-                        {
-                            'error': 'Session limit reached',
-                            'current_sessions': fresh_session_count,
-                            'device_limit': voucher.package.device_limit
-                        },
-                        status=status.HTTP_403_FORBIDDEN
-                    )
+            # Check session limit using voucher.session_count (updated immediately on disconnect)
+            if voucher.session_count >= voucher.package.device_limit:
+                logger.warning(f"Session limit reached for {actual_voucher}: {voucher.session_count}/{voucher.package.device_limit}")
+                return Response(
+                    {
+                        'error': 'Session limit reached',
+                        'current_sessions': voucher.session_count,
+                        'device_limit': voucher.package.device_limit
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
             
             # Get router configuration based on client location
             router_config = RouterConfig.get_config(client.current_location)
@@ -801,6 +791,17 @@ class DisconnectAPIView(APIView):
                 )
                 
                 logger.info(f"Hotspot session removed - ID: {session_to_remove}, MAC: {mac_address}")
+                
+                # Immediately decrement session count in DispatchVoucher
+                if client and client.active_voucher:
+                    try:
+                        voucher = DispatchVoucher.objects.get(voucher_code=client.active_voucher)
+                        if voucher.session_count > 0:
+                            voucher.session_count -= 1
+                            voucher.save(update_fields=['session_count'])
+                            logger.info(f"Decremented session count for {client.active_voucher}: {voucher.session_count}")
+                    except DispatchVoucher.DoesNotExist:
+                        logger.warning(f"Voucher {client.active_voucher} not found for session count update")
             
             # Terminate local sessions
             sessions_terminated = 0
