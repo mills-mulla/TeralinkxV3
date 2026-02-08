@@ -802,7 +802,7 @@ class DisconnectAPIView(APIView):
                 logger.info(f"Hotspot session removed - ID: {session_to_remove}, MAC: {mac_address}")
                 
                 # Use voucher from frontend if provided, otherwise from MikroTik session
-                voucher_to_decrement = voucher_code or disconnected_voucher_code
+                voucher_to_decrement = voucher_code #or disconnected_voucher_code
                 
                 # Immediately decrement session count for the disconnected voucher
                 if voucher_to_decrement:
