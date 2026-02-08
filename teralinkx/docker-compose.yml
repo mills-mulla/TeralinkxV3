@@ -175,6 +175,7 @@ services:
     command: gunicorn --config gunicorn_config.py radius_api.wsgi:application
     volumes:
       - ../radius_api:/app
+      - radius_api_static:/app/staticfiles
     ports:
       - "8010:8010"
     env_file:
@@ -189,6 +190,7 @@ services:
 
 volumes:
   pg_data:
+  radius_api_static:
 
 networks:
   app_network:
