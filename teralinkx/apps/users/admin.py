@@ -67,6 +67,8 @@ class ClientHAdmin(admin.ModelAdmin):
         'account_tier', 
         'status', 
         'balance_display',
+        'reward_points_display',
+        'reward_tier_badge',
         'availability_status_badge',
         'active_devices_count',
         'active_sessions_count',
@@ -106,7 +108,10 @@ class ClientHAdmin(admin.ModelAdmin):
         'is_eligible_for_credit_display',
         'available_credit_display',
         'profile_image_preview',  
-        'balance_display'  
+        'balance_display',
+        'reward_points_display',
+        'reward_tier_badge',
+        'reward_stats_display'
     )
     
     fieldsets = (
@@ -130,6 +135,15 @@ class ClientHAdmin(admin.ModelAdmin):
                 'lifetime_data_used',
                 'is_eligible_for_credit_display',
                 'available_credit_display'
+            )
+        }),
+        ('Rewards', {
+            'fields': (
+                'reward_points',
+                'reward_tier',
+                'total_points_earned',
+                'total_points_redeemed',
+                'reward_stats_display'
             )
         }),
         ('Security', {
@@ -242,6 +256,78 @@ class ClientHAdmin(admin.ModelAdmin):
 
     balance_display.short_description = "Balance"
     balance_display.admin_order_field = 'balance'
+    
+    def reward_points_display(self, obj):
+        """Display reward points with color coding"""
+        points = obj.reward_points
+        
+        # Color based on points amount
+        if points >= 1000:
+            color = 'green'
+        elif points >= 500:
+            color = 'blue'
+        elif points >= 100:
+            color = 'orange'
+        else:
+            color = 'gray'
+        
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">🏆 {} pts</span>',
+            color, points
+        )
+    reward_points_display.short_description = "Points"
+    reward_points_display.admin_order_field = 'reward_points'
+    
+    def reward_tier_badge(self, obj):
+        """Display reward tier with badge"""
+        tier_colors = {
+            'bronze': '#CD7F32',
+            'silver': '#C0C0C0',
+            'gold': '#FFD700',
+            'platinum': '#E5E4E2'
+        }
+        tier_icons = {
+            'bronze': '🥉',
+            'silver': '🥈',
+            'gold': '🥇',
+            'platinum': '💎'
+        }
+        
+        color = tier_colors.get(obj.reward_tier, 'gray')
+        icon = tier_icons.get(obj.reward_tier, '🏅')
+        
+        return format_html(
+            '<span style="color: {}; background: {}20; padding: 2px 8px; border-radius: 10px; font-weight: bold;">{} {}</span>',
+            color, color, icon, obj.reward_tier.title()
+        )
+    reward_tier_badge.short_description = "Tier"
+    reward_tier_badge.admin_order_field = 'reward_tier'
+    
+    def reward_stats_display(self, obj):
+        """Display comprehensive reward statistics"""
+        next_tier_points = obj.next_tier_points
+        progress = obj.tier_progress_percentage
+        
+        return format_html(
+            '''
+            <div style="padding: 10px; background: #f5f5f5; border-radius: 5px; font-size: 12px;">
+                <strong>Reward Statistics:</strong><br>
+                • Current Points: <span style="color: green; font-weight: bold;">{}</span><br>
+                • Total Earned: <span style="color: blue;">{}</span><br>
+                • Total Redeemed: <span style="color: red;">{}</span><br>
+                • Current Tier: <span style="font-weight: bold;">{}</span><br>
+                • Tier Progress: <span style="color: orange;">{:.1f}%</span><br>
+                • Points to Next Tier: <span style="color: purple;">{}</span>
+            </div>
+            ''',
+            obj.reward_points,
+            obj.total_points_earned,
+            obj.total_points_redeemed,
+            obj.reward_tier.title(),
+            progress,
+            next_tier_points if next_tier_points > 0 else 'Max Tier Reached'
+        )
+    reward_stats_display.short_description = "Reward Statistics"
     
     def active_devices_count(self, obj):
         count = obj.devices.filter(status='active').count()
