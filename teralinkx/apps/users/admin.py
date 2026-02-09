@@ -107,8 +107,7 @@ class ClientHAdmin(admin.ModelAdmin):
         'user_link',
         'is_eligible_for_credit_display',
         'available_credit_display',
-        'profile_image_preview',  
-        'balance_display',
+        'profile_image_preview',
         'reward_points_display',
         'reward_tier_badge',
         'reward_stats_display'
@@ -226,32 +225,14 @@ class ClientHAdmin(admin.ModelAdmin):
     def balance_display(self, obj):
         """Display balance with color coding"""
         try:
-            # Get the balance value
-            balance = obj.balance
-            
-            # Convert to float for display
-            if isinstance(balance, Decimal):
-                balance_float = float(balance)
-            elif isinstance(balance, (int, float)):
-                balance_float = float(balance)
-            else:
-                # Try to convert string or other types
-                balance_str = str(balance).replace(',', '').strip()
-                balance_float = float(balance_str)
-            
-            # Format with color
-            if balance_float >= 0:
-                color = 'green'
-            else:
-                color = 'red'
-                balance_float = abs(balance_float)  # Show absolute value for negative
+            balance = float(obj.balance)
+            color = 'green' if balance >= 0 else 'red'
             
             return format_html(
                 '<span style="color: {}; font-weight: bold;">KES {:,.2f}</span>',
-                color, balance_float
+                color, balance
             )
-        except Exception as e:
-            # Return safe fallback
+        except Exception:
             return format_html('<span style="color: gray; font-weight: bold;">KES 0.00</span>')
 
     balance_display.short_description = "Balance"
