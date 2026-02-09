@@ -66,7 +66,7 @@ class ClientHAdmin(admin.ModelAdmin):
         'phone_number', 
         'account_tier', 
         'status', 
-        'balance_display',
+        'balance',
         'reward_points_display',
         'reward_tier_badge',
         'availability_status_badge',
@@ -232,8 +232,8 @@ class ClientHAdmin(admin.ModelAdmin):
                 '<span style="color: {}; font-weight: bold;">KES {:,.2f}</span>',
                 color, balance
             )
-        except Exception:
-            return format_html('<span style="color: gray; font-weight: bold;">KES 0.00</span>')
+        except Exception as e:
+            return format_html('<span style="color: orange; font-weight: bold;">ERROR: {}</span>', str(e))
 
     balance_display.short_description = "Balance"
     balance_display.admin_order_field = 'balance'
