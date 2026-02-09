@@ -31,15 +31,13 @@ const backendConnected = ref(false)
 
 const checkBackendHealth = async () => {
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/network-info/`, {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/health/`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
       signal: AbortSignal.timeout(5000)
     })
     
     if (response.ok) {
-      const data = await response.json()
-      console.log('Backend health check response:', data)
       backendConnected.value = true
     } else {
       backendConnected.value = false
