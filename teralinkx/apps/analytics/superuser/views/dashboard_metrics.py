@@ -25,17 +25,17 @@ class DashboardMetricsView(APIView):
             # Client metrics
             total_clients = ClientH.objects.count()
             new_clients_today = ClientH.objects.filter(
-                date_joined__date=today
+                created_at__date=today
             ).count()
             new_clients_7d = ClientH.objects.filter(
-                date_joined__date__gte=week_ago
+                created_at__date__gte=week_ago
             ).count()
             
             # Active users (clients with active vouchers)
             active_users = DispatchVoucher.objects.filter(
-                dispatch_expiry__gt=timezone.now(),
-                dispatch_status='active'
-            ).values('dispatch_account').distinct().count()
+                expires_at__gt=timezone.now(),
+                status='active'
+            ).values('user').distinct().count()
             
             # Revenue metrics (from transactions)
             revenue_data = PaymentTransaction.objects.filter(
@@ -47,7 +47,7 @@ class DashboardMetricsView(APIView):
             
             # Packages sold
             packages_sold = DispatchVoucher.objects.filter(
-                dispatch_time__date__gte=month_ago
+                activated_at__date__gte=month_ago
             ).count()
             
             # Active ratio (clients with active vouchers vs total clients)
@@ -137,7 +137,7 @@ class ClientGrowthView(APIView):
             for i in range(days):
                 date = start_date + timedelta(days=i)
                 daily_signups = ClientH.objects.filter(
-                    date_joined__date=date
+                    created_at__date=date
                 ).count()
                 
                 daily_growth.append({

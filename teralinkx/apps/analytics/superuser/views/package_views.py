@@ -81,10 +81,10 @@ class PackageTypeViewSet(viewsets.ModelViewSet):
 class DispatchVoucherViewSet(viewsets.ModelViewSet):
     """ViewSet for DispatchVoucher model"""
     permission_classes = [IsAuthenticated, IsAdminUser]
-    queryset = DispatchVoucher.objects.all().select_related('clienth', 'dispatch_package')
+    queryset = DispatchVoucher.objects.all().select_related('user', 'package')
     serializer_class = DispatchVoucherSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['voucher_code', 'dispatch_account', 'clienth__account']
+    search_fields = ['voucher_code', 'user__username']
     ordering_fields = ['id', 'dispatch_expiry', 'created_at']
     ordering = ['-created_at']
     
@@ -99,15 +99,15 @@ class DispatchVoucherViewSet(viewsets.ModelViewSet):
         # Filter by client
         client_id = self.request.query_params.get('client_id', None)
         if client_id:
-            queryset = queryset.filter(clienth_id=client_id)
+            queryset = queryset.filter(user_id=client_id)
         
         # Filter by expired
         expired = self.request.query_params.get('expired', None)
         if expired == 'true':
-            queryset = queryset.filter(dispatch_expiry__lt=timezone.now())
+            queryset = queryset.filter(expires_at__lt=timezone.now())
         elif expired == 'false':
             queryset = queryset.filter(
-                Q(dispatch_expiry__gte=timezone.now()) | Q(dispatch_expiry__isnull=True)
+                Q(expires_at__gte=timezone.now()) | Q(expires_at__isnull=True)
             )
         
         return queryset
@@ -119,12 +119,12 @@ class DispatchVoucherViewSet(viewsets.ModelViewSet):
             total_vouchers = DispatchVoucher.objects.count()
             active_vouchers = DispatchVoucher.objects.filter(status='active').count()
             expired_vouchers = DispatchVoucher.objects.filter(
-                dispatch_expiry__lt=timezone.now()
+                expires_at__lt=timezone.now()
             ).count()
             
             # Total revenue
             total_revenue = DispatchVoucher.objects.aggregate(
-                total=Sum('dispatch_price')
+                total=Sum('price_paid')
             )['total'] or 0
             
             return Response({
