@@ -66,7 +66,7 @@ class ClientHAdmin(admin.ModelAdmin):
         'phone_number', 
         'account_tier', 
         'status', 
-        'balance',
+        'balance_display',
         'reward_points_display',
         'reward_tier_badge',
         'availability_status_badge',
