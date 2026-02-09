@@ -207,17 +207,80 @@ export default {
           name: 'Clients', 
           icon: '👥', 
           component: 'Clients',
-          notification: '12'
+          notification: null
         },
         { 
           id: 3, 
-          name: 'Transactions', 
-          icon: '💳', 
-          component: 'Transactions',
-          notification: '3'
+          name: 'Users', 
+          icon: '🔐', 
+          component: 'Users',
+          notification: null
         },
         { 
           id: 4, 
+          name: 'Devices', 
+          icon: '📱', 
+          component: 'Devices',
+          notification: null
+        },
+        { 
+          id: 5, 
+          name: 'Sessions', 
+          icon: '🔌', 
+          component: 'Sessions',
+          notification: null
+        },
+        { 
+          id: 6, 
+          name: 'Packages', 
+          icon: '📦', 
+          component: 'Packages',
+          notification: null
+        },
+        { 
+          id: 7, 
+          name: 'Vouchers', 
+          icon: '🎫', 
+          component: 'Vouchers',
+          notification: null
+        },
+        { 
+          id: 8, 
+          name: 'Coupons', 
+          icon: '🎟️', 
+          component: 'Coupons',
+          notification: null
+        },
+        { 
+          id: 9, 
+          name: 'Promotions', 
+          icon: '🎁', 
+          component: 'Promotions',
+          notification: null
+        },
+        { 
+          id: 10, 
+          name: 'Points', 
+          icon: '🏆', 
+          component: 'PointTransactions',
+          notification: null
+        },
+        { 
+          id: 11, 
+          name: 'Locations', 
+          icon: '📍', 
+          component: 'Locations',
+          notification: null
+        },
+        { 
+          id: 12, 
+          name: 'Transactions', 
+          icon: '💳', 
+          component: 'Transactions',
+          notification: null
+        },
+        { 
+          id: 13, 
           name: 'Refunds', 
           icon: '🔄', 
           component: 'Refunds',

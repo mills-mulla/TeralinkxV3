@@ -17,14 +17,34 @@ from .views.auth import (
 )
 from .views.systemstatusview import SystemStatusView
 
+# Import new ViewSets
+from .views.user_views import DjangoUserViewSet, UserDeviceViewSet, UserSessionViewSet
+from .views.package_views import (
+    PackageTypeViewSet,
+    DispatchVoucherViewSet,
+    CouponViewSet,
+    FeaturedPromotionViewSet,
+    PointTransactionViewSet
+)
+from .views.location_views import LocationViewSet
+
 # Initialize router
 router = DefaultRouter()
 
-# Register ViewSets (they get automatic URL generation)
+# Register existing ViewSets
 router.register(r'clients', ClientViewSet, basename='clients')
 router.register(r'transactions', TransactionViewSet, basename='transactions')
-# router.register(r'refunds', RefundViewSet, basename='refunds')
-# Add DowntimeRecord ViewSet if you create one, or use the existing refund endpoints
+
+# Register new ViewSets
+router.register(r'users', DjangoUserViewSet, basename='users')
+router.register(r'devices', UserDeviceViewSet, basename='devices')
+router.register(r'sessions', UserSessionViewSet, basename='sessions')
+router.register(r'packages', PackageTypeViewSet, basename='packages')
+router.register(r'vouchers', DispatchVoucherViewSet, basename='vouchers')
+router.register(r'coupons', CouponViewSet, basename='coupons')
+router.register(r'promotions', FeaturedPromotionViewSet, basename='promotions')
+router.register(r'point-transactions', PointTransactionViewSet, basename='point-transactions')
+router.register(r'locations', LocationViewSet, basename='locations')
 
 urlpatterns = [
     # Router-generated URLs (automatic CRUD for ViewSets)
