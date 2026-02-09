@@ -11,7 +11,9 @@ import logging
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 
-from core.models import RefundLog, DispatchVoucher, ClientH, DowntimeRecord
+from analytics.models import RefundLog, DowntimeRecord
+from packages.models import DispatchVoucher
+from users.models import ClientH
 from ..serializers.serializers import RefundLogSerializer, DowntimeRecordSerializer
 
 logger = logging.getLogger(__name__)
