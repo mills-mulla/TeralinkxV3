@@ -13,8 +13,8 @@ class PackageTypeSerializer(serializers.ModelSerializer):
 
 class DispatchVoucherSerializer(serializers.ModelSerializer):
     """Serializer for DispatchVoucher model"""
-    client_account = serializers.CharField(source='clienth.account', read_only=True)
-    package_name = serializers.CharField(source='dispatch_package.name', read_only=True)
+    user_username = serializers.CharField(source='user.username', read_only=True)
+    package_name = serializers.CharField(source='package.name', read_only=True)
     total_usage_mb = serializers.SerializerMethodField()
     
     class Meta:
