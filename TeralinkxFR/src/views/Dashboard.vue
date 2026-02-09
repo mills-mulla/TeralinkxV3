@@ -21,7 +21,7 @@
       </div>
     </div>
    
-    <!-- <fooTr/> -->
+    <fooTr />
     <WelcomeMessage v-if="isNewU" @close="isNewU = false"/>
   </div>
   

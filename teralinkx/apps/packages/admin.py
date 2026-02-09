@@ -3,7 +3,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from .models import (
     PackageType, DispatchVoucher, AvailableVoucher, 
-    Coupon, CouponUsage, FeaturedPromotion,
+    Coupon, CouponUsage, FeaturedPromotion, PointTransaction,
     PackageTypeLocation, FeaturedPromotionLocation  # Import the through models
 )
 
@@ -236,6 +236,7 @@ class DispatchVoucherAdmin(admin.ModelAdmin):
         'price_paid_display',
         'activated_display',
         'expires_display',
+        'total_usage_display',
         'usage_display',
         'is_roaming'
     ]
@@ -364,6 +365,20 @@ class DispatchVoucherAdmin(admin.ModelAdmin):
             return f"{total_used_mb:.1f}MB ({percentage:.1f}%)"
         return f"{total_used_mb:.1f}MB"
     usage_display.short_description = 'Usage'
+    
+    def total_usage_display(self, obj):
+        """Display total usage (download + upload) in human-readable format"""
+        total_bytes = obj.download_bytes + obj.upload_bytes
+        
+        if total_bytes < 1024:
+            return f"{total_bytes} B"
+        elif total_bytes < 1024 * 1024:
+            return f"{total_bytes / 1024:.2f} KB"
+        elif total_bytes < 1024 * 1024 * 1024:
+            return f"{total_bytes / (1024 * 1024):.2f} MB"
+        else:
+            return f"{total_bytes / (1024 * 1024 * 1024):.2f} GB"
+    total_usage_display.short_description = 'Total Usage'
     
     def created_display(self, obj):
         """Format created_at date"""
@@ -624,3 +639,70 @@ class FeaturedPromotionLocationAdmin(admin.ModelAdmin):
     list_display = ['promotion', 'location']
     list_filter = ['promotion', 'location']
     autocomplete_fields = ['promotion', 'location']
+
+
+@admin.register(PointTransaction)
+class PointTransactionAdmin(admin.ModelAdmin):
+    list_display = [
+        'user_display',
+        'transaction_type',
+        'points_display',
+        'description',
+        'created_display'
+    ]
+    
+    list_filter = [
+        'transaction_type',
+        'created_at'
+    ]
+    
+    search_fields = [
+        'user__account',
+        'user__phone_number',
+        'description'
+    ]
+    
+    readonly_fields = ['created_display']
+    
+    fieldsets = (
+        ('Transaction Information', {
+            'fields': (
+                'user',
+                'transaction_type',
+                'points',
+                'description'
+            )
+        }),
+        ('Related Objects', {
+            'fields': (
+                'related_voucher',
+                'related_coupon'
+            )
+        }),
+        ('Metadata', {
+            'fields': (
+                'created_display',
+            ),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def user_display(self, obj):
+        """Display user account"""
+        return f"{obj.user.account} ({obj.user.phone_number})"
+    user_display.short_description = 'User'
+    
+    def points_display(self, obj):
+        """Display points with color coding"""
+        color = 'green' if obj.points > 0 else 'red'
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{:+d}</span>',
+            color,
+            obj.points
+        )
+    points_display.short_description = 'Points'
+    
+    def created_display(self, obj):
+        """Format created_at date"""
+        return obj.created_at.strftime("%Y-%m-%d %H:%M:%S")
+    created_display.short_description = 'Created'

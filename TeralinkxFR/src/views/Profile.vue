@@ -331,7 +331,7 @@
       </div>
 
       <!-- Save Status -->
-      <div v-if="saving" class="fixed bottom-4 right-4 bg-white dark:bg-gray-800 border rounded-lg shadow-lg p-4 flex items-center space-x-3">
+      <div v-if="saving" class="fixed bottom-4 right-4 bg-white dark:bg-gray-800 border rounded-lg shadow-lg p-4 flex items-center space-x-3 z-50">
         <div class="animate-spin">
           <svg class="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -341,6 +341,8 @@
         <span class="text-sm font-medium text-gray-900 dark:text-white">Saving changes...</span>
       </div>
     </div>
+
+    <fooTr />
 
     <!-- Advanced Image Crop Modal -->
     <Transition
@@ -454,6 +456,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useToast } from '@/composables/useToast'
 import NavBar from '@/components/NavBar.vue'
+import fooTr from '@/components/Footer.vue'
 
 // Composables
 const authStore = useAuthStore()

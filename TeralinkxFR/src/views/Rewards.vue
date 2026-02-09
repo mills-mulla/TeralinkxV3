@@ -205,6 +205,8 @@
         </div>
       </div>
     </div>
+
+    <fooTr />
   </div>
 </template>
 
@@ -214,6 +216,7 @@ import { useRewards } from '@/composables/useRewards'
 import { useToast } from '@/composables/useToast'
 import { useAuthStore } from '@/stores/auth'
 import NavBar from '@/components/NavBar.vue'
+import fooTr from '@/components/Footer.vue'
 
 const {
   loading,

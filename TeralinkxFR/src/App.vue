@@ -9,9 +9,6 @@
     <div class="flex-1">
       <router-view />
     </div>
-    
-    <!-- Global Footer -->
-    <Footer />
   </div>
 </template>
 
@@ -19,7 +16,6 @@
 import { onMounted } from 'vue'
 import NotificationHandler from './components/NotificationHandler.vue'
 import ToastContainer from './components/ToastContainer.vue'
-import Footer from './components/Footer.vue'
 import { useTheme } from './composables/useTheme'
 
 // Initialize theme on app mount

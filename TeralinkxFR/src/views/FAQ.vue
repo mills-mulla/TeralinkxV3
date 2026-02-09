@@ -125,101 +125,285 @@
         </button>
       </div>
     </div>
+
+    <fooTr />
   </div>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
 import NavBar from '@/components/NavBar.vue'
+import fooTr from '@/components/Footer.vue'
 
 const searchQuery = ref('')
 const activeCategory = ref('all')
 
 const faqCategories = [
-  { id: 'all', name: 'All Questions', count: 15 },
-  { id: 'account', name: 'Account & Billing', count: 5 },
-  { id: 'technical', name: 'Technical Issues', count: 4 },
-  { id: 'packages', name: 'Packages & Data', count: 3 },
-  { id: 'devices', name: 'Device Management', count: 3 }
+  { id: 'all', name: 'All Questions', count: 35 },
+  { id: 'account', name: 'Account & Billing', count: 8 },
+  { id: 'technical', name: 'Technical Issues', count: 9 },
+  { id: 'packages', name: 'Packages & Data', count: 7 },
+  { id: 'devices', name: 'Device Management', count: 6 },
+  { id: 'security', name: 'Security & Privacy', count: 5 }
 ]
 
 const faqs = ref([
+  // Account & Billing
   {
     id: 1,
     category: 'account',
     question: 'How do I create a new account?',
-    answer: 'To create a new account, visit our registration page and provide your phone number. You\'ll receive an SMS with a verification code. Enter the code to complete your registration.',
+    answer: 'To create a new account:<br>1. Connect to Teralinkx WiFi hotspot<br>2. Open your browser and enter your phone number<br>3. Verify your number via SMS code<br>4. Complete your profile setup<br><br>Your account is created instantly and you can start purchasing packages immediately.',
     isOpen: false
   },
   {
     id: 2,
     category: 'account',
     question: 'How can I check my account balance?',
-    answer: 'You can check your account balance by logging into your dashboard. Your current balance is displayed prominently on the main page, along with your data usage statistics.',
+    answer: 'You can check your account balance by:<br>• Logging into your dashboard - balance is displayed prominently<br>• Viewing the Account Card on the main page<br>• Checking the Profile section for detailed balance history<br>• Receiving SMS notifications when balance is low',
     isOpen: false
   },
   {
     id: 3,
-    category: 'technical',
-    question: 'Why is my internet connection slow?',
-    answer: 'Slow internet can be caused by several factors:<br>• High network traffic during peak hours<br>• Multiple devices connected to your account<br>• Reaching your data limit (speed may be throttled)<br>• Distance from the access point<br><br>Try disconnecting unused devices or contact support for assistance.',
+    category: 'account',
+    question: 'What payment methods do you accept?',
+    answer: 'We accept multiple payment methods:<br>• M-Pesa (Safaricom)<br>• Airtel Money<br>• Account Credit Balance<br>• Bank Cards (Visa, Mastercard)<br>• PayPal<br><br>All payments are processed securely through encrypted channels.',
     isOpen: false
   },
   {
     id: 4,
-    category: 'packages',
-    question: 'What data packages are available?',
-    answer: 'We offer various data packages to suit different needs:<br>• Daily packages (1GB-5GB)<br>• Weekly packages (5GB-20GB)<br>• Monthly packages (20GB-100GB)<br>• Unlimited packages<br><br>Visit the "Buy" section to see current packages and pricing.',
+    category: 'account',
+    question: 'How do I add credit to my account?',
+    answer: 'To add credit:<br>1. Go to Dashboard > Buy Packages<br>2. Select "Add Credit" option<br>3. Enter amount (minimum KSh 50)<br>4. Choose payment method<br>5. Complete payment<br><br>Credit is added instantly and can be used for any package purchase.',
     isOpen: false
   },
   {
     id: 5,
-    category: 'devices',
-    question: 'How many devices can I connect?',
-    answer: 'The number of devices you can connect depends on your package:<br>• Basic packages: 2-3 devices<br>• Standard packages: 4-5 devices<br>• Premium packages: 6-10 devices<br>• Unlimited packages: Up to 15 devices',
+    category: 'account',
+    question: 'Can I get a refund for unused data?',
+    answer: 'Refund eligibility depends on several factors:<br>• Unused packages (80%+ data remaining): Eligible within 7 days<br>• Service issues: Full refund if service unavailable for 12+ hours<br>• Billing errors: Immediate refund<br>• Expired packages: Not eligible<br><br>Contact support with your request and we\'ll review your case.',
     isOpen: false
   },
   {
     id: 6,
-    category: 'technical',
-    question: 'I can\'t connect to the internet. What should I do?',
-    answer: 'If you can\'t connect, try these steps:<br>1. Check if your voucher is still active<br>2. Verify you haven\'t exceeded device limits<br>3. Clear your browser cache and cookies<br>4. Try a different browser or device<br>5. Restart your network connection<br><br>If the problem persists, contact our support team.',
+    category: 'account',
+    question: 'How do I view my transaction history?',
+    answer: 'Access your transaction history:<br>1. Go to Profile page<br>2. Scroll to "Transaction History" section<br>3. Filter by date range or transaction type<br>4. Export to PDF or CSV for records<br><br>All transactions are stored for 12 months.',
     isOpen: false
   },
   {
     id: 7,
     category: 'account',
-    question: 'How do I change my password?',
-    answer: 'To change your password:<br>1. Go to Settings > Security Settings<br>2. Enter your new password<br>3. Click "Update Password"<br><br>For security, we recommend using a strong password with a mix of letters, numbers, and symbols.',
+    question: 'Can I transfer credit to another account?',
+    answer: 'Yes! Credit transfers are available:<br>• Minimum transfer: KSh 50<br>• Maximum per day: KSh 5,000<br>• Transfer fee: 2% of amount<br>• Instant processing<br><br>Go to Dashboard > Transfer Credit and enter recipient\'s phone number.',
     isOpen: false
   },
   {
     id: 8,
-    category: 'packages',
-    question: 'Do data packages expire?',
-    answer: 'Yes, all data packages have expiration dates:<br>• Daily packages: 24 hours<br>• Weekly packages: 7 days<br>• Monthly packages: 30 days<br><br>Unused data expires at the end of the validity period and cannot be carried forward.',
+    category: 'account',
+    question: 'What happens if my account is suspended?',
+    answer: 'Account suspension reasons:<br>• Policy violations<br>• Payment disputes<br>• Suspicious activity<br>• Terms of service breach<br><br>Contact support immediately to resolve. Most suspensions are temporary and can be lifted after verification.',
     isOpen: false
   },
+
+  // Technical Issues
   {
     id: 9,
-    category: 'devices',
-    question: 'How do I disconnect a device?',
-    answer: 'To disconnect a device:<br>1. Go to your Profile page<br>2. Scroll to "Connected Devices"<br>3. Find the device you want to disconnect<br>4. Click the menu button (three dots)<br>5. Select "Disconnect Device"<br><br>The device will be immediately disconnected from the network.',
+    category: 'technical',
+    question: 'Why is my internet connection slow?',
+    answer: 'Slow internet can be caused by:<br>• <strong>Network congestion:</strong> Peak hours (6-10 PM) may have slower speeds<br>• <strong>Multiple devices:</strong> Too many connected devices sharing bandwidth<br>• <strong>Data limit:</strong> Speed throttled after reaching package limit<br>• <strong>Distance:</strong> Too far from access point<br>• <strong>Device issues:</strong> Outdated software or hardware<br><br>Try disconnecting unused devices, moving closer to the access point, or upgrading your package.',
     isOpen: false
   },
   {
     id: 10,
     category: 'technical',
-    question: 'What browsers are supported?',
-    answer: 'TeralinkX works with all modern browsers:<br>• Chrome (recommended)<br>• Firefox<br>• Safari<br>• Microsoft Edge<br>• Opera<br><br>For the best experience, keep your browser updated to the latest version.',
+    question: 'I can\'t connect to the internet. What should I do?',
+    answer: 'Troubleshooting steps:<br>1. <strong>Check voucher status:</strong> Ensure it\'s active and not expired<br>2. <strong>Verify device limit:</strong> You may have reached maximum devices<br>3. <strong>Clear cache:</strong> Clear browser cache and cookies<br>4. <strong>Try different browser:</strong> Use Chrome, Firefox, or Safari<br>5. <strong>Restart connection:</strong> Disconnect and reconnect to WiFi<br>6. <strong>Check balance:</strong> Ensure you have active data<br><br>If problem persists, contact support with error details.',
     isOpen: false
   },
   {
     id: 11,
-    category: 'account',
-    question: 'How do I enable two-factor authentication?',
-    answer: 'To enable 2FA:<br>1. Go to Settings > Security Settings<br>2. Find "Two-Factor Authentication"<br>3. Toggle the switch to enable<br>4. Follow the setup instructions<br><br>2FA adds an extra layer of security to your account.',
+    category: 'technical',
+    question: 'What browsers are supported?',
+    answer: 'TeralinkX works with all modern browsers:<br>• <strong>Chrome</strong> (recommended) - Version 90+<br>• <strong>Firefox</strong> - Version 88+<br>• <strong>Safari</strong> - Version 14+<br>• <strong>Microsoft Edge</strong> - Version 90+<br>• <strong>Opera</strong> - Version 76+<br><br>For best experience, keep your browser updated. Mobile browsers are fully supported.',
     isOpen: false
+  },
+  {
+    id: 12,
+    category: 'technical',
+    question: 'How do I check my data usage?',
+    answer: 'Monitor your data usage:<br>• <strong>Dashboard:</strong> Real-time usage displayed on main page<br>• <strong>Profile:</strong> Detailed statistics (daily, weekly, monthly)<br>• <strong>Voucher section:</strong> Per-voucher usage breakdown<br>• <strong>SMS alerts:</strong> Enable in Settings for usage notifications<br>• <strong>Mobile app:</strong> Track usage on the go<br><br>Usage updates every 5 minutes.',
+    isOpen: false
+  },
+  {
+    id: 13,
+    category: 'technical',
+    question: 'Why do I keep getting disconnected?',
+    answer: 'Frequent disconnections may be due to:<br>• <strong>Weak signal:</strong> Move closer to access point<br>• <strong>Network switching:</strong> Disable auto-connect to other networks<br>• <strong>Session timeout:</strong> Inactive for 30+ minutes<br>• <strong>Device sleep mode:</strong> Adjust power settings<br>• <strong>VPN conflicts:</strong> Disable VPN temporarily<br><br>Enable "Keep me connected" in settings to maintain session.',
+    isOpen: false
+  },
+  {
+    id: 14,
+    category: 'technical',
+    question: 'Can I use a VPN with TeralinkX?',
+    answer: 'Yes, VPNs are allowed:<br>• Most VPN services work seamlessly<br>• May slightly reduce connection speed<br>• Recommended for enhanced privacy<br>• Some VPNs may require initial connection without VPN<br><br>Popular VPNs tested: NordVPN, ExpressVPN, ProtonVPN, Surfshark.',
+    isOpen: false
+  },
+  {
+    id: 15,
+    category: 'technical',
+    question: 'What ports are blocked?',
+    answer: 'For security and network stability:<br>• <strong>Blocked:</strong> Port 25 (SMTP), Port 445 (SMB)<br>• <strong>Restricted:</strong> Torrent ports during peak hours<br>• <strong>Open:</strong> HTTP (80), HTTPS (443), FTP (21), SSH (22)<br>• <strong>Gaming ports:</strong> Fully open and optimized<br><br>Business packages have unrestricted port access.',
+    isOpen: false
+  },
+  {
+    id: 16,
+    category: 'technical',
+    question: 'How do I improve my connection speed?',
+    answer: 'Speed optimization tips:<br>• Use 5GHz WiFi band if available<br>• Position device closer to router<br>• Close bandwidth-heavy applications<br>• Update device network drivers<br>• Use Ethernet cable for best performance<br>• Upgrade to higher-tier package<br>• Schedule large downloads during off-peak hours',
+    isOpen: false
+  },
+  {
+    id: 17,
+    category: 'technical',
+    question: 'Does weather affect my connection?',
+    answer: 'Weather impact on connection:<br>• <strong>Rain:</strong> Minimal impact on fiber connections<br>• <strong>Heavy storms:</strong> May cause temporary disruptions<br>• <strong>Lightning:</strong> Equipment protection in place<br>• <strong>Extreme heat:</strong> Rare equipment overheating<br><br>Our infrastructure is weather-resistant. Outages are rare and quickly resolved.',
+    isOpen: false
+  },
+
+  // Packages & Data
+  {
+    id: 18,
+    category: 'packages',
+    question: 'What data packages are available?',
+    answer: 'We offer flexible packages:<br><strong>Daily Packages:</strong><br>• 1GB - KSh 50 (24 hours)<br>• 3GB - KSh 120 (24 hours)<br>• 5GB - KSh 180 (24 hours)<br><br><strong>Weekly Packages:</strong><br>• 10GB - KSh 350 (7 days)<br>• 20GB - KSh 650 (7 days)<br><br><strong>Monthly Packages:</strong><br>• 50GB - KSh 1,500 (30 days)<br>• 100GB - KSh 2,800 (30 days)<br>• Unlimited - KSh 5,000 (30 days)<br><br>All packages include unlimited local content access.',
+    isOpen: false
+  },
+  {
+    id: 19,
+    category: 'packages',
+    question: 'Do data packages expire?',
+    answer: 'Yes, all packages have validity periods:<br>• <strong>Daily:</strong> 24 hours from activation<br>• <strong>Weekly:</strong> 7 days from activation<br>• <strong>Monthly:</strong> 30 days from activation<br><br>Unused data expires and cannot be carried forward. Set reminders or enable auto-renewal to avoid expiration.',
+    isOpen: false
+  },
+  {
+    id: 20,
+    category: 'packages',
+    question: 'Can I upgrade my package mid-cycle?',
+    answer: 'Yes! Package upgrades are flexible:<br>• Purchase additional packages anytime<br>• Multiple packages can run simultaneously<br>• New package activates immediately<br>• No loss of existing package data<br>• Upgrade to higher tier for better rates<br><br>Example: Add 10GB weekly to your existing 50GB monthly package.',
+    isOpen: false
+  },
+  {
+    id: 21,
+    category: 'packages',
+    question: 'What is the unlimited package fair usage policy?',
+    answer: 'Unlimited package details:<br>• <strong>Daily limit:</strong> 100GB at full speed<br>• <strong>After 100GB:</strong> Speed reduced to 5 Mbps<br>• <strong>Resets:</strong> Daily at midnight<br>• <strong>Streaming:</strong> HD quality supported<br>• <strong>Gaming:</strong> Low latency maintained<br><br>99% of users never reach the daily limit. Perfect for heavy users.',
+    isOpen: false
+  },
+  {
+    id: 22,
+    category: 'packages',
+    question: 'Can I share my package with family?',
+    answer: 'Yes! Package sharing options:<br>• Connect multiple devices (up to package limit)<br>• Family members can use same voucher<br>• Monitor usage per device<br>• Set device priorities<br>• Block/unblock devices anytime<br><br>Premium packages support up to 15 simultaneous devices.',
+    isOpen: false
+  },
+  {
+    id: 23,
+    category: 'packages',
+    question: 'Are there student or corporate discounts?',
+    answer: 'Special discounts available:<br><strong>Student Discount:</strong><br>• 20% off all packages<br>• Valid student ID required<br>• Educational content free<br><br><strong>Corporate Plans:</strong><br>• Custom packages for businesses<br>• Volume discounts (10+ users)<br>• Dedicated support<br>• Priority bandwidth<br><br>Contact sales@teralinkx.com for details.',
+    isOpen: false
+  },
+  {
+    id: 24,
+    category: 'packages',
+    question: 'What happens when my data runs out?',
+    answer: 'When data is exhausted:<br>• Connection automatically pauses<br>• SMS notification sent<br>• Dashboard shows "Out of Data" status<br>• Can purchase new package immediately<br>• Previous session restored after purchase<br>• No disconnection of devices<br><br>Enable auto-renewal to avoid interruptions.',
+    isOpen: false
+  },
+
+  // Device Management
+  {
+    id: 25,
+    category: 'devices',
+    question: 'How many devices can I connect?',
+    answer: 'Device limits by package:<br>• <strong>Basic (1-5GB):</strong> 2-3 devices<br>• <strong>Standard (10-20GB):</strong> 4-5 devices<br>• <strong>Premium (50GB+):</strong> 6-10 devices<br>• <strong>Unlimited:</strong> Up to 15 devices<br><br>Devices include phones, tablets, laptops, smart TVs, and IoT devices.',
+    isOpen: false
+  },
+  {
+    id: 26,
+    category: 'devices',
+    question: 'How do I disconnect a device?',
+    answer: 'To disconnect a device:<br>1. Go to Profile > Connected Devices<br>2. Find the device in the list<br>3. Click menu (three dots)<br>4. Select "Disconnect Device"<br>5. Confirm action<br><br>Device is immediately disconnected. It can reconnect using the voucher code.',
+    isOpen: false
+  },
+  {
+    id: 27,
+    category: 'devices',
+    question: 'Why was my device blocked?',
+    answer: 'Devices may be blocked for:<br>• <strong>Suspicious activity:</strong> Unusual traffic patterns<br>• <strong>Policy violations:</strong> Prohibited content access<br>• <strong>Security threats:</strong> Malware or virus detected<br>• <strong>Manual block:</strong> Account owner action<br>• <strong>Excessive usage:</strong> Abnormal data consumption<br><br>Contact support to appeal or resolve security issues.',
+    isOpen: false
+  },
+  {
+    id: 28,
+    category: 'devices',
+    question: 'Can I rename my devices?',
+    answer: 'Yes! Device naming helps identification:<br>1. Go to Profile > Connected Devices<br>2. Click device name or edit icon<br>3. Enter new name (e.g., "John\'s iPhone")<br>4. Press Enter or click Save<br><br>Names are private and only visible to you. Helps manage family devices.',
+    isOpen: false
+  },
+  {
+    id: 29,
+    category: 'devices',
+    question: 'What is device trust and how does it work?',
+    answer: 'Trusted devices feature:<br>• <strong>Auto-login:</strong> No voucher code needed<br>• <strong>Priority access:</strong> Faster connection<br>• <strong>Security:</strong> Device fingerprint stored<br>• <strong>Convenience:</strong> Seamless reconnection<br><br>To trust a device: Profile > Devices > Trust Device. Untrust anytime for security.',
+    isOpen: false
+  },
+  {
+    id: 30,
+    category: 'devices',
+    question: 'How do I connect a smart TV or gaming console?',
+    answer: 'Connecting non-browser devices:<br>1. Connect device to Teralinkx WiFi<br>2. On phone/laptop, login to your account<br>3. Go to Profile > Add Device<br>4. Enter device MAC address (found in device settings)<br>5. Authorize device<br><br>Device connects automatically. Works for PS5, Xbox, Smart TVs, etc.',
+    isOpen: false
+  },
+
+  // Security & Privacy
+  {
+    id: 31,
+    category: 'security',
+    question: 'How do I enable two-factor authentication?',
+    answer: 'Enable 2FA for enhanced security:<br>1. Go to Settings > Security<br>2. Toggle "Two-Factor Authentication"<br>3. Choose method (SMS or Authenticator App)<br>4. Verify with code<br>5. Save backup codes<br><br>2FA adds extra protection. Required for high-value accounts.',
+    isOpen: false
+  },
+  {
+    id: 32,
+    category: 'security',
+    question: 'Is my browsing data private?',
+    answer: 'Your privacy is protected:<br>• <strong>No logging:</strong> We don\'t track browsing history<br>• <strong>Encrypted:</strong> HTTPS traffic is end-to-end encrypted<br>• <strong>No selling:</strong> We never sell user data<br>• <strong>Compliance:</strong> GDPR and local privacy laws<br>• <strong>VPN friendly:</strong> Use VPN for extra privacy<br><br>We only collect connection metadata for service quality.',
+    isOpen: false
+  },
+  {
+    id: 33,
+    category: 'security',
+    question: 'How do I change my password?',
+    answer: 'Change password securely:<br>1. Go to Settings > Security Settings<br>2. Click "Change Password"<br>3. Enter current password<br>4. Enter new password (min 8 characters)<br>5. Confirm new password<br>6. Click "Update Password"<br><br>Use strong passwords with letters, numbers, and symbols.',
+    isOpen: false
+  },
+  {
+    id: 34,
+    category: 'security',
+    question: 'What should I do if my account is hacked?',
+    answer: 'If you suspect unauthorized access:<br>1. <strong>Immediately:</strong> Change your password<br>2. <strong>Review:</strong> Check connected devices and disconnect unknown ones<br>3. <strong>Enable:</strong> Two-factor authentication<br>4. <strong>Contact:</strong> Support team immediately<br>5. <strong>Monitor:</strong> Transaction history for unauthorized purchases<br><br>We\'ll investigate and secure your account within 1 hour.',
+    isOpen: false
+  },
+  {
+    id: 35,
+    category: 'security',
+    question: 'Are public WiFi connections safe?',
+    answer: 'TeralinkX public WiFi security:<br>• <strong>WPA3 encryption:</strong> Latest security standard<br>• <strong>Isolated sessions:</strong> Users can\'t see each other<br>• <strong>Firewall protection:</strong> Malicious traffic blocked<br>• <strong>Regular monitoring:</strong> 24/7 security team<br>• <strong>Recommendation:</strong> Use HTTPS sites and VPN for sensitive transactions<br><br>Our network is safer than most public WiFi.',
+    isOpen: false
+  }
+])
+  {
   },
   {
     id: 12,

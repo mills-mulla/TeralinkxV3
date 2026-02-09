@@ -338,6 +338,177 @@
               </div>
             </div>
           </div>
+
+          <!-- Data Protection -->
+          <div v-if="activeSection === 'data-protection'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 animate-fade-in">
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">Data Protection</h2>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">Last updated: {{ new Date().toLocaleDateString() }}</p>
+            
+            <div class="space-y-6 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+              <div>
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-3">GDPR Compliance</h3>
+                <p class="mb-3">TeralinkX is committed to protecting your personal data in accordance with GDPR and Kenya Data Protection Act 2019:</p>
+                <ul class="list-disc list-inside space-y-2">
+                  <li><strong>Lawful Processing:</strong> We process data only with your consent or for legitimate business purposes</li>
+                  <li><strong>Data Minimization:</strong> We collect only necessary information</li>
+                  <li><strong>Purpose Limitation:</strong> Data used only for stated purposes</li>
+                  <li><strong>Storage Limitation:</strong> Data retained only as long as necessary</li>
+                  <li><strong>Integrity & Confidentiality:</strong> Appropriate security measures in place</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-3">Your Data Rights</h3>
+                <p class="mb-3">Under data protection laws, you have the right to:</p>
+                <ul class="list-disc list-inside space-y-2">
+                  <li><strong>Access:</strong> Request copies of your personal data</li>
+                  <li><strong>Rectification:</strong> Correct inaccurate or incomplete data</li>
+                  <li><strong>Erasure:</strong> Request deletion of your data ("right to be forgotten")</li>
+                  <li><strong>Restriction:</strong> Limit how we use your data</li>
+                  <li><strong>Portability:</strong> Receive your data in a structured format</li>
+                  <li><strong>Object:</strong> Object to processing of your data</li>
+                  <li><strong>Withdraw Consent:</strong> Withdraw consent at any time</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-3">Data Security Measures</h3>
+                <ul class="list-disc list-inside space-y-2">
+                  <li><strong>Encryption:</strong> All data encrypted in transit (TLS 1.3) and at rest (AES-256)</li>
+                  <li><strong>Access Controls:</strong> Role-based access with multi-factor authentication</li>
+                  <li><strong>Regular Audits:</strong> Quarterly security assessments and penetration testing</li>
+                  <li><strong>Employee Training:</strong> Mandatory data protection training for all staff</li>
+                  <li><strong>Incident Response:</strong> 24/7 security monitoring and rapid response team</li>
+                  <li><strong>Backup & Recovery:</strong> Daily encrypted backups with disaster recovery plan</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-3">Data Breach Notification</h3>
+                <p class="mb-3">In the unlikely event of a data breach:</p>
+                <ul class="list-disc list-inside space-y-2">
+                  <li>We will notify affected users within 72 hours</li>
+                  <li>Notification will include nature of breach and data affected</li>
+                  <li>We will provide guidance on protective measures</li>
+                  <li>Regulatory authorities will be informed as required</li>
+                  <li>We will take immediate action to contain and remediate</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-3">Third-Party Data Sharing</h3>
+                <p class="mb-3">We share data only with trusted partners:</p>
+                <ul class="list-disc list-inside space-y-2">
+                  <li><strong>Payment Processors:</strong> M-Pesa, Airtel Money (for transactions only)</li>
+                  <li><strong>Cloud Services:</strong> AWS (data hosting with encryption)</li>
+                  <li><strong>Analytics:</strong> Anonymized usage data for service improvement</li>
+                  <li><strong>Support Tools:</strong> Customer service platforms (encrypted)</li>
+                </ul>
+                <p class="mt-3">All third parties are contractually bound to protect your data and use it only for specified purposes.</p>
+              </div>
+
+              <div>
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-3">Data Retention Policy</h3>
+                <ul class="list-disc list-inside space-y-2">
+                  <li><strong>Account Data:</strong> Retained while account is active + 2 years</li>
+                  <li><strong>Transaction Records:</strong> 7 years (legal requirement)</li>
+                  <li><strong>Usage Logs:</strong> 12 months for billing and support</li>
+                  <li><strong>Support Tickets:</strong> 3 years for quality assurance</li>
+                  <li><strong>Marketing Data:</strong> Until consent is withdrawn</li>
+                </ul>
+              </div>
+
+              <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <h4 class="font-medium text-blue-800 dark:text-blue-200 mb-2">Data Protection Officer</h4>
+                <p class="text-sm text-blue-700 dark:text-blue-300">For data protection inquiries, contact our DPO:<br>Email: dpo@teralinkx.com<br>Phone: +254 113 209 751<br>Response time: Within 30 days</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Legal Compliance -->
+          <div v-if="activeSection === 'compliance'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 animate-fade-in">
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">Legal Compliance</h2>
+            
+            <div class="space-y-6 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+              <div>
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-3">Regulatory Compliance</h3>
+                <p class="mb-3">TeralinkX operates in full compliance with:</p>
+                <ul class="list-disc list-inside space-y-2">
+                  <li><strong>Communications Authority of Kenya (CA):</strong> Licensed ISP provider</li>
+                  <li><strong>Kenya Data Protection Act 2019:</strong> Full compliance with data protection laws</li>
+                  <li><strong>Kenya Information and Communications Act:</strong> Adherence to telecommunications regulations</li>
+                  <li><strong>Consumer Protection Act:</strong> Fair trading and consumer rights</li>
+                  <li><strong>Anti-Money Laundering Regulations:</strong> KYC and transaction monitoring</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-3">Licensing & Certifications</h3>
+                <ul class="list-disc list-inside space-y-2">
+                  <li><strong>ISP License:</strong> Valid license from Communications Authority</li>
+                  <li><strong>ISO 27001:</strong> Information security management certification</li>
+                  <li><strong>PCI DSS:</strong> Payment card industry compliance</li>
+                  <li><strong>SOC 2 Type II:</strong> Security and availability controls</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-3">Content Filtering & Monitoring</h3>
+                <p class="mb-3">In compliance with legal requirements:</p>
+                <ul class="list-disc list-inside space-y-2">
+                  <li>We block access to illegal content as mandated by law</li>
+                  <li>Child protection filters are in place</li>
+                  <li>We cooperate with law enforcement when legally required</li>
+                  <li>No monitoring of private communications without legal warrant</li>
+                  <li>Users are notified of content restrictions</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-3">Intellectual Property</h3>
+                <ul class="list-disc list-inside space-y-2">
+                  <li>Users must respect copyright and intellectual property laws</li>
+                  <li>Piracy and illegal file sharing are prohibited</li>
+                  <li>We respond to valid DMCA takedown notices</li>
+                  <li>Repeat infringers may have service terminated</li>
+                  <li>Fair use and legal content sharing are permitted</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-3">Dispute Resolution</h3>
+                <p class="mb-3">For disputes with TeralinkX:</p>
+                <ol class="list-decimal list-inside space-y-2">
+                  <li><strong>Internal Resolution:</strong> Contact customer support first</li>
+                  <li><strong>Escalation:</strong> Request manager review if unresolved</li>
+                  <li><strong>Mediation:</strong> Independent mediator if needed</li>
+                  <li><strong>Arbitration:</strong> Binding arbitration as per agreement</li>
+                  <li><strong>Legal Action:</strong> Kenyan courts have jurisdiction</li>
+                </ol>
+              </div>
+
+              <div>
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-3">Governing Law</h3>
+                <p>These terms are governed by the laws of the Republic of Kenya. Any disputes shall be subject to the exclusive jurisdiction of the Kenyan courts.</p>
+              </div>
+
+              <div>
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-3">Changes to Terms</h3>
+                <ul class="list-disc list-inside space-y-2">
+                  <li>We may update these terms with 30 days notice</li>
+                  <li>Material changes require explicit consent</li>
+                  <li>Continued use implies acceptance of minor changes</li>
+                  <li>Users can terminate service if they disagree with changes</li>
+                  <li>Version history available upon request</li>
+                </ul>
+              </div>
+
+              <div class="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                <h4 class="font-medium text-green-800 dark:text-green-200 mb-2">Legal Department</h4>
+                <p class="text-sm text-green-700 dark:text-green-300">For legal inquiries:<br>Email: legal@teralinkx.com<br>Address: Nairobi, Kenya<br>Business Registration: [Registration Number]</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -360,12 +531,15 @@
         </div>
       </div>
     </div>
+
+    <fooTr />
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
 import NavBar from '@/components/NavBar.vue'
+import fooTr from '@/components/Footer.vue'
 
 const activeSection = ref('terms')
 
@@ -374,7 +548,9 @@ const policySections = [
   { id: 'privacy', name: 'Privacy Policy', icon: 'svg' },
   { id: 'usage', name: 'Usage Guidelines', icon: 'svg' },
   { id: 'support', name: 'Support Policy', icon: 'svg' },
-  { id: 'refunds', name: 'Refund Policy', icon: 'svg' }
+  { id: 'refunds', name: 'Refund Policy', icon: 'svg' },
+  { id: 'data-protection', name: 'Data Protection', icon: 'svg' },
+  { id: 'compliance', name: 'Legal Compliance', icon: 'svg' }
 ]
 </script>
 

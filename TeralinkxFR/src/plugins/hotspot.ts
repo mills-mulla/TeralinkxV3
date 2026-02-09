@@ -47,24 +47,29 @@ const hotspotPlugin = {
     let finalIP = '';
     let finalMAC = '';
     
-    if (urlIP && urlMAC) {
+    // CRITICAL: Only use real credentials, never defaults
+    const isDefaultIP = (ip: string) => ip === '192.168.88.100' || ip === '192.168.1.100';
+    const isDefaultMAC = (mac: string) => mac === '00:11:22:33:44:55';
+    
+    if (urlIP && urlMAC && !isDefaultIP(urlIP) && !isDefaultMAC(urlMAC)) {
       // URL params present - use them (highest priority)
       finalIP = urlIP;
       finalMAC = urlMAC;
-    } else if (windowIP && windowMAC) {
+    } else if (windowIP && windowMAC && !isDefaultIP(windowIP) && !isDefaultMAC(windowMAC)) {
       // window.hotspotContext present
       finalIP = windowIP;
       finalMAC = windowMAC;
-    } else if (sessionContext?.ip && sessionContext?.mac) {
+    } else if (sessionContext?.ip && sessionContext?.mac && 
+               !isDefaultIP(sessionContext.ip) && !isDefaultMAC(sessionContext.mac)) {
       // sessionStorage present
       finalIP = sessionContext.ip;
       finalMAC = sessionContext.mac;
-    } else if (localIP && localMAC) {
+    } else if (localIP && localMAC && !isDefaultIP(localIP) && !isDefaultMAC(localMAC)) {
       // localStorage present
       finalIP = localIP;
       finalMAC = localMAC;
     }
-    // If none available, leave empty (will block signin)
+    // If none available or all are defaults, leave empty (will block signin)
     
     // Initialize reactive hotspot data
     const hotspot = reactive<HotSpotContext>({

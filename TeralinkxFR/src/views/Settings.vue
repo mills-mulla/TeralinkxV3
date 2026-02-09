@@ -401,6 +401,8 @@
         </button>
       </div>
     </div>
+
+    <fooTr />
   </div>
 </template>
 
@@ -408,6 +410,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useToast } from '@/composables/useToast'
 import NavBar from '@/components/NavBar.vue'
+import fooTr from '@/components/Footer.vue'
 
 const { showSuccess, showError } = useToast()
 

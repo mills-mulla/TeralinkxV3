@@ -177,14 +177,6 @@
 
 
       </form>
-
-      <!-- Footer -->
-      <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
-        <p class="text-center text-xs text-gray-500 dark:text-gray-400">
-          © {{ new Date().getFullYear() }} Teralinkx Waves. All rights reserved.
-        </p>
-
-      </div>
     </div>
 
     <!-- Forgot Password Modal -->
@@ -465,6 +457,7 @@ const checkAccountStatus = async () => {
     }
     
   } catch (error) {
+    console.error('Account check error:', error)
     
     // Handle specific validation errors
     if (error.response && error.response.status === 400) {
@@ -473,6 +466,23 @@ const checkAccountStatus = async () => {
         showError('Network connection error. Please try again or contact support if issues persist.')
         return
       }
+      // Show specific error message from API
+      if (errorData.error) {
+        showError(errorData.error)
+        return
+      }
+    }
+    
+    // Handle authentication errors
+    if (error.response && error.response.status === 401) {
+      showError('Authentication failed. Please check your credentials.')
+      return
+    }
+    
+    // Handle server errors
+    if (error.response && error.response.status >= 500) {
+      showError('Server error. Please try again later.')
+      return
     }
     
     accountInfo.value = {
@@ -582,6 +592,7 @@ const performAuth = async (isAuto = false) => {
     }
     
   } catch (error) {
+    console.error('Authentication error:', error)
     
     // Handle specific validation errors
     if (error.response && error.response.status === 400) {
@@ -590,8 +601,39 @@ const performAuth = async (isAuto = false) => {
         showError('Network connection error. Please try again or contact support if issues persist.')
         return
       }
+      // Show specific error message from API
+      if (errorData.error) {
+        showError(errorData.error)
+        return
+      }
     }
     
+    // Handle authentication errors (401)
+    if (error.response && error.response.status === 401) {
+      const errorData = error.response.data
+      if (errorData.code === 'AUTH_FAILED') {
+        showError(errorData.error || 'Invalid credentials. Please check your phone number and password.')
+      } else {
+        showError('Authentication failed. Please try again.')
+      }
+      return
+    }
+    
+    // Handle device conflicts (409)
+    if (error.response && error.response.status === 409) {
+      const errorData = error.response.data
+      showError(errorData.error || 'Device conflict detected. Please contact support.')
+      return
+    }
+    
+    // Handle server errors (500+)
+    if (error.response && error.response.status >= 500) {
+      const errorData = error.response.data
+      showError(errorData.error || 'Server error. Please try again later.')
+      return
+    }
+    
+    // Generic error
     showError(error.message || 'Authentication failed. Please try again.')
   } finally {
     authStore.loading = false
@@ -703,6 +745,44 @@ const attemptAutoSignIn = async () => {
     }
     
   } catch (error) {
+    console.error('Auto sign-in error:', error)
+    
+    // Handle specific error responses
+    if (error.response) {
+      const errorData = error.response.data
+      
+      // Handle validation errors (400)
+      if (error.response.status === 400) {
+        if (errorData.error?.includes('IP') || errorData.error?.includes('MAC')) {
+          console.warn('Network validation error during auto sign-in')
+        } else if (errorData.code === 'BUSINESS_RULE_VIOLATION') {
+          console.warn('Business rule violation:', errorData.error)
+        }
+        return false
+      }
+      
+      // Handle authentication errors (401)
+      if (error.response.status === 401) {
+        console.warn('Auto sign-in authentication failed:', errorData.error)
+        if (errorData.code === 'AUTH_FAILED') {
+          // Device not trusted or credentials invalid
+          return false
+        }
+      }
+      
+      // Handle device conflicts (409)
+      if (error.response.status === 409) {
+        console.warn('Device conflict during auto sign-in:', errorData.error)
+        return false
+      }
+      
+      // Handle server errors (500+)
+      if (error.response.status >= 500) {
+        console.error('Server error during auto sign-in:', errorData.error)
+        return false
+      }
+    }
+    
     return false // Auto sign-in failed, continue with manual auth
   }
 }
@@ -713,6 +793,20 @@ const attemptAutoSignIn = async () => {
 
 // Lifecycle
 onMounted(async () => {
+  // CRITICAL: Check for valid hotspot credentials first
+  if (!hotspot.ip || !hotspot.mac || 
+      hotspot.ip === '192.168.88.100' || 
+      hotspot.mac === '00:11:22:33:44:55') {
+    console.warn('No valid hotspot credentials detected. Redirecting to login page...')
+    // Clear any stored invalid credentials
+    sessionStorage.removeItem('hotspotContext')
+    localStorage.removeItem('hs_ip')
+    localStorage.removeItem('hs_mac')
+    // Redirect to login page to get fresh credentials
+    window.location.href = '/login.html'
+    return
+  }
+  
   // First check for existing credentials
   await checkExistingCredentials()
   

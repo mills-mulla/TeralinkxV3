@@ -188,56 +188,251 @@
           </div>
 
           <!-- Troubleshooting -->
-          <div v-if="activeSection === 'troubleshooting'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 animate-fade-in">
-            <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">Troubleshooting</h2>
+
+          <!-- Payments & Billing -->
+          <div v-if="activeSection === 'payments'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 animate-fade-in">
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">Payments & Billing</h2>
             
             <div class="space-y-6">
               <div>
-                <h3 class="font-semibold text-gray-900 dark:text-white mb-3">Common Issues</h3>
-                
-                <div class="space-y-4">
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-3">Payment Methods</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div class="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
-                    <h4 class="font-medium text-gray-900 dark:text-white mb-2">Cannot Connect to Internet</h4>
+                    <h4 class="font-medium text-gray-900 dark:text-white mb-2">M-Pesa (Safaricom)</h4>
                     <ul class="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
-                      <li>Check if your voucher is still active</li>
-                      <li>Verify you haven't exceeded device limits</li>
-                      <li>Clear your browser cache and cookies</li>
-                      <li>Try connecting from a different browser</li>
+                      <li>Instant processing</li>
+                      <li>No transaction fees</li>
+                      <li>Available 24/7</li>
+                      <li>Paybill: 247247</li>
                     </ul>
                   </div>
-
                   <div class="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
-                    <h4 class="font-medium text-gray-900 dark:text-white mb-2">Slow Internet Speed</h4>
+                    <h4 class="font-medium text-gray-900 dark:text-white mb-2">Airtel Money</h4>
                     <ul class="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
-                      <li>Check your data usage - you might be near your limit</li>
-                      <li>Disconnect unused devices</li>
-                      <li>Move closer to the access point</li>
-                      <li>Restart your device's network connection</li>
+                      <li>Fast processing</li>
+                      <li>Secure transactions</li>
+                      <li>24/7 availability</li>
+                      <li>Direct integration</li>
                     </ul>
                   </div>
-
                   <div class="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
-                    <h4 class="font-medium text-gray-900 dark:text-white mb-2">Voucher Code Not Working</h4>
+                    <h4 class="font-medium text-gray-900 dark:text-white mb-2">Account Credit</h4>
                     <ul class="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
-                      <li>Double-check the voucher code for typos</li>
-                      <li>Ensure the voucher hasn't expired</li>
-                      <li>Verify you haven't reached the device limit</li>
-                      <li>Contact support if the issue persists</li>
+                      <li>Pre-load your account</li>
+                      <li>Instant purchases</li>
+                      <li>No payment delays</li>
+                      <li>Bonus credit offers</li>
+                    </ul>
+                  </div>
+                  <div class="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+                    <h4 class="font-medium text-gray-900 dark:text-white mb-2">Bank Cards</h4>
+                    <ul class="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                      <li>Visa & Mastercard</li>
+                      <li>Secure 3D verification</li>
+                      <li>International cards accepted</li>
+                      <li>Save for future use</li>
                     </ul>
                   </div>
                 </div>
+              </div>
+
+              <div>
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-3">How to Make a Payment</h3>
+                <ol class="list-decimal list-inside space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                  <li>Select your desired package from the Buy section</li>
+                  <li>Click "Purchase" or "Buy Now"</li>
+                  <li>Choose your preferred payment method</li>
+                  <li>Enter payment details (phone number for mobile money)</li>
+                  <li>Confirm the transaction</li>
+                  <li>Complete payment on your phone (for M-Pesa/Airtel)</li>
+                  <li>Receive confirmation SMS and email</li>
+                  <li>Package activates automatically</li>
+                </ol>
+              </div>
+
+              <div>
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-3">Transaction History</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">Access your complete transaction history:</p>
+                <ul class="list-disc list-inside space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                  <li>Go to Profile > Transaction History</li>
+                  <li>View all purchases, credits, and refunds</li>
+                  <li>Filter by date range or transaction type</li>
+                  <li>Download statements (PDF or CSV)</li>
+                  <li>Track pending transactions</li>
+                  <li>Request receipts for any transaction</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-3">Refunds & Disputes</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">If you need a refund:</p>
+                <ul class="list-disc list-inside space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                  <li>Contact support within 14 days of purchase</li>
+                  <li>Provide transaction reference number</li>
+                  <li>Explain the reason for refund request</li>
+                  <li>Refunds processed within 3-7 business days</li>
+                  <li>Partial refunds available for unused data (80%+ remaining)</li>
+                  <li>Full refund for service issues or billing errors</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rewards Program -->
+          <div v-if="activeSection === 'rewards'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 animate-fade-in">
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">Rewards Program</h2>
+            
+            <div class="space-y-6">
+              <div class="p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg">
+                <h3 class="font-semibold text-purple-900 dark:text-purple-200 mb-2">Earn While You Browse</h3>
+                <p class="text-sm text-purple-800 dark:text-purple-300">Every purchase earns you reward points that can be redeemed for discounts and exclusive offers!</p>
+              </div>
+
+              <div>
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-3">How to Earn Points</h3>
+                <div class="space-y-3">
+                  <div class="flex items-start space-x-3">
+                    <div class="flex-shrink-0 w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center text-sm font-bold">1</div>
+                    <div>
+                      <h4 class="font-medium text-gray-900 dark:text-white">Purchase Packages</h4>
+                      <p class="text-sm text-gray-600 dark:text-gray-400">Earn 1 point for every KSh spent on data packages</p>
+                    </div>
+                  </div>
+                  <div class="flex items-start space-x-3">
+                    <div class="flex-shrink-0 w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center text-sm font-bold">2</div>
+                    <div>
+                      <h4 class="font-medium text-gray-900 dark:text-white">Refer Friends</h4>
+                      <p class="text-sm text-gray-600 dark:text-gray-400">Get 500 bonus points for each friend who signs up and makes a purchase</p>
+                    </div>
+                  </div>
+                  <div class="flex items-start space-x-3">
+                    <div class="flex-shrink-0 w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center text-sm font-bold">3</div>
+                    <div>
+                      <h4 class="font-medium text-gray-900 dark:text-white">Tier Upgrades</h4>
+                      <p class="text-sm text-gray-600 dark:text-gray-400">Unlock bonus points and multipliers as you reach higher tiers</p>
+                    </div>
+                  </div>
+                  <div class="flex items-start space-x-3">
+                    <div class="flex-shrink-0 w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center text-sm font-bold">4</div>
+                    <div>
+                      <h4 class="font-medium text-gray-900 dark:text-white">Special Promotions</h4>
+                      <p class="text-sm text-gray-600 dark:text-gray-400">Participate in seasonal campaigns for extra points</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-3">Reward Tiers</h3>
+                <div class="space-y-3">
+                  <div class="border-l-4 border-orange-400 pl-4 py-2">
+                    <h4 class="font-medium text-gray-900 dark:text-white">🥉 Bronze (0-999 points)</h4>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Starting tier - 1x point multiplier</p>
+                  </div>
+                  <div class="border-l-4 border-gray-400 pl-4 py-2">
+                    <h4 class="font-medium text-gray-900 dark:text-white">🥈 Silver (1,000-4,999 points)</h4>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">1.2x point multiplier + exclusive offers</p>
+                  </div>
+                  <div class="border-l-4 border-yellow-400 pl-4 py-2">
+                    <h4 class="font-medium text-gray-900 dark:text-white">🥇 Gold (5,000-14,999 points)</h4>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">1.5x point multiplier + priority support</p>
+                  </div>
+                  <div class="border-l-4 border-purple-400 pl-4 py-2">
+                    <h4 class="font-medium text-gray-900 dark:text-white">💎 Platinum (15,000+ points)</h4>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">2x point multiplier + VIP benefits</p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-3">Redeeming Points</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mb-3">Use your points for:</p>
+                <ul class="list-disc list-inside space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                  <li>Discount coupons (5%, 10%, 15%, 20% off)</li>
+                  <li>Free data packages</li>
+                  <li>Account credit</li>
+                  <li>Exclusive merchandise</li>
+                  <li>Priority customer support</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tips & Best Practices -->
+          <div v-if="activeSection === 'tips'" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 animate-fade-in">
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">Tips & Best Practices</h2>
+            
+            <div class="space-y-6">
+              <div>
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-3">Maximize Your Data</h3>
+                <ul class="list-disc list-inside space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                  <li>Download content during off-peak hours for faster speeds</li>
+                  <li>Use data-saving modes in browsers and apps</li>
+                  <li>Disable auto-play videos on social media</li>
+                  <li>Download maps and content for offline use</li>
+                  <li>Monitor data usage regularly to avoid surprises</li>
+                  <li>Close background apps that consume data</li>
+                  <li>Use WiFi calling to save mobile data</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-3">Security Best Practices</h3>
+                <ul class="list-disc list-inside space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                  <li>Enable two-factor authentication on your account</li>
+                  <li>Use strong, unique passwords</li>
+                  <li>Don't share your voucher codes publicly</li>
+                  <li>Regularly review connected devices</li>
+                  <li>Log out from shared devices</li>
+                  <li>Keep your contact information updated</li>
+                  <li>Report suspicious activity immediately</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-3">Save Money</h3>
+                <ul class="list-disc list-inside space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                  <li>Buy larger packages for better value per GB</li>
+                  <li>Take advantage of promotional offers</li>
+                  <li>Use reward points for discounts</li>
+                  <li>Refer friends to earn bonus credit</li>
+                  <li>Enable auto-renewal for loyalty bonuses</li>
+                  <li>Share packages with family to split costs</li>
+                  <li>Monitor usage to avoid buying excess data</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 class="font-semibold text-gray-900 dark:text-white mb-3">Optimize Performance</h3>
+                <ul class="list-disc list-inside space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                  <li>Position your device closer to the WiFi source</li>
+                  <li>Use 5GHz band for faster speeds (if available)</li>
+                  <li>Keep your device's software updated</li>
+                  <li>Restart your device periodically</li>
+                  <li>Clear browser cache regularly</li>
+                  <li>Limit simultaneous device connections</li>
+                  <li>Use Ethernet cable for gaming or streaming</li>
+                </ul>
+              </div>
+
+              <div class="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                <h4 class="font-medium text-green-800 dark:text-green-200 mb-2">Pro Tip</h4>
+                <p class="text-sm text-green-700 dark:text-green-300">Set up usage alerts in Settings to get notified when you reach 50%, 75%, and 90% of your data limit. This helps you manage your usage and avoid unexpected slowdowns!</p>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
+
+    <fooTr />
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue'
 import NavBar from '@/components/NavBar.vue'
+import fooTr from '@/components/Footer.vue'
 
 const activeSection = ref('getting-started')
 
@@ -246,7 +441,10 @@ const guideSections = [
   { id: 'packages', name: 'Packages & Vouchers', icon: 'svg' },
   { id: 'devices', name: 'Device Management', icon: 'svg' },
   { id: 'account', name: 'Account Settings', icon: 'svg' },
-  { id: 'troubleshooting', name: 'Troubleshooting', icon: 'svg' }
+  { id: 'payments', name: 'Payments & Billing', icon: 'svg' },
+  { id: 'rewards', name: 'Rewards Program', icon: 'svg' },
+  { id: 'troubleshooting', name: 'Troubleshooting', icon: 'svg' },
+  { id: 'tips', name: 'Tips & Best Practices', icon: 'svg' }
 ]
 </script>
 
