@@ -161,20 +161,7 @@ export const useNetworkStore = defineStore('network', () => {
     error.value = null
     
     try {
-      // Try Mikrotik hotspot first
-      if (window.$hotspot) {
-        ip.value = window.$hotspot.ip || ''
-        mac.value = window.$hotspot.mac || ''
-        hasHotspotData.value = !!(window.$hotspot.ip && window.$hotspot.mac)
-        source.value = 'mikrotik_hotspot'
-        
-        if (hasHotspotData.value) {
-          isLoading.value = false
-          return true
-        }
-      }
-
-      // Try URL parameters
+      // Priority 1: URL parameters
       const urlParams = new URLSearchParams(window.location.search)
       const paramIP = urlParams.get('ip') || urlParams.get('client_ip')
       const paramMAC = urlParams.get('mac') || urlParams.get('client_mac')
@@ -188,22 +175,30 @@ export const useNetworkStore = defineStore('network', () => {
         return true
       }
 
-      // Fallback to WebRTC
-      const webRTCIP = await getLocalIP()
-      ip.value = webRTCIP
-      mac.value = generatePlaceholderMac()
-      source.value = 'webrtc_fallback'
+      // Priority 2: window.$hotspot (from hotspot plugin)
+      if (window.$hotspot) {
+        ip.value = window.$hotspot.ip || ''
+        mac.value = window.$hotspot.mac || ''
+        hasHotspotData.value = !!(window.$hotspot.ip && window.$hotspot.mac)
+        source.value = 'mikrotik_hotspot'
+        
+        if (hasHotspotData.value) {
+          isLoading.value = false
+          return true
+        }
+      }
+
+      // No valid hotspot data found
+      error.value = 'No hotspot connection detected'
+      source.value = 'detection_failed'
       hasHotspotData.value = false
       
       isLoading.value = false
-      return true
+      return false
       
     } catch (error) {
       error.value = error.message
       source.value = 'detection_failed'
-      
-      ip.value = getFallbackIP()
-      mac.value = generatePlaceholderMac()
       hasHotspotData.value = false
       
       isLoading.value = false
@@ -221,15 +216,6 @@ export const useNetworkStore = defineStore('network', () => {
       connectionTested.value = false
       throw error
     }
-  }
-
-  const simulateData = () => {
-    const randomIP = `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255) + 1}`
-    ip.value = randomIP
-    mac.value = generateRandomMac()
-    hasHotspotData.value = true
-    source.value = 'simulated'
-    error.value = null
   }
 
   const initialize = async () => {
@@ -260,6 +246,6 @@ export const useNetworkStore = defineStore('network', () => {
   return {
     ip, mac, source, hasHotspotData, connectionTested, lastTest, isLoading, error,
     isConnected, connectionStatus,
-    detectNetwork, testConnection, simulateData, initialize, reset
+    detectNetwork, testConnection, initialize, reset
   }
 })

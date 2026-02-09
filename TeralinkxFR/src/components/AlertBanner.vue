@@ -22,8 +22,7 @@
               </span>
             </div>
             
-            <p class="text-sm text-gray-700 dark:text-gray-300 mb-2">
-              {{ announcement.message }}
+            <p class="text-sm text-gray-700 dark:text-gray-300 mb-2 whitespace-pre-line" v-html="decodeHtml(announcement.message)">
             </p>
             
             <div class="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
@@ -147,6 +146,12 @@ async function fetchAnnouncements() {
     console.error('❌ Failed to fetch announcements:', error)
     announcements.value = []
   }
+}
+
+function decodeHtml(html) {
+  const txt = document.createElement('textarea')
+  txt.innerHTML = html
+  return txt.value
 }
 
 onMounted(() => {

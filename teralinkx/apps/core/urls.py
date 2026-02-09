@@ -61,13 +61,16 @@
 # ]
 from django.urls import path
 from .views.network_views import NetworkInfoView
+from .views.health_views import HealthCheckView
 from .services.csrf import get_csrf_token
 
 urlpatterns = [
+    # Health check endpoint (lightweight)
+    path('health/', HealthCheckView.as_view(), name='health-check'),
     
-    # Network information endpoint
+    # Network information endpoint (detailed)
     path('network-info/', NetworkInfoView.as_view(), name='network-info'),
+    
+    # CSRF token
     path('cross/', get_csrf_token),
-    # Health check endpoint (for captive portal detection)
-    path('network-health/', NetworkInfoView.as_view(), name='network-health'),
 ]

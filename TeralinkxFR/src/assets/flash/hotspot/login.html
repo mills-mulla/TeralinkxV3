@@ -204,7 +204,17 @@
     // Redirect to SPA with variables preserved
     function redirectToApp() {
       setupMikroTikVariables();
-      window.location.replace('/htm.html#/');
+      
+      const mac = '$(mac)';
+      const ip = '$(ip)';
+      
+      // Redirect with URL parameters for Vue app to capture
+      const params = new URLSearchParams();
+      if (ip) params.append('ip', ip);
+      if (mac) params.append('mac', mac);
+      params.append('timestamp', Date.now().toString());
+      
+      window.location.replace('/htm.html#/?' + params.toString());
     }
 
     // Setup on page load

@@ -5,32 +5,6 @@
   <!-- Main Signin Form - shown after credential check -->
   <div v-else class="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 px-4">
 
-    <!-- Public Announcements -->
-    <div v-if="publicAnnouncements.length > 0" class="w-full max-w-xs mb-4">
-      <div
-        v-for="announcement in publicAnnouncements"
-        :key="announcement.id"
-        :class="[
-          'p-3 rounded-lg shadow-lg border-l-4 backdrop-blur-sm',
-          getAnnouncementClass(announcement.priority)
-        ]"
-      >
-        <div class="flex items-start justify-between">
-          <div class="flex-1">
-            <div class="flex items-center space-x-2 mb-1">
-              <span class="text-lg">{{ getAnnouncementIcon(announcement.notification_type) }}</span>
-              <h3 class="font-semibold text-sm text-gray-900 dark:text-white">
-                {{ announcement.title }}
-              </h3>
-            </div>
-            <p class="text-xs text-gray-700 dark:text-gray-300">
-              {{ announcement.message }}
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Main Auth Card -->
     <div class="w-full max-w-xs bg-white dark:bg-gray-900 shadow-xl rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
       <!-- Logo Header -->
@@ -45,15 +19,10 @@
       <!-- Auth Form -->
       <form @submit.prevent="handleManualAuth" class="p-4 space-y-4">
         <!-- Connection Status -->
-        <ConnectionStatus 
-          :ip="hotspot.ip"
-          :mac="hotspot.mac"
-          :source="hotspot.ip ? 'hotspot' : 'fallback'"
-          :isConnected="!!(hotspot.ip && hotspot.mac)"
-          @simulate="simulateNetworkData"
-          @test="testBackend"
-        />
+        <ConnectionStatus />
 
+        <!-- Maintenance Announcements -->
+        <MaintenanceAnnouncements />
 
         <!-- Error Display -->
         <AuthError 
@@ -62,15 +31,15 @@
           @clear="authStore.clearError()"
         />
 
-        <!-- Network Warning (shown when using fallback data) -->
-        <div v-if="showNetworkWarning" class="p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
+        <!-- Network Warning (shown when no hotspot data) -->
+        <div v-if="!hotspot.ip || !hotspot.mac" class="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
           <div class="flex items-start space-x-2">
-            <svg class="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.346 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
             </svg>
-            <div class="text-sm text-yellow-700 dark:text-yellow-300">
-              <p class="font-medium">Using fallback network data</p>
-              <p class="text-xs mt-1">You can still proceed with authentication.</p>
+            <div class="text-sm text-red-700 dark:text-red-300">
+              <p class="font-medium">No Hotspot Connection</p>
+              <p class="text-xs mt-1">Please connect to Teralinkx WiFi hotspot to continue.</p>
             </div>
           </div>
         </div>
@@ -251,6 +220,7 @@ import ConnectionStatus from '../components/auth/ConnectionStatus.vue'
 import AuthError from '../components/auth/AuthError.vue'
 import ForgotPasswordModal from '../components/auth/ForgotPasswordModal.vue'
 import ConnectionDetailsModal from '../components/network/ConnectionDetailsModal.vue'
+import MaintenanceAnnouncements from '../components/auth/MaintenanceAnnouncements.vue'
 
 // Store instances
 const authStore = useAuthStore()
@@ -273,7 +243,6 @@ const showConnectionDetails = ref(false)
 const accountInfo = ref(null)
 const isAutoProcessing = ref(false)
 const hasCheckedAccount = ref(false)
-const publicAnnouncements = ref([])
 
 
 
@@ -285,13 +254,14 @@ const isValidPhone = computed(() => {
 })
 
 const canSubmit = computed(() => {
+  if (!hotspot.ip || !hotspot.mac) return false
   if (!isValidPhone.value) return false
   if (showPasswordField.value && !password.value) return false
   return true
 })
 
 const showNetworkWarning = computed(() => {
-  return !hotspot.ip || !hotspot.mac
+  return false // Removed - we now block signin instead
 })
 
 // Debounced account check to prevent race conditions
@@ -424,32 +394,22 @@ const handlePhoneBlur = () => {
   }
 }
 
-
-
-const simulateNetworkData = () => {
-  networkStore.simulateData()
-  showSuccess('Network data simulated')
-}
-
-const testBackend = async () => {
-  try {
-    await networkStore.testConnection()
-    showSuccess('Backend connection successful')
-  } catch (error) {
-    showError('Backend connection failed')
-  }
-}
-
 const checkAccountStatus = async () => {
   if (!isValidPhone.value) return
+  
+  // Block if no hotspot data
+  if (!hotspot.ip || !hotspot.mac) {
+    showError('Please connect to Teralinkx WiFi hotspot first')
+    return
+  }
   
   hasCheckedAccount.value = true
   
   try {
     const payload = {
       phone: normalizeKenyanPhone(phone.value),
-      current_ip: hotspot.ip || generateFallbackIP(),
-      current_mac: hotspot.mac || generateFallbackMac()
+      current_ip: hotspot.ip,
+      current_mac: hotspot.mac
     }
     
 
@@ -528,13 +488,19 @@ const checkAccountStatus = async () => {
 }
 
 const performAuth = async (isAuto = false) => {
+  // Block if no hotspot data
+  if (!hotspot.ip || !hotspot.mac) {
+    showError('Please connect to Teralinkx WiFi hotspot first')
+    return
+  }
+  
   const formattedPhone = normalizeKenyanPhone(phone.value)
   
   // Prepare authentication payload
   const payload = {
     phone: formattedPhone,
-    current_mac: hotspot.mac || generateFallbackMac(),
-    current_ip: hotspot.ip || generateFallbackIP()
+    current_mac: hotspot.mac,
+    current_ip: hotspot.ip
   }
   
 
@@ -634,6 +600,11 @@ const performAuth = async (isAuto = false) => {
 }
 
 const handleManualAuth = async () => {
+  if (!hotspot.ip || !hotspot.mac) {
+    showError('Please connect to Teralinkx WiFi hotspot first')
+    return
+  }
+  
   if (!isValidPhone.value) {
     showError('Please enter a valid 9-digit Kenyan phone number')
     return
@@ -644,54 +615,11 @@ const handleManualAuth = async () => {
     return
   }
 
-  if (!hotspot.ip || !hotspot.mac) {
-    showError('Please connect to Teralinkx WiFi first')
-    return
-  }
-
   await performAuth(false)
 }
 
 const forgotPassword = () => {
   showForgotPasswordModal.value = true
-}
-
-const fetchPublicAnnouncements = async () => {
-  try {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/notifications/announcements/public/`, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' }
-    })
-    
-    if (response.ok) {
-      const data = await response.json()
-      publicAnnouncements.value = Array.isArray(data) ? data.filter(a => 
-        a.scope === 'global' && ['maintenance', 'system', 'security'].includes(a.notification_type)
-      ) : []
-    }
-  } catch (error) {
-    // Silently fail - announcements are optional
-  }
-}
-
-const getAnnouncementIcon = (type) => {
-  const icons = {
-    'maintenance': '🔧',
-    'system': '⚙️',
-    'security': '🔒',
-    'announcement': '📢'
-  }
-  return icons[type] || '📢'
-}
-
-const getAnnouncementClass = (priority) => {
-  const classes = {
-    'low': 'border-blue-500 bg-blue-50/90 dark:bg-blue-900/30',
-    'medium': 'border-yellow-500 bg-yellow-50/90 dark:bg-yellow-900/30',
-    'high': 'border-orange-500 bg-orange-50/90 dark:bg-orange-900/30',
-    'urgent': 'border-red-500 bg-red-50/90 dark:bg-red-900/30'
-  }
-  return classes[priority] || classes['medium']
 }
 
 const attemptAutoSignIn = async () => {
@@ -785,9 +713,6 @@ const attemptAutoSignIn = async () => {
 
 // Lifecycle
 onMounted(async () => {
-  // Fetch public announcements (non-blocking)
-  fetchPublicAnnouncements()
-  
   // First check for existing credentials
   await checkExistingCredentials()
   
