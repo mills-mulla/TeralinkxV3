@@ -5,7 +5,9 @@ from datetime import timedelta
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
-from core.models import ClientH, DispatchVoucher, Transaction
+from users.models import ClientH
+from packages.models import DispatchVoucher
+from finance.models import PaymentTransaction
 import logging
 
 logger = logging.getLogger(__name__)
@@ -36,7 +38,7 @@ class DashboardMetricsView(APIView):
             ).values('dispatch_account').distinct().count()
             
             # Revenue metrics (from transactions)
-            revenue_data = Transaction.objects.filter(
+            revenue_data = PaymentTransaction.objects.filter(
                 result_code=0  # Successful transactions
             ).aggregate(
                 total_revenue=Sum('amount'),
@@ -92,7 +94,7 @@ class RevenueAnalyticsView(APIView):
             daily_revenue = []
             for i in range(days):
                 date = start_date + timedelta(days=i)
-                day_revenue = Transaction.objects.filter(
+                day_revenue = PaymentTransaction.objects.filter(
                     transaction_time__date=date,
                     result_code=0
                 ).aggregate(total=Sum('amount'))['total'] or 0

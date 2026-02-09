@@ -5,7 +5,8 @@ from datetime import timedelta
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
-from core.models import ActiveUser, Transaction
+from analytics.models import ActiveSession
+from finance.models import PaymentTransaction
 import logging
 
 logger = logging.getLogger(__name__)
@@ -16,16 +17,16 @@ class SystemStatusView(APIView):
     def get(self, request):
         try:
             # Active sessions count
-            active_sessions = ActiveUser.objects.count()
+            active_sessions = ActiveSession.objects.filter(is_authenticated=True).count()
             
             # Recent transactions count (last hour)
             hour_ago = timezone.now() - timedelta(hours=1)
-            recent_transactions = Transaction.objects.filter(
+            recent_transactions = PaymentTransaction.objects.filter(
                 transaction_time__gte=hour_ago
             ).count()
             
             # Error rate (failed transactions in last hour)
-            failed_transactions = Transaction.objects.filter(
+            failed_transactions = PaymentTransaction.objects.filter(
                 transaction_time__gte=hour_ago,
                 result_code__gt=0
             ).count()
