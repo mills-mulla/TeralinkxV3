@@ -403,37 +403,6 @@ const faqs = ref([
     isOpen: false
   }
 ])
-  {
-  },
-  {
-    id: 12,
-    category: 'packages',
-    question: 'Can I upgrade my package mid-cycle?',
-    answer: 'Yes, you can purchase additional packages at any time. The new package will be added to your account and can be used immediately. Multiple active packages can run simultaneously.',
-    isOpen: false
-  },
-  {
-    id: 13,
-    category: 'devices',
-    question: 'Why was my device blocked?',
-    answer: 'Devices may be blocked for several reasons:<br>• Suspicious activity detected<br>• Violation of terms of service<br>• Security concerns<br>• Manual blocking by account owner<br><br>Contact support if you believe your device was blocked in error.',
-    isOpen: false
-  },
-  {
-    id: 14,
-    category: 'technical',
-    question: 'How do I check my data usage?',
-    answer: 'You can monitor your data usage in several ways:<br>• Dashboard shows real-time usage<br>• Profile page displays detailed statistics<br>• Voucher section shows per-voucher usage<br>• Enable usage alerts in Settings<br><br>Usage is updated every few minutes.',
-    isOpen: false
-  },
-  {
-    id: 15,
-    category: 'account',
-    question: 'How do I contact customer support?',
-    answer: 'You can reach our support team through:<br>• Live chat (available 24/7)<br>• Email: support@teralinkx.com<br>• Phone: +254 XXX XXX XXX<br>• WhatsApp: +254 XXX XXX XXX<br><br>For faster service, have your account number ready when contacting us.',
-    isOpen: false
-  }
-])
 
 const filteredFAQs = computed(() => {
   let filtered = faqs.value

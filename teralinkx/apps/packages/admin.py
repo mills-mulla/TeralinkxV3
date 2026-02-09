@@ -696,9 +696,9 @@ class PointTransactionAdmin(admin.ModelAdmin):
         """Display points with color coding"""
         color = 'green' if obj.points > 0 else 'red'
         return format_html(
-            '<span style="color: {}; font-weight: bold;">{:+d}</span>',
+            '<span style="color: {}; font-weight: bold;">{}</span>',
             color,
-            obj.points
+            f'{obj.points:+d}'
         )
     points_display.short_description = 'Points'
     
