@@ -1,16 +1,16 @@
 <template>
-  <div v-if="show" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-      <div class="p-6">
-        <div :class="`w-12 h-12 ${iconBgColor} rounded-2xl flex items-center justify-center mx-auto mb-4`">
+  <div v-if="show" class="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md transition-colors duration-300">
+      <div class="p-5">
+        <div :class="`w-12 h-12 ${iconBgColor} rounded-xl flex items-center justify-center mx-auto mb-4`">
           <component :is="icon" :class="`w-6 h-6 ${iconColor}`" />
         </div>
-        <h3 class="text-lg font-semibold text-slate-800 text-center mb-2">{{ title }}</h3>
-        <p class="text-slate-600 text-center mb-6" v-html="message"></p>
-        <div class="flex space-x-3">
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-white text-center mb-2">{{ title }}</h3>
+        <p class="text-slate-600 dark:text-slate-400 text-center mb-6 text-sm" v-html="message"></p>
+        <div class="flex gap-3">
           <button
             @click="$emit('cancel')"
-            class="flex-1 px-4 py-2 border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 transition-all duration-300"
+            class="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-all duration-200"
           >
             {{ cancelText }}
           </button>
@@ -18,7 +18,7 @@
             @click="$emit('confirm')"
             :disabled="loading"
             :class="[
-              'flex-1 px-4 py-2 text-white rounded-lg transition-all duration-300 flex items-center justify-center space-x-2',
+              'flex-1 px-4 py-2 text-white rounded-lg transition-all duration-200 flex items-center justify-center gap-2',
               loading ? `${confirmBgColor} opacity-50 cursor-not-allowed` : `${confirmBgColor} ${confirmHoverColor}`
             ]"
           >
@@ -73,30 +73,30 @@ export default {
     const iconBgColor = computed(() => {
       switch (props.type) {
         case 'danger':
-          return 'bg-rose-100'
+          return 'bg-rose-100 dark:bg-rose-500/20'
         case 'warning':
-          return 'bg-amber-100'
+          return 'bg-amber-100 dark:bg-amber-500/20'
         case 'success':
-          return 'bg-emerald-100'
+          return 'bg-emerald-100 dark:bg-emerald-500/20'
         case 'info':
-          return 'bg-blue-100'
+          return 'bg-blue-100 dark:bg-blue-500/20'
         default:
-          return 'bg-rose-100'
+          return 'bg-rose-100 dark:bg-rose-500/20'
       }
     })
     
     const iconColor = computed(() => {
       switch (props.type) {
         case 'danger':
-          return 'text-rose-600'
+          return 'text-rose-600 dark:text-rose-400'
         case 'warning':
-          return 'text-amber-600'
+          return 'text-amber-600 dark:text-amber-400'
         case 'success':
-          return 'text-emerald-600'
+          return 'text-emerald-600 dark:text-emerald-400'
         case 'info':
-          return 'text-blue-600'
+          return 'text-blue-600 dark:text-blue-400'
         default:
-          return 'text-rose-600'
+          return 'text-rose-600 dark:text-rose-400'
       }
     })
     

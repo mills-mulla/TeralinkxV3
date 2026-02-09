@@ -17,7 +17,7 @@ class LocationViewSet(viewsets.ModelViewSet):
     queryset = Location.objects.all()
     serializer_class = LocationSerializer
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['name', 'address', 'city', 'region']
+    search_fields = ['name', 'address', 'city', 'code']
     ordering_fields = ['id', 'name', 'created_at']
     ordering = ['name']
     
@@ -29,10 +29,10 @@ class LocationViewSet(viewsets.ModelViewSet):
         if is_active is not None:
             queryset = queryset.filter(is_active=is_active.lower() == 'true')
         
-        # Filter by region
-        region = self.request.query_params.get('region', None)
-        if region:
-            queryset = queryset.filter(region=region)
+        # Filter by location type
+        location_type = self.request.query_params.get('location_type', None)
+        if location_type:
+            queryset = queryset.filter(location_type=location_type)
         
         return queryset
     
@@ -43,8 +43,8 @@ class LocationViewSet(viewsets.ModelViewSet):
             total_locations = Location.objects.count()
             active_locations = Location.objects.filter(is_active=True).count()
             
-            # Locations by region
-            by_region = Location.objects.values('region').annotate(
+            # Locations by type
+            by_type = Location.objects.values('location_type').annotate(
                 count=Count('id')
             )
             
@@ -56,7 +56,7 @@ class LocationViewSet(viewsets.ModelViewSet):
             return Response({
                 'total_locations': total_locations,
                 'active_locations': active_locations,
-                'by_region': list(by_region),
+                'by_type': list(by_type),
                 'top_locations': LocationSerializer(top_locations, many=True).data
             })
         except Exception as e:

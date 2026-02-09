@@ -1,99 +1,49 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 p-6">
+  <div class="space-y-6 animate-fade-in">
     <!-- Header -->
-    <div class="mb-8">
-      <div class="flex items-center justify-between">
-        <div>
-          <h1 class="text-3xl font-bold bg-gradient-to-r from-slate-800 to-blue-600 bg-clip-text text-transparent mb-2">
-            📦 Package Management
-          </h1>
-          <p class="text-slate-600 font-light">Manage internet packages and pricing</p>
-        </div>
-        <button 
-          @click="refreshData"
-          class="p-2 hover:bg-white/50 rounded-xl transition-all duration-300"
-          title="Refresh data"
-        >
-          <ArrowPathIcon class="w-6 h-6 text-slate-600" />
-        </button>
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-semibold text-slate-900 dark:text-white">Packages</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Manage data packages</p>
       </div>
+      <button @click="refreshData" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors" :class="{ 'animate-spin': loading }">
+        <ArrowPathIcon class="w-5 h-5 text-slate-600 dark:text-slate-400" />
+      </button>
     </div>
 
     <!-- Error State -->
-    <div v-if="error" class="bg-rose-50 border border-rose-200 rounded-2xl p-6 mb-6">
+    <div v-if="error" class="bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 rounded-lg p-4">
       <div class="flex items-center justify-between">
-        <div class="flex items-center space-x-3">
-          <ExclamationTriangleIcon class="w-6 h-6 text-rose-600" />
+        <div class="flex items-center gap-3">
+          <ExclamationTriangleIcon class="w-5 h-5 text-rose-600 dark:text-rose-400" />
           <div>
-            <h3 class="text-rose-800 font-semibold">Failed to load package data</h3>
-            <p class="text-rose-600 text-sm">{{ error }}</p>
+            <h3 class="text-sm font-medium text-rose-800 dark:text-rose-400">Failed to load packages</h3>
+            <p class="text-xs text-rose-600 dark:text-rose-500 mt-1">{{ error }}</p>
           </div>
         </div>
-        <button 
-          @click="fetchPackages"
-          class="px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors"
-        >
-          Retry
-        </button>
+        <button @click="fetchPackages" class="px-3 py-1.5 bg-rose-600 text-white rounded-lg hover:bg-rose-700 text-sm">Retry</button>
       </div>
     </div>
 
-    <!-- Loading State -->
-    <div v-if="loading && !error" class="flex items-center justify-center py-20">
-      <div class="text-center">
-        <div class="relative">
-          <div class="w-16 h-16 border-4 border-blue-200 rounded-full"></div>
-          <div class="w-16 h-16 border-4 border-transparent border-t-blue-500 rounded-full animate-spin absolute top-0 left-0"></div>
-        </div>
-        <p class="mt-4 text-slate-500 font-light">Loading packages...</p>
-      </div>
+    <!-- Metrics -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-slide-up">
+      <ModernMetricCard title="Total Packages" :value="stats.total_packages" icon="📦" color="blue" />
+      <ModernMetricCard title="Active" :value="stats.active_packages" icon="✅" color="emerald" />
+      <ModernMetricCard title="Popular" :value="stats.popular_packages" icon="🔥" color="purple" />
+      <ModernMetricCard title="Avg Price" :value="`KSh ${formatNumber(stats.average_price || 0)}`" icon="💰" color="amber" :formatted="false" />
     </div>
 
-    <!-- Main Content -->
-    <div v-else-if="!loading" class="space-y-8">
-      <!-- Stats -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <ModernMetricCard
-          title="Total Packages"
-          :value="stats.total_packages"
-          icon="📦"
-          color="blue"
-          :formatted="true"
-        />
-        <ModernMetricCard
-          title="Active Packages"
-          :value="stats.active_packages"
-          icon="✅"
-          color="emerald"
-          :formatted="true"
-        />
-        <ModernMetricCard
-          title="Public Packages"
-          :value="stats.public_packages"
-          icon="🌐"
-          color="cyan"
-          :formatted="true"
-        />
-        <ModernMetricCard
-          title="Categories"
-          :value="stats.by_category?.length || 0"
-          icon="📂"
-          color="purple"
-          :formatted="true"
-        />
-      </div>
-
-      <!-- Search Bar -->
+    <!-- Search & Table -->
+    <div class="space-y-4 animate-slide-up" style="animation-delay: 0.1s">
       <SearchBar
         v-model="searchTerm"
-        placeholder="Search packages by name, description, category..."
+        placeholder="Search packages..."
         :filters="filters"
         @filter-change="handleFilterChange"
         @clear="clearFilters"
         @add="openCreateModal"
       />
 
-      <!-- Data Table -->
       <DataTable
         title="Package Records"
         :data="filteredPackages"
@@ -103,19 +53,14 @@
         @delete="openDeleteModal"
       >
         <template #cell-is_active="{ value }">
-          <span :class="value ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-800'" 
-                class="px-2 py-1 text-xs font-medium rounded-full">
+          <span :class="value ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-400'" class="px-2 py-0.5 text-xs font-medium rounded-full">
             {{ value ? 'Active' : 'Inactive' }}
           </span>
-        </template>
-        
-        <template #cell-price="{ value }">
-          <span class="font-medium">KSh {{ formatNumber(value) }}</span>
         </template>
       </DataTable>
     </div>
 
-    <!-- Form Modal -->
+    <!-- Modals -->
     <FormModal
       :show="showFormModal"
       title="Package"
@@ -126,13 +71,11 @@
       @submit="savePackage"
     />
 
-    <!-- Delete Confirmation -->
     <ConfirmDialog
       :show="showDeleteModal"
       title="Delete Package"
-      :message="`Are you sure you want to delete package <strong>${packageToDelete?.name}</strong>? This action cannot be undone.`"
+      :message="`Are you sure you want to delete package <strong>${packageToDelete?.name}</strong>?`"
       type="danger"
-      confirm-text="Delete"
       :loading="deleteLoading"
       @confirm="confirmDelete"
       @cancel="closeDeleteModal"
@@ -152,18 +95,9 @@ import { ArrowPathIcon, ExclamationTriangleIcon } from '@heroicons/vue/24/outlin
 
 export default {
   name: 'Packages',
-  components: {
-    ModernMetricCard,
-    SearchBar,
-    DataTable,
-    FormModal,
-    ConfirmDialog,
-    ArrowPathIcon,
-    ExclamationTriangleIcon
-  },
+  components: { ModernMetricCard, SearchBar, DataTable, FormModal, ConfirmDialog, ArrowPathIcon, ExclamationTriangleIcon },
   setup() {
     const { loading, error, makeRequest } = useApi()
-    
     const packages = ref([])
     const stats = ref({})
     const searchTerm = ref('')
@@ -178,208 +112,122 @@ export default {
     const columns = [
       { key: 'id', label: 'ID', sortable: true },
       { key: 'name', label: 'Name', sortable: true },
-      { key: 'category', label: 'Category', sortable: true },
-      { key: 'tier', label: 'Tier', sortable: true },
-      { key: 'price', label: 'Price', sortable: true },
-      { key: 'is_active', label: 'Status', sortable: true },
-      { key: 'is_public', label: 'Public', sortable: true }
+      { key: 'price', label: 'Price', sortable: true, format: (v) => `KSh ${v}` },
+      { key: 'data_limit_gb', label: 'Data (GB)', sortable: true },
+      { key: 'validity_days', label: 'Validity (Days)', sortable: true },
+      { key: 'is_active', label: 'Status', sortable: true }
     ]
 
     const filters = [
-      {
-        key: 'category',
-        label: 'Category',
-        options: [
-          { value: 'data', label: 'Data' },
-          { value: 'voice', label: 'Voice' },
-          { value: 'sms', label: 'SMS' },
-          { value: 'bundle', label: 'Bundle' }
-        ]
-      },
-      {
-        key: 'tier',
-        label: 'Tier',
-        options: [
-          { value: 'basic', label: 'Basic' },
-          { value: 'standard', label: 'Standard' },
-          { value: 'premium', label: 'Premium' },
-          { value: 'enterprise', label: 'Enterprise' }
-        ]
-      },
-      {
-        key: 'is_active',
-        label: 'Status',
-        options: [
-          { value: 'true', label: 'Active' },
-          { value: 'false', label: 'Inactive' }
-        ]
-      }
+      { key: 'is_active', label: 'Status', options: [{ value: 'true', label: 'Active' }, { value: 'false', label: 'Inactive' }] }
     ]
 
     const formFields = [
-      { key: 'name', label: 'Package Name', type: 'text', required: true, placeholder: 'e.g., Premium 100GB' },
-      { key: 'description', label: 'Description', type: 'textarea', rows: 3, placeholder: 'Package description...' },
-      { key: 'category', label: 'Category', type: 'select', required: true, options: filters[0].options },
-      { key: 'tier', label: 'Tier', type: 'select', required: true, options: filters[1].options },
-      { key: 'price', label: 'Price (KSh)', type: 'number', required: true, min: 0, step: '0.01' },
-      { key: 'data_limit', label: 'Data Limit (MB)', type: 'number', min: 0 },
-      { key: 'validity_days', label: 'Validity (Days)', type: 'number', min: 1 },
-      { key: 'is_active', label: 'Active', type: 'checkbox', checkboxLabel: 'Package is active' },
-      { key: 'is_public', label: 'Public', type: 'checkbox', checkboxLabel: 'Visible to customers' }
+      { key: 'name', label: 'Package Name', type: 'text', required: true },
+      { key: 'price', label: 'Price (KSh)', type: 'number', required: true },
+      { key: 'data_limit_gb', label: 'Data Limit (GB)', type: 'number', required: true },
+      { key: 'validity_days', label: 'Validity (Days)', type: 'number', required: true },
+      { key: 'description', label: 'Description', type: 'textarea', rows: 3 },
+      { key: 'is_active', label: 'Active', type: 'checkbox', checkboxLabel: 'Package is active' }
     ]
 
     const filteredPackages = computed(() => {
       let result = packages.value
-
-      // Apply search
       if (searchTerm.value) {
         const term = searchTerm.value.toLowerCase()
-        result = result.filter(pkg =>
-          pkg.name?.toLowerCase().includes(term) ||
-          pkg.description?.toLowerCase().includes(term) ||
-          pkg.category?.toLowerCase().includes(term)
-        )
+        result = result.filter(p => p.name?.toLowerCase().includes(term))
       }
-
-      // Apply filters
       Object.keys(activeFilters.value).forEach(key => {
         const value = activeFilters.value[key]
-        if (value) {
-          if (key === 'is_active') {
-            result = result.filter(pkg => pkg.is_active === (value === 'true'))
-          } else {
-            result = result.filter(pkg => pkg[key] === value)
-          }
-        }
+        if (value) result = result.filter(p => p[key] === (value === 'true'))
       })
-
       return result
     })
 
     const fetchPackages = async () => {
       try {
-        const data = await makeRequest('get', 'packages/')
+        const data = await makeRequest('get', 'suapi/packages/')
         packages.value = data.results || data
       } catch (err) {
-        console.error('Error fetching packages:', err)
+        console.error('Error:', err)
       }
     }
 
     const fetchStats = async () => {
       try {
-        const data = await makeRequest('get', 'packages/stats/')
-        stats.value = data
+        stats.value = await makeRequest('get', 'suapi/packages/stats/')
       } catch (err) {
-        console.error('Error fetching stats:', err)
+        console.error('Error:', err)
       }
     }
 
-    const refreshData = async () => {
-      await Promise.all([fetchPackages(), fetchStats()])
-    }
-
-    const handleFilterChange = ({ all }) => {
-      activeFilters.value = all
-    }
-
-    const clearFilters = () => {
-      searchTerm.value = ''
-      activeFilters.value = {}
-    }
-
-    const openCreateModal = () => {
-      selectedPackage.value = null
-      showFormModal.value = true
-    }
-
-    const openEditModal = (pkg) => {
-      selectedPackage.value = { ...pkg }
-      showFormModal.value = true
-    }
-
-    const closeFormModal = () => {
-      showFormModal.value = false
-      selectedPackage.value = null
-    }
+    const refreshData = () => Promise.all([fetchPackages(), fetchStats()])
+    const handleFilterChange = ({ all }) => { activeFilters.value = all }
+    const clearFilters = () => { searchTerm.value = ''; activeFilters.value = {} }
+    const openCreateModal = () => { selectedPackage.value = null; showFormModal.value = true }
+    const openEditModal = (pkg) => { selectedPackage.value = { ...pkg }; showFormModal.value = true }
+    const closeFormModal = () => { showFormModal.value = false; selectedPackage.value = null }
+    const formatNumber = (num) => new Intl.NumberFormat().format(num)
 
     const savePackage = async (data) => {
       saveLoading.value = true
       try {
-        const endpoint = data.id ? `packages/${data.id}/` : 'packages/'
+        const endpoint = data.id ? `suapi/packages/${data.id}/` : 'suapi/packages/'
         const method = data.id ? 'put' : 'post'
-        
         await makeRequest(method, endpoint, data)
         await refreshData()
         closeFormModal()
       } catch (err) {
-        console.error('Error saving package:', err)
-        alert('Error saving package: ' + (err.response?.data?.error || err.message))
+        alert('Error: ' + (err.response?.data?.error || err.message))
       } finally {
         saveLoading.value = false
       }
     }
 
-    const openDeleteModal = (pkg) => {
-      packageToDelete.value = pkg
-      showDeleteModal.value = true
-    }
-
-    const closeDeleteModal = () => {
-      showDeleteModal.value = false
-      packageToDelete.value = null
-    }
+    const openDeleteModal = (pkg) => { packageToDelete.value = pkg; showDeleteModal.value = true }
+    const closeDeleteModal = () => { showDeleteModal.value = false; packageToDelete.value = null }
 
     const confirmDelete = async () => {
       deleteLoading.value = true
       try {
-        await makeRequest('delete', `packages/${packageToDelete.value.id}/`)
+        await makeRequest('delete', `suapi/packages/${packageToDelete.value.id}/`)
         await refreshData()
         closeDeleteModal()
       } catch (err) {
-        console.error('Error deleting package:', err)
-        alert('Error deleting package: ' + (err.response?.data?.error || err.message))
+        alert('Error: ' + (err.response?.data?.error || err.message))
       } finally {
         deleteLoading.value = false
       }
     }
 
-    const formatNumber = (num) => {
-      return new Intl.NumberFormat().format(num)
-    }
-
-    onMounted(() => {
-      refreshData()
-    })
+    onMounted(refreshData)
 
     return {
-      loading,
-      error,
-      packages,
-      stats,
-      searchTerm,
-      showFormModal,
-      showDeleteModal,
-      selectedPackage,
-      packageToDelete,
-      saveLoading,
-      deleteLoading,
-      columns,
-      filters,
-      formFields,
-      filteredPackages,
-      fetchPackages,
-      refreshData,
-      handleFilterChange,
-      clearFilters,
-      openCreateModal,
-      openEditModal,
-      closeFormModal,
-      savePackage,
-      openDeleteModal,
-      closeDeleteModal,
-      confirmDelete,
-      formatNumber
+      loading, error, packages, stats, searchTerm, showFormModal, showDeleteModal, selectedPackage, packageToDelete,
+      saveLoading, deleteLoading, columns, filters, formFields, filteredPackages, fetchPackages, refreshData,
+      handleFilterChange, clearFilters, openCreateModal, openEditModal, closeFormModal, savePackage,
+      openDeleteModal, closeDeleteModal, confirmDelete, formatNumber
     }
   }
 }
 </script>
+
+<style scoped>
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.4s ease-out;
+}
+</style>

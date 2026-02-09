@@ -1,24 +1,24 @@
 <template>
-  <div v-if="show" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+  <div v-if="show" class="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto transition-colors duration-300">
       <!-- Header -->
-      <div class="p-6 border-b border-slate-200/60">
-        <h3 class="text-xl font-semibold text-slate-800 flex items-center">
+      <div class="p-5 border-b border-slate-200 dark:border-slate-700">
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-white flex items-center">
           {{ isEdit ? `✏️ Edit ${title}` : `➕ Add New ${title}` }}
         </h3>
       </div>
       
       <!-- Body -->
-      <div class="p-6">
+      <div class="p-5">
         <div :class="gridClass">
           <div
             v-for="field in fields"
             :key="field.key"
             :class="field.colSpan || 'col-span-1'"
           >
-            <label class="block text-sm font-medium text-slate-700 mb-2">
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
               {{ field.label }}
-              <span v-if="field.required" class="text-rose-500">*</span>
+              <span v-if="field.required" class="text-rose-500 dark:text-rose-400">*</span>
             </label>
             
             <!-- Text Input -->
@@ -29,7 +29,7 @@
               :placeholder="field.placeholder"
               :disabled="field.disabled"
               :required="field.required"
-              class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
+              class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-900 dark:text-white transition-all duration-200"
             />
             
             <!-- Number Input -->
@@ -43,7 +43,7 @@
               :placeholder="field.placeholder"
               :disabled="field.disabled"
               :required="field.required"
-              class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
+              class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-900 dark:text-white transition-all duration-200"
             />
             
             <!-- Select -->
@@ -52,7 +52,7 @@
               v-model="formData[field.key]"
               :disabled="field.disabled"
               :required="field.required"
-              class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
+              class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-900 dark:text-white transition-all duration-200"
             >
               <option value="">{{ field.placeholder || 'Select an option' }}</option>
               <option
@@ -72,7 +72,7 @@
               :placeholder="field.placeholder"
               :disabled="field.disabled"
               :required="field.required"
-              class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
+              class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-900 dark:text-white transition-all duration-200"
             ></textarea>
             
             <!-- Checkbox -->
@@ -81,9 +81,9 @@
                 v-model="formData[field.key]"
                 type="checkbox"
                 :disabled="field.disabled"
-                class="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                class="w-4 h-4 text-blue-600 border-slate-300 dark:border-slate-600 rounded focus:ring-blue-500"
               />
-              <span class="ml-2 text-sm text-slate-600">{{ field.checkboxLabel }}</span>
+              <span class="ml-2 text-sm text-slate-600 dark:text-slate-400">{{ field.checkboxLabel }}</span>
             </div>
             
             <!-- Date -->
@@ -93,17 +93,17 @@
               :type="field.type"
               :disabled="field.disabled"
               :required="field.required"
-              class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
+              class="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-900 dark:text-white transition-all duration-200"
             />
             
             <!-- Custom Slot -->
             <slot v-else :name="`field-${field.key}`" :field="field" :formData="formData"></slot>
             
             <!-- Help Text -->
-            <p v-if="field.help" class="mt-1 text-xs text-slate-500">{{ field.help }}</p>
+            <p v-if="field.help" class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ field.help }}</p>
             
             <!-- Error Message -->
-            <p v-if="errors[field.key]" class="mt-1 text-xs text-rose-600">{{ errors[field.key] }}</p>
+            <p v-if="errors[field.key]" class="mt-1 text-xs text-rose-600 dark:text-rose-400">{{ errors[field.key] }}</p>
           </div>
         </div>
         
@@ -112,10 +112,10 @@
       </div>
       
       <!-- Footer -->
-      <div class="flex justify-end space-x-3 px-6 py-4 border-t border-slate-200/60">
+      <div class="flex justify-end gap-3 px-5 py-4 border-t border-slate-200 dark:border-slate-700">
         <button
           @click="$emit('close')"
-          class="px-6 py-2 border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 transition-all duration-300"
+          class="px-5 py-2 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-all duration-200"
         >
           Cancel
         </button>
@@ -123,8 +123,8 @@
           @click="handleSubmit"
           :disabled="loading"
           :class="[
-            'px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl flex items-center space-x-2',
-            loading ? 'opacity-50 cursor-not-allowed' : 'hover:from-blue-500 hover:to-purple-500'
+            'px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all duration-200 shadow-sm hover:shadow flex items-center gap-2',
+            loading ? 'opacity-50 cursor-not-allowed' : ''
           ]"
         >
           <ArrowPathIcon v-if="loading" class="w-4 h-4 animate-spin" />
@@ -136,7 +136,7 @@
 </template>
 
 <script>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { ArrowPathIcon } from '@heroicons/vue/24/outline'
 
 export default {

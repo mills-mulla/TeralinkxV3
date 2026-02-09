@@ -1,5 +1,5 @@
 <template>
-  <div id="app" class="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30">
+  <div id="app" class="min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
     <!-- Show main layout when authenticated -->
     <div v-if="authChecked">
       <div v-if="isAuthenticated" class="min-h-screen">
@@ -14,30 +14,30 @@
         <!-- Main Content Area -->
         <main class="lg:ml-64 transition-all duration-300 min-h-screen" :class="{ 'ml-0': !isMobileSidebarOpen }">
           <!-- Header with user info and logout -->
-          <header class="bg-white/80 backdrop-blur-sm border-b border-slate-200/60 sticky top-0 z-40">
+          <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-300">
             <div class="px-6 py-4 flex justify-between items-center">
               <div class="flex items-center space-x-4">
                 <button 
                   @click="toggleMobileSidebar"
-                  class="lg:hidden p-2 rounded-lg hover:bg-slate-100 transition-colors"
+                  class="lg:hidden p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                 >
-                  <svg class="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-6 h-6 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                   </svg>
                 </button>
-                <h1 class="text-xl font-semibold text-slate-800 capitalize">
+                <h1 class="text-xl font-semibold text-slate-900 dark:text-white capitalize">
                   {{ activeComponent.replace(/([A-Z])/g, ' $1').trim() }}
                 </h1>
               </div>
 
               <div class="flex items-center space-x-4">
                 <div class="text-right">
-                  <p class="text-sm font-medium text-slate-800">{{ user?.username }}</p>
-                  <p class="text-xs text-slate-500 capitalize">{{ user?.role || 'Administrator' }}</p>
+                  <p class="text-sm font-medium text-slate-900 dark:text-white">{{ user?.username }}</p>
+                  <p class="text-xs text-slate-500 dark:text-slate-400 capitalize">{{ user?.role || 'Administrator' }}</p>
                 </div>
                 <button 
                   @click="handleLogout"
-                  class="px-4 py-2 text-sm text-rose-600 hover:text-rose-700 border border-rose-300 rounded-lg hover:bg-rose-50 transition-all duration-300 flex items-center space-x-2"
+                  class="px-4 py-2 text-sm text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 border border-rose-300 dark:border-rose-700 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all duration-200 flex items-center space-x-2"
                 >
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
@@ -57,10 +57,10 @@
         </main>
 
         <!-- Toast Notification -->
-        <div v-if="showToast" class="fixed top-4 right-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-6 py-3 rounded-2xl shadow-2xl z-50 animate-fade-in border border-emerald-400/30 backdrop-blur-sm">
+        <div v-if="showToast" class="fixed top-4 right-4 bg-emerald-500 dark:bg-emerald-600 text-white px-5 py-3 rounded-lg shadow-lg z-50 animate-fade-in">
           <div class="flex items-center space-x-2">
-            <div class="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-            <span class="font-medium">{{ toastMessage }}</span>
+            <div class="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
+            <span class="text-sm font-medium">{{ toastMessage }}</span>
           </div>
         </div>
       </div>
@@ -70,20 +70,30 @@
     </div>
 
     <!-- Loading state while checking authentication -->
-    <div v-else class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50/30">
+    <div v-else class="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
       <div class="text-center">
-        <div class="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-        <p class="text-slate-600 font-medium">Checking authentication...</p>
-        <p class="text-slate-500 text-sm mt-2">Please wait while we verify your session</p>
+        <div class="w-12 h-12 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <p class="text-slate-900 dark:text-white font-medium">Checking authentication...</p>
+        <p class="text-slate-500 dark:text-slate-400 text-sm mt-2">Please wait</p>
       </div>
     </div>
   </div>
 </template>
 
 <script>
+import { useTheme } from './composables/useTheme'
 import Sidebar from './components/Sidebar.vue'
 import Dashboard from './views/Dashboard.vue'
 import Clients from './views/Clients.vue'
+import Users from './views/Users.vue'
+import Devices from './views/Devices.vue'
+import Sessions from './views/Sessions.vue'
+import Packages from './views/Packages.vue'
+import Vouchers from './views/Vouchers.vue'
+import Coupons from './views/Coupons.vue'
+import Promotions from './views/Promotions.vue'
+import PointTransactions from './views/PointTransactions.vue'
+import Locations from './views/Locations.vue'
 import Transactions from './views/Transactions.vue'
 import Refunds from './views/Refunds.vue'
 import Auth from './views/Auth.vue'
@@ -97,10 +107,24 @@ axios.defaults.headers.common['Content-Type'] = 'application/json';
 
 export default {
   name: 'App',
+  setup() {
+    const { initTheme } = useTheme()
+    initTheme()
+    return {}
+  },
   components: {
     Sidebar,
     Dashboard,
     Clients,
+    Users,
+    Devices,
+    Sessions,
+    Packages,
+    Vouchers,
+    Coupons,
+    Promotions,
+    PointTransactions,
+    Locations,
     Transactions,
     Refunds,
     Auth,

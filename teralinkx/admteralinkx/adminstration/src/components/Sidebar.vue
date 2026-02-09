@@ -1,16 +1,16 @@
 <template>
-  <aside class="w-64 bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900/80 text-white shadow-2xl flex flex-col h-screen fixed left-0 top-0 backdrop-blur-lg border-r border-slate-700/50">
+  <aside class="w-64 bg-white dark:bg-slate-900 shadow-xl flex flex-col h-screen fixed left-0 top-0 border-r border-slate-200 dark:border-slate-800 transition-colors duration-300">
     <!-- Header -->
-    <div class="p-6 border-b border-slate-700/50 bg-slate-800/30 backdrop-blur-sm">
+    <div class="p-5 border-b border-slate-200 dark:border-slate-800">
       <div class="flex items-center space-x-3">
-        <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
-          <span class="text-xl">🌊</span>
+        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-sm">
+          <span class="text-lg">🌊</span>
         </div>
         <div>
-          <h1 class="text-lg font-bold text-white bg-gradient-to-r from-blue-400 to-purple-300 bg-clip-text text-transparent">
-            Teralinkx Waves
+          <h1 class="text-base font-semibold text-slate-900 dark:text-white">
+            Teralinkx
           </h1>
-          <p class="text-slate-400 text-xs mt-1 font-light">Analytics Platform</p>
+          <p class="text-slate-500 dark:text-slate-400 text-xs">Analytics</p>
         </div>
       </div>
     </div>
@@ -19,148 +19,82 @@
     <nav class="flex-1 py-6 overflow-y-auto">
       <div class="px-4 space-y-1">
         <!-- Main Section -->
-        <div class="px-3 py-3">
-          <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider font-light">MAIN NAVIGATION</h3>
+        <div class="px-3 py-2">
+          <h3 class="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide">Main</h3>
         </div>
         
         <button
           v-for="item in mainMenuItems"
           :key="item.id"
           @click="selectComponent(item.component)"
-          class="w-full flex items-center px-4 py-3 text-slate-300 rounded-2xl transition-all duration-300 text-left group relative overflow-hidden"
+          class="w-full flex items-center px-3 py-2 text-slate-600 dark:text-slate-400 rounded-lg transition-all duration-200 text-left group text-sm"
           :class="{
-            'bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-white shadow-lg border border-blue-500/30': activeComponent === item.component,
-            'hover:bg-slate-700/50 hover:text-white hover:translate-x-2': activeComponent !== item.component
+            'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium': activeComponent === item.component,
+            'hover:bg-slate-100 dark:hover:bg-slate-800': activeComponent !== item.component
           }"
         >
-          <!-- Active indicator -->
-          <div 
-            v-if="activeComponent === item.component"
-            class="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-blue-400 to-purple-500 rounded-r-full"
-          ></div>
-          
-          <span 
-            class="text-lg mr-4 transition-all duration-300 group-hover:scale-110 relative z-10"
-            :class="{ 
-              'scale-110': activeComponent === item.component,
-              'text-blue-400': activeComponent === item.component
-            }"
-          >
-            {{ item.icon }}
-          </span>
-          <span class="font-medium flex-1 relative z-10" :class="{ 'text-white': activeComponent === item.component }">
-            {{ item.name }}
-          </span>
+          <span class="text-base mr-3">{{ item.icon }}</span>
+          <span class="flex-1">{{ item.name }}</span>
           <span 
             v-if="item.notification"
-            class="bg-gradient-to-r from-red-500 to-pink-600 text-white text-xs rounded-full px-2 py-1 min-w-6 text-center shadow-lg relative z-10"
+            class="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-5 text-center"
           >
             {{ item.notification }}
           </span>
         </button>
 
         <!-- Support Section -->
-        <div class="px-3 py-3 mt-6">
-          <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider font-light">SUPPORT</h3>
+        <div class="px-3 py-2 mt-4">
+          <h3 class="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide">Support</h3>
         </div>
         
         <button
           v-for="item in supportMenuItems"
           :key="item.id"
           @click="selectComponent(item.component)"
-          class="w-full flex items-center px-4 py-3 text-slate-300 rounded-2xl transition-all duration-300 text-left group relative overflow-hidden"
+          class="w-full flex items-center px-3 py-2 text-slate-600 dark:text-slate-400 rounded-lg transition-all duration-200 text-left group text-sm"
           :class="{
-            'bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-white shadow-lg border border-blue-500/30': activeComponent === item.component,
-            'hover:bg-slate-700/50 hover:text-white hover:translate-x-2': activeComponent !== item.component
+            'bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium': activeComponent === item.component,
+            'hover:bg-slate-100 dark:hover:bg-slate-800': activeComponent !== item.component
           }"
         >
-          <!-- Active indicator -->
-          <div 
-            v-if="activeComponent === item.component"
-            class="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-blue-400 to-purple-500 rounded-r-full"
-          ></div>
-          
-          <span 
-            class="text-lg mr-4 transition-all duration-300 group-hover:scale-110 relative z-10"
-            :class="{ 
-              'scale-110': activeComponent === item.component,
-              'text-blue-400': activeComponent === item.component
-            }"
-          >
-            {{ item.icon }}
-          </span>
-          <span class="font-medium relative z-10" :class="{ 'text-white': activeComponent === item.component }">
-            {{ item.name }}
-          </span>
+          <span class="text-base mr-3">{{ item.icon }}</span>
+          <span>{{ item.name }}</span>
         </button>
       </div>
     </nav>
 
     <!-- Footer Section -->
-    <div class="p-4 border-t border-slate-700/50 bg-slate-800/30 backdrop-blur-sm">
-      <!-- Refresh Button -->
-      <button
-        @click="refreshData"
-        class="w-full flex items-center justify-center px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl hover:from-blue-500 hover:to-purple-500 transition-all duration-300 shadow-lg hover:shadow-xl mb-4 group hover:scale-105"
-      >
-        <span class="group-hover:animate-spin mr-2 transition-transform duration-300">🔄</span>
-        <span class="font-semibold">Refresh Data</span>
-      </button>
-      
-      <!-- Quick Stats -->
-      <div class="bg-slate-800/50 rounded-2xl p-4 mb-4 border border-slate-700/30 backdrop-blur-sm">
-        <div class="flex justify-between items-center">
-          <div class="text-slate-300">
-            <div class="font-semibold text-sm text-white">System Status</div>
-            <div class="flex items-center mt-2">
-              <div class="w-2 h-2 bg-emerald-500 rounded-full mr-2 animate-pulse"></div>
-              <span class="text-xs text-slate-400">All Systems Operational</span>
-            </div>
-          </div>
-          <div class="text-right">
-            <div class="text-slate-300 font-semibold text-sm">Last Update</div>
-            <div class="text-blue-400 text-xs font-mono">{{ lastUpdateTime }}</div>
-          </div>
+    <div class="p-4 border-t border-slate-200 dark:border-slate-800 space-y-3">
+      <!-- Theme Toggle -->
+      <div class="bg-slate-100 dark:bg-slate-800 rounded-lg p-3">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-medium text-slate-600 dark:text-slate-400">Theme</span>
+          <button
+            @click="toggleTheme"
+            class="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+          >
+            <span class="text-lg">{{ isDark ? '🌙' : '☀️' }}</span>
+          </button>
         </div>
+        <label class="flex items-center cursor-pointer">
+          <input
+            type="checkbox"
+            v-model="isAuto"
+            @change="setAutoTheme"
+            class="w-3.5 h-3.5 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500 focus:ring-offset-0"
+          />
+          <span class="ml-2 text-xs text-slate-600 dark:text-slate-400">Auto (6AM-6PM)</span>
+        </label>
       </div>
 
-      <!-- About Section -->
-      <div class="text-xs text-slate-400 space-y-3">
-        <div>
-          <p class="font-semibold text-slate-300 mb-2 flex items-center">
-            <span class="text-blue-400 mr-1">💡</span>
-            Contribute
-          </p>
-          <p class="text-slate-500 font-light">Teralinkx Data Visualisation Platform</p>
+      <!-- Status -->
+      <div class="flex items-center justify-between text-xs">
+        <div class="flex items-center">
+          <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5 animate-pulse"></div>
+          <span class="text-slate-600 dark:text-slate-400">Online</span>
         </div>
-        
-        <div>
-          <p class="font-semibold text-slate-300 mb-2 flex items-center">
-            <span class="text-blue-400 mr-1">ℹ️</span>
-            About
-          </p>
-          <p class="text-slate-500 font-light">
-            Maintained by <strong class="text-slate-300">Nomad Ghost</strong>
-          </p>
-          <a 
-            href="https://millsmulla.onrender.com" 
-            class="text-blue-400 hover:text-blue-300 transition-colors duration-200 block mt-1 font-light hover:underline"
-            target="_blank"
-          >
-            millsmulla.onrender.com
-          </a>
-        </div>
-
-        <!-- Version Info -->
-        <div class="pt-3 border-t border-slate-700/50">
-          <div class="flex justify-between items-center">
-            <span class="text-slate-500 font-mono">v2.1.0</span>
-            <span class="text-emerald-400 flex items-center text-xs">
-              <div class="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-1 animate-pulse"></div>
-              Live
-            </span>
-          </div>
-        </div>
+        <span class="text-slate-500 dark:text-slate-500 font-mono">v2.1.0</span>
       </div>
     </div>
 
@@ -185,9 +119,15 @@
 </template>
 
 <script>
+import { useTheme } from '../composables/useTheme'
+
 export default {
   name: 'Sidebar',
   emits: ['component-selected', 'refresh-data'],
+  setup() {
+    const { isDark, isAuto, toggleTheme, setAutoTheme } = useTheme()
+    return { isDark, isAuto, toggleTheme, setAutoTheme }
+  },
   data() {
     return {
       activeComponent: 'Dashboard',
@@ -320,6 +260,9 @@ export default {
     }
   },
   methods: {
+    setAutoTheme() {
+      this.setAutoTheme(this.isAuto)
+    },
     selectComponent(componentName) {
       this.activeComponent = componentName;
       this.$emit('component-selected', componentName);

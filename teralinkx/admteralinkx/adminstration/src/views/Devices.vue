@@ -1,53 +1,43 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 p-6">
-    <div class="mb-8">
-      <div class="flex items-center justify-between">
-        <div>
-          <h1 class="text-3xl font-bold bg-gradient-to-r from-slate-800 to-blue-600 bg-clip-text text-transparent mb-2">
-            📱 Device Management
-          </h1>
-          <p class="text-slate-600 font-light">Monitor and manage user devices</p>
-        </div>
-        <button @click="refreshData" class="p-2 hover:bg-white/50 rounded-xl transition-all duration-300">
-          <ArrowPathIcon class="w-6 h-6 text-slate-600" />
-        </button>
+  <div class="space-y-6 animate-fade-in">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-semibold text-slate-900 dark:text-white">Devices</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Monitor and manage user devices</p>
       </div>
+      <button @click="refreshData" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors" :class="{ 'animate-spin': loading }">
+        <ArrowPathIcon class="w-5 h-5 text-slate-600 dark:text-slate-400" />
+      </button>
     </div>
 
-    <div v-if="error" class="bg-rose-50 border border-rose-200 rounded-2xl p-6 mb-6">
+    <!-- Error State -->
+    <div v-if="error" class="bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 rounded-lg p-4">
       <div class="flex items-center justify-between">
-        <div class="flex items-center space-x-3">
-          <ExclamationTriangleIcon class="w-6 h-6 text-rose-600" />
+        <div class="flex items-center gap-3">
+          <ExclamationTriangleIcon class="w-5 h-5 text-rose-600 dark:text-rose-400" />
           <div>
-            <h3 class="text-rose-800 font-semibold">Failed to load device data</h3>
-            <p class="text-rose-600 text-sm">{{ error }}</p>
+            <h3 class="text-sm font-medium text-rose-800 dark:text-rose-400">Failed to load devices</h3>
+            <p class="text-xs text-rose-600 dark:text-rose-500 mt-1">{{ error }}</p>
           </div>
         </div>
-        <button @click="fetchDevices" class="px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700">Retry</button>
+        <button @click="fetchDevices" class="px-3 py-1.5 bg-rose-600 text-white rounded-lg hover:bg-rose-700 text-sm">Retry</button>
       </div>
     </div>
 
-    <div v-if="loading && !error" class="flex items-center justify-center py-20">
-      <div class="text-center">
-        <div class="relative">
-          <div class="w-16 h-16 border-4 border-blue-200 rounded-full"></div>
-          <div class="w-16 h-16 border-4 border-transparent border-t-blue-500 rounded-full animate-spin absolute top-0 left-0"></div>
-        </div>
-        <p class="mt-4 text-slate-500 font-light">Loading devices...</p>
-      </div>
+    <!-- Metrics -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-slide-up">
+      <ModernMetricCard title="Total Devices" :value="stats.total_devices" icon="📱" color="blue" />
+      <ModernMetricCard title="Active Devices" :value="stats.active_devices" icon="✅" color="emerald" />
+      <ModernMetricCard title="Online Now" :value="stats.online_devices" icon="🟢" color="green" />
+      <ModernMetricCard title="Trusted" :value="stats.trusted_devices" icon="🔒" color="purple" />
     </div>
 
-    <div v-else-if="!loading" class="space-y-8">
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <ModernMetricCard title="Total Devices" :value="stats.total_devices" icon="📱" color="blue" :formatted="true" />
-        <ModernMetricCard title="Active Devices" :value="stats.active_devices" icon="✅" color="emerald" :formatted="true" />
-        <ModernMetricCard title="Online Now" :value="stats.online_devices" icon="🟢" color="green" :formatted="true" />
-        <ModernMetricCard title="Trusted" :value="stats.trusted_devices" icon="🔒" color="purple" :formatted="true" />
-      </div>
-
+    <!-- Search & Table -->
+    <div class="space-y-4 animate-slide-up" style="animation-delay: 0.1s">
       <SearchBar
         v-model="searchTerm"
-        placeholder="Search devices by MAC, name, user..."
+        placeholder="Search devices..."
         :filters="filters"
         @filter-change="handleFilterChange"
         @clear="clearFilters"
@@ -63,24 +53,21 @@
         @delete="openDeleteModal"
       >
         <template #cell-status="{ value }">
-          <span :class="value === 'active' ? 'bg-emerald-100 text-emerald-800' : value === 'suspended' ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-800'" class="px-2 py-1 text-xs font-medium rounded-full">
+          <span :class="value === 'active' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400' : value === 'suspended' ? 'bg-rose-100 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-400'" class="px-2 py-0.5 text-xs font-medium rounded-full">
             {{ value }}
           </span>
         </template>
         <template #cell-is_online="{ value }">
-          <span :class="value ? 'text-emerald-600' : 'text-slate-400'">{{ value ? '● Online' : '○ Offline' }}</span>
+          <span :class="value ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-600'">{{ value ? '● Online' : '○ Offline' }}</span>
         </template>
         <template #custom-actions="{ item }">
-          <button v-if="item.status === 'active'" @click="blockDevice(item)" class="text-rose-600 hover:text-rose-800 p-1 rounded" title="Block">
-            🚫
-          </button>
-          <button v-else @click="unblockDevice(item)" class="text-emerald-600 hover:text-emerald-800 p-1 rounded" title="Unblock">
-            ✅
-          </button>
+          <button v-if="item.status === 'active'" @click="blockDevice(item)" class="text-rose-600 dark:text-rose-400 hover:text-rose-800 dark:hover:text-rose-300 p-1 rounded" title="Block">🚫</button>
+          <button v-else @click="unblockDevice(item)" class="text-emerald-600 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 p-1 rounded" title="Unblock">✅</button>
         </template>
       </DataTable>
     </div>
 
+    <!-- Modals -->
     <FormModal
       :show="showFormModal"
       title="Device"
@@ -169,7 +156,7 @@ export default {
 
     const fetchDevices = async () => {
       try {
-        const data = await makeRequest('get', 'devices/')
+        const data = await makeRequest('get', 'suapi/devices/')
         devices.value = data.results || data
       } catch (err) {
         console.error('Error:', err)
@@ -178,7 +165,7 @@ export default {
 
     const fetchStats = async () => {
       try {
-        stats.value = await makeRequest('get', 'devices/stats/')
+        stats.value = await makeRequest('get', 'suapi/devices/stats/')
       } catch (err) {
         console.error('Error:', err)
       }
@@ -194,7 +181,7 @@ export default {
     const saveDevice = async (data) => {
       saveLoading.value = true
       try {
-        const endpoint = data.id ? `devices/${data.id}/` : 'devices/'
+        const endpoint = data.id ? `suapi/devices/${data.id}/` : 'devices/'
         const method = data.id ? 'put' : 'post'
         await makeRequest(method, endpoint, data)
         await refreshData()
@@ -208,7 +195,7 @@ export default {
 
     const blockDevice = async (device) => {
       try {
-        await makeRequest('post', `devices/${device.id}/block/`, { reason: 'Admin action' })
+        await makeRequest('post', `suapi/devices/${device.id}/block/`, { reason: 'Admin action' })
         await refreshData()
       } catch (err) {
         alert('Error: ' + (err.response?.data?.error || err.message))
@@ -217,7 +204,7 @@ export default {
 
     const unblockDevice = async (device) => {
       try {
-        await makeRequest('post', `devices/${device.id}/unblock/`, { reason: 'Admin action' })
+        await makeRequest('post', `suapi/devices/${device.id}/unblock/`, { reason: 'Admin action' })
         await refreshData()
       } catch (err) {
         alert('Error: ' + (err.response?.data?.error || err.message))
@@ -230,7 +217,7 @@ export default {
     const confirmDelete = async () => {
       deleteLoading.value = true
       try {
-        await makeRequest('delete', `devices/${deviceToDelete.value.id}/`)
+        await makeRequest('delete', `suapi/devices/${deviceToDelete.value.id}/`)
         await refreshData()
         closeDeleteModal()
       } catch (err) {
@@ -251,3 +238,23 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.4s ease-out;
+}
+</style>

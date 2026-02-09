@@ -1,16 +1,85 @@
-// Vouchers.vue
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/30 p-6">
-    <div class="mb-8"><div class="flex items-center justify-between"><div><h1 class="text-3xl font-bold bg-gradient-to-r from-slate-800 to-blue-600 bg-clip-text text-transparent mb-2">🎫 Voucher Management</h1><p class="text-slate-600 font-light">Manage dispatch vouchers</p></div><button @click="refreshData" class="p-2 hover:bg-white/50 rounded-xl transition-all duration-300"><ArrowPathIcon class="w-6 h-6 text-slate-600" /></button></div></div>
-    <div v-if="error" class="bg-rose-50 border border-rose-200 rounded-2xl p-6 mb-6"><div class="flex items-center justify-between"><div class="flex items-center space-x-3"><ExclamationTriangleIcon class="w-6 h-6 text-rose-600" /><div><h3 class="text-rose-800 font-semibold">Failed to load voucher data</h3><p class="text-rose-600 text-sm">{{ error }}</p></div></div><button @click="fetchVouchers" class="px-4 py-2 bg-rose-600 text-white rounded-lg hover:bg-rose-700">Retry</button></div></div>
-    <div v-if="loading && !error" class="flex items-center justify-center py-20"><div class="text-center"><div class="relative"><div class="w-16 h-16 border-4 border-blue-200 rounded-full"></div><div class="w-16 h-16 border-4 border-transparent border-t-blue-500 rounded-full animate-spin absolute top-0 left-0"></div></div><p class="mt-4 text-slate-500 font-light">Loading vouchers...</p></div></div>
-    <div v-else-if="!loading" class="space-y-8">
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"><ModernMetricCard title="Total Vouchers" :value="stats.total_vouchers" icon="🎫" color="blue" :formatted="true" /><ModernMetricCard title="Active" :value="stats.active_vouchers" icon="✅" color="emerald" :formatted="true" /><ModernMetricCard title="Expired" :value="stats.expired_vouchers" icon="⏰" color="rose" :formatted="true" /><ModernMetricCard title="Revenue" :value="`KSh ${formatNumber(stats.total_revenue)}`" icon="💰" color="amber" :formatted="false" /></div>
-      <SearchBar v-model="searchTerm" placeholder="Search vouchers..." :filters="filters" @filter-change="handleFilterChange" @clear="clearFilters" @add="openCreateModal" />
-      <DataTable title="Voucher Records" :data="filteredVouchers" :columns="columns" :actions="['edit', 'delete']" @edit="openEditModal" @delete="openDeleteModal"><template #cell-status="{ value }"><span :class="value === 'active' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-800'" class="px-2 py-1 text-xs font-medium rounded-full">{{ value }}</span></template><template #cell-dispatch_price="{ value }"><span class="font-medium">KSh {{ formatNumber(value) }}</span></template></DataTable>
+  <div class="space-y-6 animate-fade-in">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-semibold text-slate-900 dark:text-white">Vouchers</h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Manage dispatch vouchers</p>
+      </div>
+      <button @click="refreshData" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors" :class="{ 'animate-spin': loading }">
+        <ArrowPathIcon class="w-5 h-5 text-slate-600 dark:text-slate-400" />
+      </button>
     </div>
-    <FormModal :show="showFormModal" title="Voucher" :fields="formFields" :initial-data="selectedVoucher" :loading="saveLoading" @close="closeFormModal" @submit="saveVoucher" />
-    <ConfirmDialog :show="showDeleteModal" title="Delete Voucher" :message="`Delete voucher <strong>${voucherToDelete?.voucher_code}</strong>?`" type="danger" :loading="deleteLoading" @confirm="confirmDelete" @cancel="closeDeleteModal" />
+
+    <!-- Error State -->
+    <div v-if="error" class="bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 rounded-lg p-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <ExclamationTriangleIcon class="w-5 h-5 text-rose-600 dark:text-rose-400" />
+          <div>
+            <h3 class="text-sm font-medium text-rose-800 dark:text-rose-400">Failed to load vouchers</h3>
+            <p class="text-xs text-rose-600 dark:text-rose-500 mt-1">{{ error }}</p>
+          </div>
+        </div>
+        <button @click="fetchVouchers" class="px-3 py-1.5 bg-rose-600 text-white rounded-lg hover:bg-rose-700 text-sm">Retry</button>
+      </div>
+    </div>
+
+    <!-- Metrics -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-slide-up">
+      <ModernMetricCard title="Total Vouchers" :value="stats.total_vouchers" icon="🎫" color="blue" />
+      <ModernMetricCard title="Active" :value="stats.active_vouchers" icon="✅" color="emerald" />
+      <ModernMetricCard title="Expired" :value="stats.expired_vouchers" icon="⏰" color="amber" />
+      <ModernMetricCard title="Used" :value="stats.used_vouchers" icon="📊" color="purple" />
+    </div>
+
+    <!-- Search & Table -->
+    <div class="space-y-4 animate-slide-up" style="animation-delay: 0.1s">
+      <SearchBar
+        v-model="searchTerm"
+        placeholder="Search vouchers..."
+        :filters="filters"
+        @filter-change="handleFilterChange"
+        @clear="clearFilters"
+        @add="openCreateModal"
+      />
+
+      <DataTable
+        title="Voucher Records"
+        :data="filteredVouchers"
+        :columns="columns"
+        :actions="['edit', 'delete']"
+        @edit="openEditModal"
+        @delete="openDeleteModal"
+      >
+        <template #cell-status="{ value }">
+          <span :class="value === 'active' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400' : value === 'expired' ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-400'" class="px-2 py-0.5 text-xs font-medium rounded-full">
+            {{ value }}
+          </span>
+        </template>
+      </DataTable>
+    </div>
+
+    <!-- Modals -->
+    <FormModal
+      :show="showFormModal"
+      title="Voucher"
+      :fields="formFields"
+      :initial-data="selectedVoucher"
+      :loading="saveLoading"
+      @close="closeFormModal"
+      @submit="saveVoucher"
+    />
+
+    <ConfirmDialog
+      :show="showDeleteModal"
+      title="Delete Voucher"
+      :message="`Are you sure you want to delete this voucher?`"
+      type="danger"
+      :loading="deleteLoading"
+      @confirm="confirmDelete"
+      @cancel="closeDeleteModal"
+    />
   </div>
 </template>
 
@@ -42,28 +111,30 @@ export default {
 
     const columns = [
       { key: 'id', label: 'ID', sortable: true },
-      { key: 'voucher_code', label: 'Code', sortable: true },
-      { key: 'client_account', label: 'Client', sortable: true },
-      { key: 'dispatch_price', label: 'Price', sortable: true },
+      { key: 'user_username', label: 'User', sortable: true },
+      { key: 'package_name', label: 'Package', sortable: true },
+      { key: 'price_paid', label: 'Price', sortable: true, format: (v) => `KSh ${v}` },
       { key: 'status', label: 'Status', sortable: true },
-      { key: 'dispatch_expiry', label: 'Expiry', sortable: true, format: (v) => v ? new Date(v).toLocaleDateString() : 'N/A' }
+      { key: 'activated_at', label: 'Activated', sortable: true, format: (v) => v ? new Date(v).toLocaleDateString() : 'N/A' },
+      { key: 'expires_at', label: 'Expires', sortable: true, format: (v) => v ? new Date(v).toLocaleDateString() : 'N/A' }
     ]
 
-    const filters = [{ key: 'status', label: 'Status', options: [{ value: 'active', label: 'Active' }, { value: 'expired', label: 'Expired' }, { value: 'used', label: 'Used' }] }]
+    const filters = [
+      { key: 'status', label: 'Status', options: [{ value: 'active', label: 'Active' }, { value: 'expired', label: 'Expired' }, { value: 'used', label: 'Used' }] }
+    ]
 
     const formFields = [
-      { key: 'voucher_code', label: 'Voucher Code', type: 'text', required: true },
-      { key: 'dispatch_price', label: 'Price (KSh)', type: 'number', required: true, min: 0, step: '0.01' },
-      { key: 'dispatch_package_duration', label: 'Duration (days)', type: 'number', min: 1 },
-      { key: 'usage_limit', label: 'Usage Limit (MB)', type: 'number', min: 0 },
-      { key: 'status', label: 'Status', type: 'select', required: true, options: filters[0].options }
+      { key: 'user', label: 'User ID', type: 'number', required: true },
+      { key: 'package', label: 'Package ID', type: 'number', required: true },
+      { key: 'price_paid', label: 'Price Paid', type: 'number', required: true },
+      { key: 'expires_at', label: 'Expires At', type: 'datetime-local' }
     ]
 
     const filteredVouchers = computed(() => {
       let result = vouchers.value
       if (searchTerm.value) {
         const term = searchTerm.value.toLowerCase()
-        result = result.filter(v => v.voucher_code?.toLowerCase().includes(term) || v.client_account?.toLowerCase().includes(term))
+        result = result.filter(v => v.user_username?.toLowerCase().includes(term) || v.package_name?.toLowerCase().includes(term))
       }
       Object.keys(activeFilters.value).forEach(key => {
         const value = activeFilters.value[key]
@@ -72,8 +143,23 @@ export default {
       return result
     })
 
-    const fetchVouchers = async () => { try { const data = await makeRequest('get', 'vouchers/'); vouchers.value = data.results || data } catch (err) { console.error('Error:', err) } }
-    const fetchStats = async () => { try { stats.value = await makeRequest('get', 'vouchers/stats/') } catch (err) { console.error('Error:', err) } }
+    const fetchVouchers = async () => {
+      try {
+        const data = await makeRequest('get', 'suapi/vouchers/')
+        vouchers.value = data.results || data
+      } catch (err) {
+        console.error('Error:', err)
+      }
+    }
+
+    const fetchStats = async () => {
+      try {
+        stats.value = await makeRequest('get', 'suapi/vouchers/stats/')
+      } catch (err) {
+        console.error('Error:', err)
+      }
+    }
+
     const refreshData = () => Promise.all([fetchVouchers(), fetchStats()])
     const handleFilterChange = ({ all }) => { activeFilters.value = all }
     const clearFilters = () => { searchTerm.value = ''; activeFilters.value = {} }
@@ -84,7 +170,7 @@ export default {
     const saveVoucher = async (data) => {
       saveLoading.value = true
       try {
-        const endpoint = data.id ? `vouchers/${data.id}/` : 'vouchers/'
+        const endpoint = data.id ? `suapi/vouchers/${data.id}/` : 'suapi/vouchers/'
         const method = data.id ? 'put' : 'post'
         await makeRequest(method, endpoint, data)
         await refreshData()
@@ -98,10 +184,11 @@ export default {
 
     const openDeleteModal = (voucher) => { voucherToDelete.value = voucher; showDeleteModal.value = true }
     const closeDeleteModal = () => { showDeleteModal.value = false; voucherToDelete.value = null }
+
     const confirmDelete = async () => {
       deleteLoading.value = true
       try {
-        await makeRequest('delete', `vouchers/${voucherToDelete.value.id}/`)
+        await makeRequest('delete', `suapi/vouchers/${voucherToDelete.value.id}/`)
         await refreshData()
         closeDeleteModal()
       } catch (err) {
@@ -111,11 +198,34 @@ export default {
       }
     }
 
-    const formatNumber = (num) => new Intl.NumberFormat().format(num)
-
     onMounted(refreshData)
 
-    return { loading, error, vouchers, stats, searchTerm, showFormModal, showDeleteModal, selectedVoucher, voucherToDelete, saveLoading, deleteLoading, columns, filters, formFields, filteredVouchers, fetchVouchers, refreshData, handleFilterChange, clearFilters, openCreateModal, openEditModal, closeFormModal, saveVoucher, openDeleteModal, closeDeleteModal, confirmDelete, formatNumber }
+    return {
+      loading, error, vouchers, stats, searchTerm, showFormModal, showDeleteModal, selectedVoucher, voucherToDelete,
+      saveLoading, deleteLoading, columns, filters, formFields, filteredVouchers, fetchVouchers, refreshData,
+      handleFilterChange, clearFilters, openCreateModal, openEditModal, closeFormModal, saveVoucher,
+      openDeleteModal, closeDeleteModal, confirmDelete
+    }
   }
 }
 </script>
+
+<style scoped>
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.4s ease-out;
+}
+</style>
