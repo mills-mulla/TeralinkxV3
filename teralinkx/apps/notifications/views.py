@@ -104,3 +104,37 @@ class AnnouncementListView(APIView):
                 {"error": "Failed to fetch announcements", "details": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class PublicAnnouncementListView(APIView):
+    """Get public announcements (no auth required)"""
+    permission_classes = []
+    
+    def get(self, request):
+        try:
+            now = timezone.now()
+            
+            # Only show global maintenance/system/security announcements
+            announcements = Notification.objects.filter(
+                scope='global',
+                notification_type__in=['maintenance', 'system', 'security'],
+                is_archived=False
+            ).filter(
+                Q(expires_at__isnull=True) | Q(expires_at__gt=now)
+            ).order_by('-priority', '-created_at')[:5]
+            
+            data = [{
+                'id': a.id,
+                'title': a.title or '',
+                'message': a.message or '',
+                'priority': a.priority or 'medium',
+                'notification_type': a.notification_type,
+                'scope': 'global',
+                'created_at': a.created_at.isoformat() if a.created_at else None,
+                'expires_at': a.expires_at.isoformat() if a.expires_at else None,
+            } for a in announcements]
+            
+            return Response(data, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response([], status=status.HTTP_200_OK)

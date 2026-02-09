@@ -5,6 +5,31 @@
   <!-- Main Signin Form - shown after credential check -->
   <div v-else class="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 px-4">
 
+    <!-- Public Announcements -->
+    <div v-if="publicAnnouncements.length > 0" class="w-full max-w-xs mb-4">
+      <div
+        v-for="announcement in publicAnnouncements"
+        :key="announcement.id"
+        :class="[
+          'p-3 rounded-lg shadow-lg border-l-4 backdrop-blur-sm',
+          getAnnouncementClass(announcement.priority)
+        ]"
+      >
+        <div class="flex items-start justify-between">
+          <div class="flex-1">
+            <div class="flex items-center space-x-2 mb-1">
+              <span class="text-lg">{{ getAnnouncementIcon(announcement.notification_type) }}</span>
+              <h3 class="font-semibold text-sm text-gray-900 dark:text-white">
+                {{ announcement.title }}
+              </h3>
+            </div>
+            <p class="text-xs text-gray-700 dark:text-gray-300">
+              {{ announcement.message }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Main Auth Card -->
     <div class="w-full max-w-xs bg-white dark:bg-gray-900 shadow-xl rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
@@ -248,6 +273,7 @@ const showConnectionDetails = ref(false)
 const accountInfo = ref(null)
 const isAutoProcessing = ref(false)
 const hasCheckedAccount = ref(false)
+const publicAnnouncements = ref([])
 
 
 
@@ -630,6 +656,44 @@ const forgotPassword = () => {
   showForgotPasswordModal.value = true
 }
 
+const fetchPublicAnnouncements = async () => {
+  try {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/notifications/announcements/public/`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    })
+    
+    if (response.ok) {
+      const data = await response.json()
+      publicAnnouncements.value = Array.isArray(data) ? data.filter(a => 
+        a.scope === 'global' && ['maintenance', 'system', 'security'].includes(a.notification_type)
+      ) : []
+    }
+  } catch (error) {
+    // Silently fail - announcements are optional
+  }
+}
+
+const getAnnouncementIcon = (type) => {
+  const icons = {
+    'maintenance': '🔧',
+    'system': '⚙️',
+    'security': '🔒',
+    'announcement': '📢'
+  }
+  return icons[type] || '📢'
+}
+
+const getAnnouncementClass = (priority) => {
+  const classes = {
+    'low': 'border-blue-500 bg-blue-50/90 dark:bg-blue-900/30',
+    'medium': 'border-yellow-500 bg-yellow-50/90 dark:bg-yellow-900/30',
+    'high': 'border-orange-500 bg-orange-50/90 dark:bg-orange-900/30',
+    'urgent': 'border-red-500 bg-red-50/90 dark:bg-red-900/30'
+  }
+  return classes[priority] || classes['medium']
+}
+
 const attemptAutoSignIn = async () => {
   try {
     
@@ -721,6 +785,9 @@ const attemptAutoSignIn = async () => {
 
 // Lifecycle
 onMounted(async () => {
+  // Fetch public announcements (non-blocking)
+  fetchPublicAnnouncements()
+  
   // First check for existing credentials
   await checkExistingCredentials()
   
