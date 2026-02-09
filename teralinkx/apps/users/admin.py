@@ -225,14 +225,14 @@ class ClientHAdmin(admin.ModelAdmin):
     def balance_display(self, obj):
         """Display balance with color coding"""
         try:
-            # Get raw balance value from database
-            client = ClientH.objects.values('balance').get(id=obj.id)
-            balance = float(client['balance'])
-            color = 'green' if balance >= 0 else 'red'
+            # Access the raw field value directly
+            balance = Decimal(str(obj.__dict__['balance']))
+            balance_float = float(balance)
+            color = 'green' if balance_float >= 0 else 'red'
             
             return format_html(
                 '<span style="color: {}; font-weight: bold;">KES {:,.2f}</span>',
-                color, balance
+                color, balance_float
             )
         except Exception as e:
             return format_html('<span style="color: orange; font-weight: bold;">ERROR: {}</span>', str(e))
