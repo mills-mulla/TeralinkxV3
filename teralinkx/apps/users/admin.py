@@ -229,10 +229,11 @@ class ClientHAdmin(admin.ModelAdmin):
             balance = Decimal(str(obj.__dict__['balance']))
             balance_float = float(balance)
             color = 'green' if balance_float >= 0 else 'red'
+            formatted_balance = f'{balance_float:,.2f}'
             
             return format_html(
-                '<span style="color: {}; font-weight: bold;">KES {:,.2f}</span>',
-                color, balance_float
+                '<span style="color: {}; font-weight: bold;">KES {}</span>',
+                color, formatted_balance
             )
         except Exception as e:
             return format_html('<span style="color: orange; font-weight: bold;">ERROR: {}</span>', str(e))
