@@ -225,7 +225,10 @@ class ClientHAdmin(admin.ModelAdmin):
     def balance_display(self, obj):
         """Display balance with color coding"""
         try:
-            balance = float(obj.balance)
+            # Get raw balance value from database
+            from apps.users.models import ClientH
+            client = ClientH.objects.values('balance').get(id=obj.id)
+            balance = float(client['balance'])
             color = 'green' if balance >= 0 else 'red'
             
             return format_html(
