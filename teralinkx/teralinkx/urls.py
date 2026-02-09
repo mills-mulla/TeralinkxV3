@@ -37,7 +37,7 @@ urlpatterns = [
     path('api/rewards/redeem/', redeem_reward, name='redeem-reward'),
     path('api/rewards/coupons/', get_user_coupons, name='user-coupons'),
     path('api/rewards/history/', get_point_history, name='point-history'),
-    # path('suapi/',include('core.superuser.urls')),
+    path('suapi/', include('analytics.superuser.urls')),
     path('__debug__/', include('debug_toolbar.urls')), 
    
 ]
