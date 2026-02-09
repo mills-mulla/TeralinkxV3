@@ -23,7 +23,7 @@ class DispatchVoucherSerializer(serializers.ModelSerializer):
         read_only_fields = ['created_at', 'updated_at']
     
     def get_total_usage_mb(self, obj):
-        total_bytes = (obj.total_download or 0) + (obj.total_upload or 0)
+        total_bytes = (obj.download_bytes or 0) + (obj.upload_bytes or 0)
         return round(total_bytes / (1024 * 1024), 2)
 
 

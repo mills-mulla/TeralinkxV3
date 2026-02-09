@@ -36,7 +36,7 @@ class UserDeviceSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserDevice
         fields = '__all__'
-        read_only_fields = ['created', 'modified', 'last_seen', 'total_connections']
+        read_only_fields = ['created_at', 'updated_at', 'last_seen', 'total_connections']
 
 
 class UserSessionSerializer(serializers.ModelSerializer):
@@ -49,7 +49,7 @@ class UserSessionSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserSession
         fields = '__all__'
-        read_only_fields = ['created', 'modified', 'login_time', 'last_activity']
+        read_only_fields = ['created_at', 'updated_at', 'login_time', 'last_activity']
     
     def get_duration(self, obj):
         duration = obj.duration

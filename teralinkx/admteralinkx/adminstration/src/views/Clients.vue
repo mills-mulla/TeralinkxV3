@@ -148,13 +148,12 @@
           <table class="w-full">
             <thead class="bg-slate-50 border-b border-slate-200/60">
               <tr>
-                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">ID</th>
                 <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Account</th>
                 <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Username</th>
-                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">IP Address</th>
-                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Tier</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Points</th>
                 <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Balance</th>
-                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Active Voucher</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</th>
                 <th class="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -164,19 +163,24 @@
                 :key="client.id"
                 class="hover:bg-slate-50 transition-colors duration-200"
               >
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{{ client.id }}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{{ client.account }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{{ client.username || 'N/A' }}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{{ client.current_ip_address || 'N/A' }}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{{ client.username || client.user?.username || 'N/A' }}</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span :class="getTierBadgeClass(client.reward_tier)" class="px-2 py-1 text-xs font-medium rounded-full">
+                    {{ getTierEmoji(client.reward_tier) }} {{ formatTier(client.reward_tier) }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-medium">
+                  🏆 {{ formatNumber(client.reward_points || 0) }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-medium">
+                  KSh {{ formatNumber(client.balance || 0) }}
+                </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <span :class="getStatusBadgeClass(client.status)" class="px-2 py-1 text-xs font-medium rounded-full">
                     {{ formatStatus(client.status) }}
                   </span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-medium">
-                  KSh {{ formatNumber(client.balance || 0) }}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{{ client.active_voucher || 'N/A' }}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div class="flex space-x-2">
                     <button
@@ -615,6 +619,31 @@ export default {
       return classes[status] || 'bg-slate-100 text-slate-800'
     }
 
+    const getTierBadgeClass = (tier) => {
+      const classes = {
+        bronze: 'bg-orange-100 text-orange-800',
+        silver: 'bg-slate-200 text-slate-800',
+        gold: 'bg-yellow-100 text-yellow-800',
+        platinum: 'bg-purple-100 text-purple-800'
+      }
+      return classes[tier] || 'bg-slate-100 text-slate-600'
+    }
+
+    const getTierEmoji = (tier) => {
+      const emojis = {
+        bronze: '🥉',
+        silver: '🥈',
+        gold: '🥇',
+        platinum: '💎'
+      }
+      return emojis[tier] || '⭐'
+    }
+
+    const formatTier = (tier) => {
+      if (!tier) return 'Bronze'
+      return tier.charAt(0).toUpperCase() + tier.slice(1)
+    }
+
     const handleSearch = () => {
       currentPage.value = 1
     }
@@ -818,6 +847,9 @@ export default {
       formatNumber,
       formatStatus,
       getStatusBadgeClass,
+      getTierBadgeClass,
+      getTierEmoji,
+      formatTier,
       handleSearch,
       clearSearch,
       nextPage,
