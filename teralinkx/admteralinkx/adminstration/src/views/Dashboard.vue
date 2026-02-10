@@ -6,16 +6,33 @@
         <h1 class="text-2xl font-semibold text-slate-900 dark:text-white">Dashboard</h1>
         <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Welcome back, here's your overview</p>
       </div>
-      <button 
-        @click="refreshData" 
-        class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-        :class="{ 'animate-spin': loading }"
-      >
-        <svg class="w-5 h-5 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-        </svg>
-      </button>
+      <div class="flex items-center gap-3">
+        <DateRangePicker @change="handleDateChange" />
+        <MultiSelectFilter 
+          label="Locations" 
+          :options="locationOptions" 
+          @change="handleLocationFilter"
+        />
+        <MultiSelectFilter 
+          label="Packages" 
+          :options="packageOptions" 
+          @change="handlePackageFilter"
+        />
+        <ExportButton :data="exportData" :filename="exportFilename" />
+        <button 
+          @click="refreshData" 
+          class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+          :class="{ 'animate-spin': loading }"
+        >
+          <svg class="w-5 h-5 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </button>
+      </div>
     </div>
+
+    <!-- Real-Time Monitor -->
+    <RealTimeMonitor />
 
     <!-- Metrics Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-slide-up">
@@ -369,14 +386,20 @@
 import ModernMetricCard from '../components/MetricCard.vue'
 import VueApexCharts from 'vue3-apexcharts'
 import { useApi } from '../composables/useApi'
-import { ArrowPathIcon } from '@heroicons/vue/24/outline'
+import DateRangePicker from '../components/DateRangePicker.vue'
+import MultiSelectFilter from '../components/MultiSelectFilter.vue'
+import ExportButton from '../components/ExportButton.vue'
+import RealTimeMonitor from '../components/RealTimeMonitor.vue'
 
 export default {
   name: 'Dashboard',
   components: {
     ModernMetricCard,
     apexchart: VueApexCharts,
-    ArrowPathIcon
+    DateRangePicker,
+    MultiSelectFilter,
+    ExportButton,
+    RealTimeMonitor
   },
   setup() {
     const { loading, makeRequest } = useApi()
@@ -390,6 +413,22 @@ export default {
       revenueData: [],
       clientGrowthData: [],
       systemStats: [],
+      packageSales: [],
+      paymentMethods: [],
+      locationPerformance: [],
+      recentActivity: [],
+      voucherStatus: {},
+      conversionFunnel: {},
+      deviceBreakdown: [],
+      rewardTiers: [],
+      refundMetrics: {},
+      
+      // Filters
+      dateRange: { start: '', end: '', compare: false },
+      selectedLocations: [],
+      selectedPackages: [],
+      locationOptions: [],
+      packageOptions: [],
       
       revenueChartOptions: {
         chart: { type: 'area', toolbar: { show: false }, zoom: { enabled: false } },
@@ -414,19 +453,98 @@ export default {
         grid: { borderColor: '#e2e8f0', strokeDashArray: 3 },
         tooltip: { theme: 'dark' }
       },
-      growthChartSeries: [{ name: 'Signups', data: [] }]
+      growthChartSeries: [{ name: 'Signups', data: [] }],
+
+      packageChartOptions: {
+        chart: { type: 'donut' },
+        colors: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'],
+        labels: [],
+        legend: { position: 'bottom', fontSize: '11px' },
+        dataLabels: { enabled: true, style: { fontSize: '11px' } },
+        plotOptions: { pie: { donut: { size: '65%' } } }
+      },
+      packageChartSeries: [],
+
+      paymentChartOptions: {
+        chart: { type: 'pie' },
+        colors: ['#06B6D4', '#10B981', '#F59E0B'],
+        labels: [],
+        legend: { position: 'bottom', fontSize: '11px' },
+        dataLabels: { enabled: true, style: { fontSize: '11px' } }
+      },
+      paymentChartSeries: []
+    }
+  },
+  computed: {
+    exportData() {
+      return {
+        metrics: this.metrics,
+        revenueData: this.revenueData,
+        clientGrowthData: this.clientGrowthData,
+        packageSales: this.packageSales,
+        locationPerformance: this.locationPerformance
+      }
+    },
+    exportFilename() {
+      const date = new Date().toISOString().split('T')[0]
+      return `dashboard-report-${date}`
     }
   },
   async mounted() {
+    await this.fetchFilterOptions()
     await this.fetchAllData()
   },
   methods: {
+    async fetchFilterOptions() {
+      try {
+        // Fetch locations
+        const locations = await this.makeRequest('get', 'suapi/locations/')
+        this.locationOptions = locations.results?.map(l => ({ 
+          value: l.id, 
+          label: l.name 
+        })) || []
+
+        // Fetch packages
+        const packages = await this.makeRequest('get', 'suapi/packages/')
+        this.packageOptions = packages.results?.map(p => ({ 
+          value: p.id, 
+          label: p.name 
+        })) || []
+      } catch (error) {
+        console.error('Error fetching filter options:', error)
+      }
+    },
+
+    handleDateChange(range) {
+      this.dateRange = range
+      this.fetchAllData()
+    },
+
+    handleLocationFilter(locations) {
+      this.selectedLocations = locations
+      this.fetchAllData()
+    },
+
+    handlePackageFilter(packages) {
+      this.selectedPackages = packages
+      this.fetchAllData()
+    },
+
     async fetchAllData() {
       await Promise.all([
         this.fetchDashboardMetrics(),
         this.fetchRevenueAnalytics(),
         this.fetchClientGrowth(),
-        this.fetchSystemStatus()
+        this.fetchSystemStatus(),
+        this.fetchPackageSales(),
+        this.fetchPaymentMethods(),
+        this.fetchLocationPerformance(),
+        this.fetchRecentActivity(),
+        this.fetchVoucherStatus(),
+        this.fetchConversionFunnel(),
+        this.fetchDeviceBreakdown(),
+        this.fetchRewardTiers(),
+        this.fetchRefundMetrics()
       ])
     },
 
@@ -478,12 +596,105 @@ export default {
       }
     },
 
+    async fetchPackageSales() {
+      try {
+        const data = await this.makeRequest('get', 'suapi/dashboard-metrics/package-sales/')
+        this.packageSales = data.data
+        this.packageChartOptions.labels = this.packageSales.map(p => p.package__name || 'Unknown')
+        this.packageChartSeries = this.packageSales.map(p => p.count)
+      } catch (error) {
+        console.error('Error fetching package sales:', error)
+      }
+    },
+
+    async fetchPaymentMethods() {
+      try {
+        const data = await this.makeRequest('get', 'suapi/dashboard-metrics/payment-methods/')
+        this.paymentMethods = data.data
+        this.paymentChartOptions.labels = this.paymentMethods.map(p => p.payment_method || 'Unknown')
+        this.paymentChartSeries = this.paymentMethods.map(p => p.count)
+      } catch (error) {
+        console.error('Error fetching payment methods:', error)
+      }
+    },
+
+    async fetchLocationPerformance() {
+      try {
+        const data = await this.makeRequest('get', 'suapi/dashboard-metrics/location-performance/')
+        this.locationPerformance = data.data
+      } catch (error) {
+        console.error('Error fetching location performance:', error)
+      }
+    },
+
+    async fetchRecentActivity() {
+      try {
+        const data = await this.makeRequest('get', 'suapi/dashboard-metrics/recent-activity/')
+        this.recentActivity = data.data
+      } catch (error) {
+        console.error('Error fetching recent activity:', error)
+      }
+    },
+
+    async fetchVoucherStatus() {
+      try {
+        this.voucherStatus = await this.makeRequest('get', 'suapi/dashboard-metrics/voucher-status/')
+      } catch (error) {
+        console.error('Error fetching voucher status:', error)
+      }
+    },
+
+    async fetchConversionFunnel() {
+      try {
+        this.conversionFunnel = await this.makeRequest('get', 'suapi/dashboard-metrics/conversion-funnel/')
+      } catch (error) {
+        console.error('Error fetching conversion funnel:', error)
+      }
+    },
+
+    async fetchDeviceBreakdown() {
+      try {
+        const data = await this.makeRequest('get', 'suapi/dashboard-metrics/device-breakdown/')
+        this.deviceBreakdown = data.data
+      } catch (error) {
+        console.error('Error fetching device breakdown:', error)
+      }
+    },
+
+    async fetchRewardTiers() {
+      try {
+        const data = await this.makeRequest('get', 'suapi/dashboard-metrics/reward-tiers/')
+        this.rewardTiers = data.data
+      } catch (error) {
+        console.error('Error fetching reward tiers:', error)
+      }
+    },
+
+    async fetchRefundMetrics() {
+      try {
+        this.refundMetrics = await this.makeRequest('get', 'suapi/dashboard-metrics/refund-metrics/')
+      } catch (error) {
+        console.error('Error fetching refund metrics:', error)
+      }
+    },
+
     refreshData() {
       this.fetchAllData()
     },
 
     formatNumber(num) {
       return new Intl.NumberFormat().format(num)
+    },
+
+    formatTime(isoString) {
+      const date = new Date(isoString)
+      const now = new Date()
+      const diff = Math.floor((now - date) / 1000)
+      
+      if (diff < 60) return 'Just now'
+      if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
+      if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
+      return `${Math.floor(diff / 86400)}d ago`
     }
   }
 }

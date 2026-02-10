@@ -365,3 +365,239 @@ class RefundMetricsView(APIView):
         except Exception as e:
             logger.error(f"Error fetching refund metrics: {e}")
             return Response({'error': 'Failed to fetch refund metrics'}, status=500)
+
+class CohortAnalysisView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        try:
+            from django.db.models.functions import TruncMonth
+            
+            # Get cohorts by signup month
+            cohorts = ClientH.objects.annotate(
+                cohort_month=TruncMonth('created_at')
+            ).values('cohort_month').annotate(
+                users=Count('id')
+            ).order_by('-cohort_month')[:12]
+            
+            cohort_data = []
+            for cohort in cohorts:
+                month = cohort['cohort_month']
+                users = cohort['users']
+                
+                # Calculate retention for each month after signup
+                retention = []
+                for i in range(6):  # 6 months retention
+                    target_month = month + timedelta(days=30 * i)
+                    active = DispatchVoucher.objects.filter(
+                        user__clienth__created_at__month=month.month,
+                        user__clienth__created_at__year=month.year,
+                        activated_at__gte=target_month,
+                        activated_at__lt=target_month + timedelta(days=30)
+                    ).values('user').distinct().count()
+                    
+                    retention.append({
+                        'month': i,
+                        'users': active,
+                        'rate': round((active / users * 100) if users > 0 else 0, 1)
+                    })
+                
+                cohort_data.append({
+                    'cohort': month.strftime('%Y-%m'),
+                    'size': users,
+                    'retention': retention
+                })
+            
+            return Response({'data': cohort_data})
+        except Exception as e:
+            logger.error(f"Error fetching cohort analysis: {e}")
+            return Response({'error': 'Failed to fetch cohort analysis'}, status=500)
+
+class RFMSegmentationView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        try:
+            from django.db.models import Max, Count
+            
+            now = timezone.now()
+            segments = []
+            
+            # Calculate RFM for each client
+            clients = ClientH.objects.annotate(
+                last_purchase=Max('user__dispatchvoucher__activated_at'),
+                purchase_count=Count('user__dispatchvoucher'),
+                total_spent=Sum('user__dispatchvoucher__price_paid')
+            ).filter(purchase_count__gt=0)
+            
+            for client in clients:
+                recency = (now - client.last_purchase).days if client.last_purchase else 999
+                frequency = client.purchase_count
+                monetary = float(client.total_spent or 0)
+                
+                # Simple RFM scoring (1-5)
+                r_score = 5 if recency <= 30 else 4 if recency <= 60 else 3 if recency <= 90 else 2 if recency <= 180 else 1
+                f_score = 5 if frequency >= 10 else 4 if frequency >= 5 else 3 if frequency >= 3 else 2 if frequency >= 2 else 1
+                m_score = 5 if monetary >= 5000 else 4 if monetary >= 2000 else 3 if monetary >= 1000 else 2 if monetary >= 500 else 1
+                
+                # Segment classification
+                if r_score >= 4 and f_score >= 4 and m_score >= 4:
+                    segment = 'Champions'
+                elif r_score >= 3 and f_score >= 3 and m_score >= 3:
+                    segment = 'Loyal'
+                elif r_score >= 4 and f_score <= 2:
+                    segment = 'New'
+                elif r_score <= 2 and f_score >= 3:
+                    segment = 'At Risk'
+                elif r_score <= 2 and f_score <= 2:
+                    segment = 'Lost'
+                else:
+                    segment = 'Potential'
+                
+                segments.append({
+                    'user_id': client.user.id,
+                    'username': client.user.username,
+                    'segment': segment,
+                    'recency': recency,
+                    'frequency': frequency,
+                    'monetary': monetary,
+                    'rfm_score': r_score + f_score + m_score
+                })
+            
+            # Aggregate by segment
+            segment_summary = {}
+            for seg in segments:
+                seg_name = seg['segment']
+                if seg_name not in segment_summary:
+                    segment_summary[seg_name] = {'count': 0, 'total_value': 0}
+                segment_summary[seg_name]['count'] += 1
+                segment_summary[seg_name]['total_value'] += seg['monetary']
+            
+            return Response({
+                'segments': segments[:100],  # Limit to 100 for performance
+                'summary': segment_summary
+            })
+        except Exception as e:
+            logger.error(f"Error fetching RFM segmentation: {e}")
+            return Response({'error': 'Failed to fetch RFM segmentation'}, status=500)
+
+class FinancialAnalyticsView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        try:
+            now = timezone.now()
+            month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            year_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+            
+            # MRR (Monthly Recurring Revenue)
+            mrr = PaymentTransaction.objects.filter(
+                transaction_time__gte=month_start,
+                result_code=0
+            ).aggregate(total=Sum('amount'))['total'] or 0
+            
+            # ARR (Annual Recurring Revenue)
+            arr = PaymentTransaction.objects.filter(
+                transaction_time__gte=year_start,
+                result_code=0
+            ).aggregate(total=Sum('amount'))['total'] or 0
+            
+            # ARPU (Average Revenue Per User)
+            active_users = DispatchVoucher.objects.filter(
+                expires_at__gt=now,
+                status='active'
+            ).values('user').distinct().count()
+            
+            arpu = (mrr / active_users) if active_users > 0 else 0
+            
+            # Revenue by package (with margins)
+            package_revenue = DispatchVoucher.objects.values(
+                'package__name', 'package__price'
+            ).annotate(
+                sales=Count('id'),
+                revenue=Sum('price_paid')
+            ).order_by('-revenue')[:10]
+            
+            package_data = []
+            for pkg in package_revenue:
+                revenue = float(pkg['revenue'] or 0)
+                cost = float(pkg['package__price'] or 0) * 0.3  # Assume 30% cost
+                profit = revenue - (cost * pkg['sales'])
+                margin = (profit / revenue * 100) if revenue > 0 else 0
+                
+                package_data.append({
+                    'name': pkg['package__name'],
+                    'sales': pkg['sales'],
+                    'revenue': revenue,
+                    'profit': profit,
+                    'margin': round(margin, 1)
+                })
+            
+            # Customer Lifetime Value (LTV)
+            avg_customer_lifespan = 12  # months (mock)
+            ltv = arpu * avg_customer_lifespan
+            
+            return Response({
+                'mrr': float(mrr),
+                'arr': float(arr),
+                'arpu': round(float(arpu), 2),
+                'ltv': round(float(ltv), 2),
+                'active_users': active_users,
+                'package_performance': package_data,
+                'growth_rate': 15.5  # Mock percentage
+            })
+        except Exception as e:
+            logger.error(f"Error fetching financial analytics: {e}")
+            return Response({'error': 'Failed to fetch financial analytics'}, status=500)
+
+class FunnelAnalysisView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        try:
+            # Funnel stages
+            total_signups = ClientH.objects.count()
+            
+            # Stage 1: Signed up
+            stage1 = total_signups
+            
+            # Stage 2: Viewed packages (users with at least one voucher)
+            stage2 = DispatchVoucher.objects.values('user').distinct().count()
+            
+            # Stage 3: Added to cart / Initiated payment
+            stage3 = PaymentTransaction.objects.values('phone_number').distinct().count()
+            
+            # Stage 4: Completed payment
+            stage4 = PaymentTransaction.objects.filter(result_code=0).values('phone_number').distinct().count()
+            
+            # Stage 5: Activated voucher
+            stage5 = DispatchVoucher.objects.filter(status='active').values('user').distinct().count()
+            
+            # Stage 6: Repeat purchase
+            stage6 = DispatchVoucher.objects.values('user').annotate(
+                purchases=Count('id')
+            ).filter(purchases__gt=1).count()
+            
+            # Calculate drop-off rates
+            stages = [
+                {'name': 'Signups', 'users': stage1, 'rate': 100, 'dropoff': 0},
+                {'name': 'Viewed Packages', 'users': stage2, 'rate': round((stage2/stage1*100) if stage1 > 0 else 0, 1), 'dropoff': stage1 - stage2},
+                {'name': 'Initiated Payment', 'users': stage3, 'rate': round((stage3/stage1*100) if stage1 > 0 else 0, 1), 'dropoff': stage2 - stage3},
+                {'name': 'Completed Payment', 'users': stage4, 'rate': round((stage4/stage1*100) if stage1 > 0 else 0, 1), 'dropoff': stage3 - stage4},
+                {'name': 'Activated Voucher', 'users': stage5, 'rate': round((stage5/stage1*100) if stage1 > 0 else 0, 1), 'dropoff': stage4 - stage5},
+                {'name': 'Repeat Purchase', 'users': stage6, 'rate': round((stage6/stage1*100) if stage1 > 0 else 0, 1), 'dropoff': stage5 - stage6}
+            ]
+            
+            # Identify biggest drop-off
+            max_dropoff = max(stages, key=lambda x: x['dropoff'])
+            
+            return Response({
+                'stages': stages,
+                'conversion_rate': round((stage6/stage1*100) if stage1 > 0 else 0, 1),
+                'biggest_dropoff': max_dropoff['name'],
+                'total_signups': stage1,
+                'repeat_customers': stage6
+            })
+        except Exception as e:
+            logger.error(f"Error fetching funnel analysis: {e}")
+            return Response({'error': 'Failed to fetch funnel analysis'}, status=500)

@@ -8,7 +8,8 @@ from .views.dashboard_metrics import (
     PackageSalesView, LocationPerformanceView, PaymentMethodsView,
     RecentActivityView, VoucherStatusView, HourlyUsageView,
     ConversionFunnelView, DeviceBreakdownView, RewardTierDistributionView,
-    SessionMetricsView, RefundMetricsView
+    SessionMetricsView, RefundMetricsView, CohortAnalysisView,
+    RFMSegmentationView, FinancialAnalyticsView, FunnelAnalysisView
 )
 
 from .views.auth import (
@@ -70,5 +71,9 @@ urlpatterns = [
     path('dashboard-metrics/reward-tiers/', RewardTierDistributionView.as_view(), name='reward-tiers'),
     path('dashboard-metrics/session-metrics/', SessionMetricsView.as_view(), name='session-metrics'),
     path('dashboard-metrics/refund-metrics/', RefundMetricsView.as_view(), name='refund-metrics'),
+    path('dashboard-metrics/cohort-analysis/', CohortAnalysisView.as_view(), name='cohort-analysis'),
+    path('dashboard-metrics/rfm-segmentation/', RFMSegmentationView.as_view(), name='rfm-segmentation'),
+    path('dashboard-metrics/financial-analytics/', FinancialAnalyticsView.as_view(), name='financial-analytics'),
+    path('dashboard-metrics/funnel-analysis/', FunnelAnalysisView.as_view(), name='funnel-analysis'),
     path('system-status/', SystemStatusView.as_view(), name='system-status'),
 ]

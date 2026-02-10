@@ -5,7 +5,7 @@
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-slate-600 dark:text-slate-400 font-medium text-sm">{{ title }}</h3>
         <div class="w-9 h-9 rounded-lg flex items-center justify-center" :class="iconBgColor">
-          <span class="text-base">{{ icon }}</span>
+          <slot></slot>
         </div>
       </div>
 
@@ -110,10 +110,6 @@ export default {
     trendValue: {
       type: String,
       default: '0%'
-    },
-    icon: {
-      type: String,
-      default: '📊'
     },
     color: {
       type: String,
