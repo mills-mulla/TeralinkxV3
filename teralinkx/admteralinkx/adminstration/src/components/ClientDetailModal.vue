@@ -34,7 +34,8 @@
         <div v-if="activeTab === 'general'" class="space-y-4">
           <!-- Profile Image & Key Metrics -->
           <div class="flex items-start gap-4 mb-4">
-            <img v-if="client.profile_image" :src="client.profile_image" class="w-24 h-24 rounded-lg object-cover" />
+            <!-- Debug: {{ client.profile_image }} -->
+            <img v-if="client.profile_image" :src="client.profile_image" alt="Profile" class="w-24 h-24 rounded-lg object-cover" @error="$event.target.style.display='none'" />
             <div v-else class="w-24 h-24 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold">
               {{ getInitials(client.user_username) }}
             </div>
