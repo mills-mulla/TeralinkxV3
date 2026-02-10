@@ -155,12 +155,21 @@ class ClientViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def force_logout(self, request, pk=None):
-        """Force logout all sessions"""
+        """Force logout all sessions and delete all devices"""
         try:
             client = self.get_object()
             reason = request.data.get('reason', 'Admin forced logout')
-            count = client.terminate_all_sessions(reason=reason)
-            return Response({'message': f'{count} sessions terminated'})
+            
+            # Terminate all sessions
+            sessions_count = client.terminate_all_sessions(reason=reason)
+            
+            # Delete all devices
+            devices_count = client.devices.count()
+            client.devices.all().delete()
+            
+            return Response({
+                'message': f'{sessions_count} sessions terminated, {devices_count} devices deleted'
+            })
         except Exception as e:
             return Response({'error': str(e)}, status=500)
     
