@@ -83,8 +83,15 @@ class UserDeviceViewSet(viewsets.ModelViewSet):
         try:
             total_devices = UserDevice.objects.count()
             active_devices = UserDevice.objects.filter(status='active').count()
-            online_devices = sum(1 for d in UserDevice.objects.all() if d.is_online)
             trusted_devices = UserDevice.objects.filter(is_trusted=True).count()
+            
+            # Count online devices based on active network sessions
+            # Get unique device MACs from active network sessions
+            online_device_macs = UserSession.objects.filter(
+                is_active=True,
+                session_type='network'
+            ).values_list('device__mac_address', flat=True).distinct()
+            online_devices = len([mac for mac in online_device_macs if mac])
             
             # Devices by type
             devices_by_type = UserDevice.objects.values('device_type').annotate(

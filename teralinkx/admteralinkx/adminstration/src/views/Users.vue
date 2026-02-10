@@ -162,8 +162,12 @@
               <input v-model="formData.last_name" type="text" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" />
             </div>
             <div class="col-span-2">
-              <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Password</label>
-              <input v-model="formData.password" type="password" placeholder="Leave blank to keep current" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" />
+              <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Password {{ selectedUser?.id ? '(leave blank to keep current)' : '' }}</label>
+              <input v-model="formData.password" type="password" :placeholder="selectedUser?.id ? 'Leave blank to keep current' : 'Enter password'" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" :required="!selectedUser?.id" />
+            </div>
+            <div v-if="!selectedUser?.id" class="col-span-2">
+              <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Confirm Password</label>
+              <input v-model="formData.confirm_password" type="password" placeholder="Confirm password" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" required />
             </div>
             <div class="col-span-2 space-y-2">
               <label class="flex items-center gap-2">
@@ -220,6 +224,7 @@ export default {
       first_name: '',
       last_name: '',
       password: '',
+      confirm_password: '',
       is_active: true,
       is_staff: false,
       is_superuser: false
@@ -264,6 +269,7 @@ export default {
         first_name: '',
         last_name: '',
         password: '',
+        confirm_password: '',
         is_active: true,
         is_staff: false,
         is_superuser: false
@@ -295,6 +301,7 @@ export default {
         first_name: '',
         last_name: '',
         password: '',
+        confirm_password: '',
         is_active: true,
         is_staff: false,
         is_superuser: false
@@ -302,9 +309,22 @@ export default {
     }
 
     const saveUser = async () => {
+      // Validate passwords match when creating new user
+      if (!selectedUser.value?.id) {
+        if (!formData.value.password) {
+          alert('Password is required for new users')
+          return
+        }
+        if (formData.value.password !== formData.value.confirm_password) {
+          alert('Passwords do not match')
+          return
+        }
+      }
+      
       saveLoading.value = true
       try {
         const payload = { ...formData.value }
+        delete payload.confirm_password
         if (!payload.password) delete payload.password
         
         if (selectedUser.value?.id) {
