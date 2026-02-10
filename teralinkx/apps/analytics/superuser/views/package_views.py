@@ -56,6 +56,19 @@ class PackageTypeViewSet(viewsets.ModelViewSet):
             active_packages = PackageType.objects.filter(is_active=True).count()
             public_packages = PackageType.objects.filter(is_public=True).count()
             
+            # Calculate average price
+            avg_price = PackageType.objects.aggregate(
+                avg=Sum('price')
+            )['avg'] or 0
+            if total_packages > 0:
+                avg_price = avg_price / total_packages
+            
+            # Popular packages (public and active)
+            popular_packages = PackageType.objects.filter(
+                is_public=True,
+                is_active=True
+            ).count()
+            
             # Packages by category
             by_category = PackageType.objects.values('category').annotate(
                 count=Count('id')
@@ -70,6 +83,8 @@ class PackageTypeViewSet(viewsets.ModelViewSet):
                 'total_packages': total_packages,
                 'active_packages': active_packages,
                 'public_packages': public_packages,
+                'popular_packages': popular_packages,
+                'average_price': float(avg_price),
                 'by_category': list(by_category),
                 'by_tier': list(by_tier)
             })
