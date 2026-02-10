@@ -16,6 +16,11 @@ class ClientViewSet(viewsets.ModelViewSet):
     queryset = ClientH.objects.all().select_related('user')
     serializer_class = ClientSerializer
     
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+    
     @action(detail=False, methods=['get'])
     def stats(self, request):
         """Get client statistics"""

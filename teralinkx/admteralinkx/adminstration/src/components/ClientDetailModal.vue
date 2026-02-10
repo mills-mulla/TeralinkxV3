@@ -1,6 +1,6 @@
 <template>
   <div v-if="show" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" @click.self="$emit('close')">
-    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden">
       <!-- Header -->
       <div class="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
         <div class="flex items-center gap-4">
@@ -21,122 +21,122 @@
 
       <!-- Tabs -->
       <div class="border-b border-slate-200 dark:border-slate-700 px-6">
-        <div class="flex gap-4 overflow-x-auto">
-          <button v-for="tab in tabs" :key="tab.id" @click="activeTab = tab.id" class="px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap" :class="activeTab === tab.id ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'">
+        <div class="flex gap-4">
+          <button v-for="tab in tabs" :key="tab.id" @click="activeTab = tab.id" class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors" :class="activeTab === tab.id ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'">
             {{ tab.label }}
           </button>
         </div>
       </div>
 
       <!-- Content -->
-      <div class="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
-        <!-- Overview Tab -->
-        <div v-if="activeTab === 'overview'" class="space-y-6">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="p-4 bg-blue-50 dark:bg-blue-500/10 rounded-lg">
-              <p class="text-xs text-blue-600 dark:text-blue-400 mb-1">Balance</p>
-              <p class="text-2xl font-bold text-blue-700 dark:text-blue-300">KSh {{ formatNumber(client.balance) }}</p>
+      <div class="p-5 overflow-y-auto max-h-[calc(85vh-180px)]">
+        <!-- General Tab -->
+        <div v-if="activeTab === 'general'" class="space-y-4">
+          <!-- Profile Image & Key Metrics -->
+          <div class="flex items-start gap-4 mb-4">
+            <img v-if="client.profile_image" :src="client.profile_image" class="w-24 h-24 rounded-lg object-cover" />
+            <div v-else class="w-24 h-24 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold">
+              {{ getInitials(client.user_username) }}
             </div>
-            <div class="p-4 bg-purple-50 dark:bg-purple-500/10 rounded-lg">
-              <p class="text-xs text-purple-600 dark:text-purple-400 mb-1">Reward Points</p>
-              <p class="text-2xl font-bold text-purple-700 dark:text-purple-300">{{ client.reward_points }}</p>
-            </div>
-            <div class="p-4 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg">
-              <p class="text-xs text-emerald-600 dark:text-emerald-400 mb-1">Total Spent</p>
-              <p class="text-2xl font-bold text-emerald-700 dark:text-emerald-300">KSh {{ formatNumber(profile.stats?.total_spent) }}</p>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4 text-sm">
-            <div><span class="text-slate-600 dark:text-slate-400">Phone:</span> <span class="font-medium text-slate-900 dark:text-white">{{ client.phone_number }}</span></div>
-            <div><span class="text-slate-600 dark:text-slate-400">Tier:</span> <span class="font-medium text-slate-900 dark:text-white">{{ client.account_tier }}</span></div>
-            <div><span class="text-slate-600 dark:text-slate-400">Status:</span> <span class="font-medium text-slate-900 dark:text-white">{{ client.status }}</span></div>
-            <div><span class="text-slate-600 dark:text-slate-400">Joined:</span> <span class="font-medium text-slate-900 dark:text-white">{{ formatDate(client.created_at) }}</span></div>
-          </div>
-        </div>
-
-        <!-- Devices Tab -->
-        <div v-if="activeTab === 'devices'" class="space-y-3">
-          <div v-for="device in profile.devices" :key="device.id" class="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="font-medium text-slate-900 dark:text-white">{{ device.name }}</p>
-                <p class="text-xs text-slate-500 dark:text-slate-400">{{ device.mac }} • {{ device.type }}</p>
+            <div class="flex-1 grid grid-cols-3 gap-3">
+              <div class="p-3 bg-blue-50 dark:bg-blue-500/10 rounded-lg">
+                <p class="text-xs text-blue-600 dark:text-blue-400">Balance</p>
+                <p class="text-lg font-bold text-blue-700 dark:text-blue-300">KSh {{ formatNumber(client.balance) }}</p>
               </div>
-              <span class="text-xs text-slate-600 dark:text-slate-400">{{ formatDate(device.last_seen) }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Sessions Tab -->
-        <div v-if="activeTab === 'sessions'" class="space-y-3">
-          <div v-for="session in profile.sessions" :key="session.id" class="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-            <div class="flex items-center justify-between">
-              <div>
-                <p class="font-medium text-slate-900 dark:text-white">{{ session.device }}</p>
-                <p class="text-xs text-slate-500 dark:text-slate-400">{{ session.ip }}</p>
+              <div class="p-3 bg-purple-50 dark:bg-purple-500/10 rounded-lg">
+                <p class="text-xs text-purple-600 dark:text-purple-400">Points</p>
+                <p class="text-lg font-bold text-purple-700 dark:text-purple-300">{{ client.reward_points }}</p>
               </div>
-              <span :class="session.is_active ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-700'" class="px-2 py-1 text-xs rounded-full">
-                {{ session.is_active ? 'Active' : 'Inactive' }}
-              </span>
+              <div class="p-3 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg">
+                <p class="text-xs text-emerald-600 dark:text-emerald-400">Spent</p>
+                <p class="text-lg font-bold text-emerald-700 dark:text-emerald-300">KSh {{ formatNumber(client.total_spent) }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- All Client Fields -->
+          <div class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+            <div><span class="text-slate-500 dark:text-slate-400">Account:</span> <span class="font-medium text-slate-900 dark:text-white ml-2">{{ client.account }}</span></div>
+            <div><span class="text-slate-500 dark:text-slate-400">Phone:</span> <span class="font-medium text-slate-900 dark:text-white ml-2">{{ client.phone_number }}</span></div>
+            <div><span class="text-slate-500 dark:text-slate-400">Email:</span> <span class="font-medium text-slate-900 dark:text-white ml-2">{{ client.user_email || 'N/A' }}</span></div>
+            <div><span class="text-slate-500 dark:text-slate-400">Display Name:</span> <span class="font-medium text-slate-900 dark:text-white ml-2">{{ client.display_name || 'N/A' }}</span></div>
+            <div><span class="text-slate-500 dark:text-slate-400">Tier:</span> <span class="px-2 py-0.5 text-xs rounded-full ml-2" :class="getTierBadge(client.account_tier)">{{ client.account_tier }}</span></div>
+            <div><span class="text-slate-500 dark:text-slate-400">Status:</span> <span class="px-2 py-0.5 text-xs rounded-full ml-2" :class="getStatusBadge(client.status)">{{ client.status }}</span></div>
+            <div><span class="text-slate-500 dark:text-slate-400">Reward Tier:</span> <span class="font-medium text-slate-900 dark:text-white ml-2">{{ client.reward_tier }}</span></div>
+            <div><span class="text-slate-500 dark:text-slate-400">Credit Limit:</span> <span class="font-medium text-slate-900 dark:text-white ml-2">KSh {{ formatNumber(client.credit_limit) }}</span></div>
+            <div><span class="text-slate-500 dark:text-slate-400">Data Used:</span> <span class="font-medium text-slate-900 dark:text-white ml-2">{{ formatBytes(client.lifetime_data_used) }}</span></div>
+            <div><span class="text-slate-500 dark:text-slate-400">Joined:</span> <span class="font-medium text-slate-900 dark:text-white ml-2">{{ formatDate(client.created_at) }}</span></div>
+            <div><span class="text-slate-500 dark:text-slate-400">Last Login:</span> <span class="font-medium text-slate-900 dark:text-white ml-2">{{ formatDate(client.last_login) }}</span></div>
+            <div><span class="text-slate-500 dark:text-slate-400">2FA:</span> <span class="font-medium text-slate-900 dark:text-white ml-2">{{ client.two_factor_enabled ? 'Enabled' : 'Disabled' }}</span></div>
+          </div>
+
+          <!-- Quick Stats -->
+          <div class="grid grid-cols-4 gap-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+            <div class="text-center p-2 bg-slate-50 dark:bg-slate-700/50 rounded">
+              <p class="text-xs text-slate-500 dark:text-slate-400">Devices</p>
+              <p class="text-lg font-bold text-slate-900 dark:text-white">{{ profile.stats?.total_devices || 0 }}</p>
+            </div>
+            <div class="text-center p-2 bg-slate-50 dark:bg-slate-700/50 rounded">
+              <p class="text-xs text-slate-500 dark:text-slate-400">Sessions</p>
+              <p class="text-lg font-bold text-slate-900 dark:text-white">{{ profile.stats?.active_sessions || 0 }}</p>
+            </div>
+            <div class="text-center p-2 bg-slate-50 dark:bg-slate-700/50 rounded">
+              <p class="text-xs text-slate-500 dark:text-slate-400">Vouchers</p>
+              <p class="text-lg font-bold text-slate-900 dark:text-white">{{ profile.stats?.total_vouchers || 0 }}</p>
+            </div>
+            <div class="text-center p-2 bg-slate-50 dark:bg-slate-700/50 rounded">
+              <p class="text-xs text-slate-500 dark:text-slate-400">Points Earned</p>
+              <p class="text-lg font-bold text-slate-900 dark:text-white">{{ client.total_points_earned || 0 }}</p>
             </div>
           </div>
         </div>
 
-        <!-- Transactions Tab -->
-        <div v-if="activeTab === 'transactions'" class="space-y-3">
-          <div v-for="txn in profile.transactions" :key="txn.id" class="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg flex items-center justify-between">
-            <div>
-              <p class="font-medium text-slate-900 dark:text-white">KSh {{ formatNumber(txn.amount) }}</p>
-              <p class="text-xs text-slate-500 dark:text-slate-400">{{ formatDate(txn.transaction_time) }}</p>
-            </div>
-            <span :class="txn.result_code === 0 ? 'text-emerald-600' : 'text-red-600'" class="text-sm font-medium">
-              {{ txn.result_code === 0 ? 'Success' : 'Failed' }}
-            </span>
-          </div>
-        </div>
-
-        <!-- Analytics Tab -->
-        <div v-if="activeTab === 'analytics'" class="space-y-4">
-          <div class="grid grid-cols-2 gap-4">
-            <div class="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-              <p class="text-xs text-slate-600 dark:text-slate-400 mb-1">Lifetime Value</p>
-              <p class="text-xl font-bold text-slate-900 dark:text-white">KSh {{ formatNumber(analytics.ltv) }}</p>
-            </div>
-            <div class="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-              <p class="text-xs text-slate-600 dark:text-slate-400 mb-1">Engagement Score</p>
-              <p class="text-xl font-bold text-slate-900 dark:text-white">{{ analytics.engagement_score }}%</p>
-            </div>
-            <div class="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-              <p class="text-xs text-slate-600 dark:text-slate-400 mb-1">Churn Risk</p>
-              <p class="text-xl font-bold" :class="analytics.churn_risk === 'low' ? 'text-emerald-600' : 'text-red-600'">{{ analytics.churn_risk }}</p>
-            </div>
-            <div class="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-              <p class="text-xs text-slate-600 dark:text-slate-400 mb-1">Avg Transaction</p>
-              <p class="text-xl font-bold text-slate-900 dark:text-white">KSh {{ formatNumber(analytics.avg_transaction) }}</p>
+        <!-- Advanced Tab -->
+        <div v-if="activeTab === 'advanced'" class="space-y-4">
+          <!-- Analytics -->
+          <div>
+            <h4 class="text-sm font-semibold text-slate-900 dark:text-white mb-3">Analytics & Insights</h4>
+            <div class="grid grid-cols-2 gap-3">
+              <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                <p class="text-xs text-slate-600 dark:text-slate-400 mb-1">Lifetime Value</p>
+                <p class="text-xl font-bold text-slate-900 dark:text-white">KSh {{ formatNumber(analytics.ltv) }}</p>
+              </div>
+              <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                <p class="text-xs text-slate-600 dark:text-slate-400 mb-1">Engagement Score</p>
+                <p class="text-xl font-bold text-slate-900 dark:text-white">{{ analytics.engagement_score }}%</p>
+              </div>
+              <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                <p class="text-xs text-slate-600 dark:text-slate-400 mb-1">Churn Risk</p>
+                <p class="text-xl font-bold" :class="analytics.churn_risk === 'low' ? 'text-emerald-600' : 'text-red-600'">{{ analytics.churn_risk }}</p>
+              </div>
+              <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                <p class="text-xs text-slate-600 dark:text-slate-400 mb-1">Avg Transaction</p>
+                <p class="text-xl font-bold text-slate-900 dark:text-white">KSh {{ formatNumber(analytics.avg_transaction) }}</p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Actions Tab -->
-        <div v-if="activeTab === 'actions'" class="space-y-4">
-          <div class="grid grid-cols-2 gap-4">
-            <button @click="showBalanceModal = true" class="p-4 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 rounded-lg text-left transition-colors">
-              <p class="font-medium text-blue-700 dark:text-blue-400">Adjust Balance</p>
-              <p class="text-xs text-blue-600 dark:text-blue-500 mt-1">Add or deduct balance</p>
-            </button>
-            <button @click="showPointsModal = true" class="p-4 bg-purple-50 dark:bg-purple-500/10 hover:bg-purple-100 dark:hover:bg-purple-500/20 rounded-lg text-left transition-colors">
-              <p class="font-medium text-purple-700 dark:text-purple-400">Award Points</p>
-              <p class="text-xs text-purple-600 dark:text-purple-500 mt-1">Give reward points</p>
-            </button>
-            <button @click="suspendClient" class="p-4 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 rounded-lg text-left transition-colors">
-              <p class="font-medium text-amber-700 dark:text-amber-400">Suspend Account</p>
-              <p class="text-xs text-amber-600 dark:text-amber-500 mt-1">Temporarily disable</p>
-            </button>
-            <button @click="forceLogout" class="p-4 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-lg text-left transition-colors">
-              <p class="font-medium text-red-700 dark:text-red-400">Force Logout</p>
-              <p class="text-xs text-red-600 dark:text-red-500 mt-1">End all sessions</p>
-            </button>
+          <!-- Quick Actions -->
+          <div>
+            <h4 class="text-sm font-semibold text-slate-900 dark:text-white mb-3">Quick Actions</h4>
+            <div class="grid grid-cols-2 gap-3">
+              <button @click="showBalanceModal = true" class="p-4 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 rounded-lg text-left transition-colors">
+                <p class="font-medium text-blue-700 dark:text-blue-400">Adjust Balance</p>
+                <p class="text-xs text-blue-600 dark:text-blue-500 mt-1">Add or deduct balance</p>
+              </button>
+              <button @click="showPointsModal = true" class="p-4 bg-purple-50 dark:bg-purple-500/10 hover:bg-purple-100 dark:hover:bg-purple-500/20 rounded-lg text-left transition-colors">
+                <p class="font-medium text-purple-700 dark:text-purple-400">Award Points</p>
+                <p class="text-xs text-purple-600 dark:text-purple-500 mt-1">Give reward points</p>
+              </button>
+              <button @click="suspendClient" class="p-4 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 rounded-lg text-left transition-colors">
+                <p class="font-medium text-amber-700 dark:text-amber-400">Suspend Account</p>
+                <p class="text-xs text-amber-600 dark:text-amber-500 mt-1">Temporarily disable</p>
+              </button>
+              <button @click="forceLogout" class="p-4 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-lg text-left transition-colors">
+                <p class="font-medium text-red-700 dark:text-red-400">Force Logout</p>
+                <p class="text-xs text-red-600 dark:text-red-500 mt-1">End all sessions</p>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -183,7 +183,7 @@ export default {
   emits: ['close', 'refresh'],
   setup(props, { emit }) {
     const { makeRequest } = useApi()
-    const activeTab = ref('overview')
+    const activeTab = ref('general')
     const profile = ref({ devices: [], sessions: [], transactions: [], vouchers: [], stats: {} })
     const analytics = ref({})
     const showBalanceModal = ref(false)
@@ -194,12 +194,8 @@ export default {
     const pointsReason = ref('')
 
     const tabs = [
-      { id: 'overview', label: 'Overview' },
-      { id: 'devices', label: 'Devices' },
-      { id: 'sessions', label: 'Sessions' },
-      { id: 'transactions', label: 'Transactions' },
-      { id: 'analytics', label: 'Analytics' },
-      { id: 'actions', label: 'Actions' }
+      { id: 'general', label: 'General' },
+      { id: 'advanced', label: 'Advanced' }
     ]
 
     const fetchProfile = async () => {
@@ -268,6 +264,33 @@ export default {
 
     const formatNumber = (num) => new Intl.NumberFormat().format(num || 0)
     const formatDate = (date) => date ? new Date(date).toLocaleDateString() : 'N/A'
+    const formatBytes = (bytes) => {
+      if (!bytes) return '0 B'
+      const k = 1024
+      const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
+      const i = Math.floor(Math.log(bytes) / Math.log(k))
+      return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
+    }
+
+    const getTierBadge = (tier) => {
+      const badges = {
+        'basic': 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300',
+        'premium': 'bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-400',
+        'business': 'bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400',
+        'enterprise': 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400'
+      }
+      return badges[tier] || badges.basic
+    }
+
+    const getStatusBadge = (status) => {
+      const badges = {
+        'active': 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400',
+        'inactive': 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-400',
+        'suspended': 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400',
+        'banned': 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400'
+      }
+      return badges[status] || badges.inactive
+    }
 
     watch(() => props.show, (newVal) => {
       if (newVal) fetchProfile()
@@ -278,7 +301,7 @@ export default {
       showBalanceModal, showPointsModal,
       balanceAmount, balanceReason, pointsAmount, pointsReason,
       adjustBalance, awardPoints, suspendClient, forceLogout,
-      getInitials, formatNumber, formatDate
+      getInitials, formatNumber, formatDate, formatBytes, getTierBadge, getStatusBadge
     }
   }
 }

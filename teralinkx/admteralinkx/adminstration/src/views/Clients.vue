@@ -104,7 +104,7 @@
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-              <tr v-for="client in filteredClients" :key="client.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+              <tr v-for="client in filteredClients" :key="client.id" @click="viewClient(client)" class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer">
                 <td class="px-4 py-3">
                   <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
@@ -145,12 +145,24 @@
                   {{ formatDate(client.created_at) }}
                 </td>
                 <td class="px-4 py-3 text-right">
-                  <button @click="viewClient(client)" class="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-600 rounded transition-colors">
-                    <svg class="w-4 h-4 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  </button>
+                  <div class="flex items-center justify-end gap-1">
+                    <button @click.stop="viewClient(client)" class="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-600 rounded transition-colors" title="View">
+                      <svg class="w-4 h-4 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    </button>
+                    <button @click.stop="editClient(client)" class="p-1.5 hover:bg-blue-100 dark:hover:bg-blue-600 rounded transition-colors" title="Edit">
+                      <svg class="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                    <button @click.stop="deleteClient(client)" class="p-1.5 hover:bg-red-100 dark:hover:bg-red-600 rounded transition-colors" title="Delete">
+                      <svg class="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -161,6 +173,69 @@
 
     <!-- Client Detail Modal -->
     <ClientDetailModal :show="showDetailModal" :client="selectedClient" @close="showDetailModal = false" @refresh="refreshData" />
+
+    <!-- Add/Edit Client Modal -->
+    <div v-if="showAddModal || showEditModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" @click.self="closeFormModal">
+      <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+        <div class="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
+          <h2 class="text-xl font-semibold text-slate-900 dark:text-white">{{ showEditModal ? 'Edit Client' : 'Add New Client' }}</h2>
+          <button @click="closeFormModal" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Username</label>
+              <input v-model="formData.username" type="text" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-sm" :disabled="showEditModal" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email</label>
+              <input v-model="formData.email" type="email" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-sm" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Phone Number</label>
+              <input v-model="formData.phone_number" type="text" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-sm" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Display Name</label>
+              <input v-model="formData.display_name" type="text" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-sm" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Account Tier</label>
+              <select v-model="formData.account_tier" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-sm">
+                <option value="basic">Basic</option>
+                <option value="premium">Premium</option>
+                <option value="business">Business</option>
+                <option value="enterprise">Enterprise</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Status</label>
+              <select v-model="formData.status" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-sm">
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="suspended">Suspended</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Balance</label>
+              <input v-model="formData.balance" type="number" step="0.01" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-sm" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Credit Limit</label>
+              <input v-model="formData.credit_limit" type="number" step="0.01" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-sm" />
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center justify-end gap-2 p-6 border-t border-slate-200 dark:border-slate-700">
+          <button @click="closeFormModal" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-900 dark:text-white rounded-lg text-sm">Cancel</button>
+          <button @click="saveClient" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm">{{ showEditModal ? 'Update' : 'Create' }}</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -181,8 +256,19 @@ export default {
     const statusFilter = ref('')
     const tierFilter = ref('')
     const showAddModal = ref(false)
+    const showEditModal = ref(false)
     const showDetailModal = ref(false)
     const selectedClient = ref(null)
+    const formData = ref({
+      username: '',
+      email: '',
+      phone_number: '',
+      display_name: '',
+      account_tier: 'basic',
+      status: 'active',
+      balance: 0,
+      credit_limit: 0
+    })
 
     const filteredClients = computed(() => {
       let result = clients.value
@@ -227,6 +313,62 @@ export default {
       selectedClient.value = client
       showDetailModal.value = true
     }
+
+    const editClient = (client) => {
+      selectedClient.value = client
+      formData.value = {
+        username: client.user_username,
+        email: client.user_email || '',
+        phone_number: client.phone_number || '',
+        display_name: client.display_name || '',
+        account_tier: client.account_tier,
+        status: client.status,
+        balance: client.balance,
+        credit_limit: client.credit_limit
+      }
+      showEditModal.value = true
+    }
+
+    const deleteClient = async (client) => {
+      if (!confirm(`Delete client ${client.user_username}? This action cannot be undone.`)) return
+      try {
+        await makeRequest('delete', `suapi/clients/${client.id}/`)
+        await refreshData()
+      } catch (err) {
+        console.error('Error deleting client:', err)
+        alert('Failed to delete client')
+      }
+    }
+
+    const saveClient = async () => {
+      try {
+        if (showEditModal.value) {
+          await makeRequest('patch', `suapi/clients/${selectedClient.value.id}/`, formData.value)
+        } else {
+          await makeRequest('post', 'suapi/clients/', formData.value)
+        }
+        closeFormModal()
+        await refreshData()
+      } catch (err) {
+        console.error('Error saving client:', err)
+        alert('Failed to save client')
+      }
+    }
+
+    const closeFormModal = () => {
+      showAddModal.value = false
+      showEditModal.value = false
+      formData.value = {
+        username: '',
+        email: '',
+        phone_number: '',
+        display_name: '',
+        account_tier: 'basic',
+        status: 'active',
+        balance: 0,
+        credit_limit: 0
+      }
+    }
     
     const getInitials = (name) => {
       if (!name) return '?'
@@ -266,8 +408,9 @@ export default {
 
     return {
       loading, error, clients, stats, searchTerm, statusFilter, tierFilter,
-      filteredClients, fetchClients, refreshData, showAddModal,
-      showDetailModal, selectedClient, viewClient,
+      filteredClients, fetchClients, refreshData, 
+      showAddModal, showEditModal, showDetailModal, selectedClient, formData,
+      viewClient, editClient, deleteClient, saveClient, closeFormModal,
       getInitials, getTierBadge, getStatusBadge, formatNumber, formatDate
     }
   }
