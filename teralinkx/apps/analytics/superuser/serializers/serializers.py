@@ -24,8 +24,9 @@ class ClientSerializer(serializers.ModelSerializer):
         if obj.profile_image:
             request = self.context.get('request')
             if request:
-                return request.build_absolute_uri(obj.profile_image.url)
-            return obj.profile_image.url
+                url = request.build_absolute_uri(obj.profile_image.url)
+                return url.replace('http://', 'https://')
+            return obj.profile_image.url.replace('http://', 'https://')
         return None
 
 class TransactionSerializer(serializers.ModelSerializer):
