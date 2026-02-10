@@ -1,62 +1,61 @@
 <template>
   <div v-if="show" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" @click.self="$emit('close')">
-    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-3xl w-full max-h-[80vh] overflow-hidden">
       <!-- Header -->
-      <div class="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
-        <div class="flex items-center gap-4">
-          <div class="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold">
+      <div class="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-lg font-bold">
             {{ getInitials(client.user_username) }}
           </div>
           <div>
-            <h2 class="text-xl font-semibold text-slate-900 dark:text-white">{{ client.user_username }}</h2>
-            <p class="text-sm text-slate-500 dark:text-slate-400">{{ client.account }}</p>
+            <h2 class="text-base font-semibold text-slate-900 dark:text-white">{{ client.user_username }}</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">{{ client.account }}</p>
           </div>
         </div>
         <button @click="$emit('close')" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="w-4 h-4 text-slate-600 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
 
       <!-- Tabs -->
-      <div class="border-b border-slate-200 dark:border-slate-700 px-6">
-        <div class="flex gap-4">
-          <button v-for="tab in tabs" :key="tab.id" @click="activeTab = tab.id" class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors" :class="activeTab === tab.id ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'">
+      <div class="border-b border-slate-200 dark:border-slate-700 px-4">
+        <div class="flex gap-3">
+          <button v-for="tab in tabs" :key="tab.id" @click="activeTab = tab.id" class="px-3 py-2 text-xs font-medium border-b-2 transition-colors" :class="activeTab === tab.id ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'">
             {{ tab.label }}
           </button>
         </div>
       </div>
 
       <!-- Content -->
-      <div class="p-5 overflow-y-auto max-h-[calc(85vh-180px)]">
+      <div class="p-4 overflow-y-auto max-h-[calc(80vh-140px)]">
         <!-- General Tab -->
-        <div v-if="activeTab === 'general'" class="space-y-4">
+        <div v-if="activeTab === 'general'" class="space-y-3">
           <!-- Profile Image & Key Metrics -->
-          <div class="flex items-start gap-4 mb-4">
-            <!-- Debug: {{ client.profile_image }} -->
-            <img v-if="client.profile_image" :src="client.profile_image" alt="Profile" class="w-24 h-24 rounded-lg object-cover" @error="$event.target.style.display='none'" />
-            <div v-else class="w-24 h-24 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-3xl font-bold">
+          <div class="flex items-start gap-3 mb-3">
+            <img v-if="client.profile_image" :src="client.profile_image" alt="Profile" class="w-16 h-16 rounded-lg object-cover" @error="$event.target.style.display='none'" />
+            <div v-else class="w-16 h-16 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold">
               {{ getInitials(client.user_username) }}
             </div>
-            <div class="flex-1 grid grid-cols-3 gap-3">
-              <div class="p-3 bg-blue-50 dark:bg-blue-500/10 rounded-lg">
-                <p class="text-xs text-blue-600 dark:text-blue-400">Balance</p>
-                <p class="text-lg font-bold text-blue-700 dark:text-blue-300">KSh {{ formatNumber(client.balance) }}</p>
+            <div class="flex-1 grid grid-cols-3 gap-2">
+              <div class="p-2 bg-blue-50 dark:bg-blue-500/10 rounded-lg">
+                <p class="text-[10px] text-blue-600 dark:text-blue-400">Balance</p>
+                <p class="text-sm font-bold text-blue-700 dark:text-blue-300">KSh {{ formatNumber(client.balance) }}</p>
               </div>
-              <div class="p-3 bg-purple-50 dark:bg-purple-500/10 rounded-lg">
-                <p class="text-xs text-purple-600 dark:text-purple-400">Points</p>
-                <p class="text-lg font-bold text-purple-700 dark:text-purple-300">{{ client.reward_points }}</p>
+              <div class="p-2 bg-purple-50 dark:bg-purple-500/10 rounded-lg">
+                <p class="text-[10px] text-purple-600 dark:text-purple-400">Points</p>
+                <p class="text-sm font-bold text-purple-700 dark:text-purple-300">{{ client.reward_points }}</p>
               </div>
-              <div class="p-3 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg">
-                <p class="text-xs text-emerald-600 dark:text-emerald-400">Spent</p>
-                <p class="text-lg font-bold text-emerald-700 dark:text-emerald-300">KSh {{ formatNumber(client.total_spent) }}</p>
+              <div class="p-2 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg">
+                <p class="text-[10px] text-emerald-600 dark:text-emerald-400">Spent</p>
+                <p class="text-sm font-bold text-emerald-700 dark:text-emerald-300">KSh {{ formatNumber(client.total_spent) }}</p>
               </div>
             </div>
           </div>
 
           <!-- All Client Fields -->
-          <div class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+          <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
             <div><span class="text-slate-500 dark:text-slate-400">Account:</span> <span class="font-medium text-slate-900 dark:text-white ml-2">{{ client.account }}</span></div>
             <div><span class="text-slate-500 dark:text-slate-400">Phone:</span> <span class="font-medium text-slate-900 dark:text-white ml-2">{{ client.phone_number }}</span></div>
             <div><span class="text-slate-500 dark:text-slate-400">Email:</span> <span class="font-medium text-slate-900 dark:text-white ml-2">{{ client.user_email || 'N/A' }}</span></div>
@@ -72,70 +71,70 @@
           </div>
 
           <!-- Quick Stats -->
-          <div class="grid grid-cols-4 gap-3 pt-3 border-t border-slate-200 dark:border-slate-700">
-            <div class="text-center p-2 bg-slate-50 dark:bg-slate-700/50 rounded">
-              <p class="text-xs text-slate-500 dark:text-slate-400">Devices</p>
-              <p class="text-lg font-bold text-slate-900 dark:text-white">{{ profile.stats?.total_devices || 0 }}</p>
+          <div class="grid grid-cols-4 gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+            <div class="text-center p-1.5 bg-slate-50 dark:bg-slate-700/50 rounded">
+              <p class="text-[10px] text-slate-500 dark:text-slate-400">Devices</p>
+              <p class="text-sm font-bold text-slate-900 dark:text-white">{{ profile.stats?.total_devices || 0 }}</p>
             </div>
-            <div class="text-center p-2 bg-slate-50 dark:bg-slate-700/50 rounded">
-              <p class="text-xs text-slate-500 dark:text-slate-400">Sessions</p>
-              <p class="text-lg font-bold text-slate-900 dark:text-white">{{ profile.stats?.active_sessions || 0 }}</p>
+            <div class="text-center p-1.5 bg-slate-50 dark:bg-slate-700/50 rounded">
+              <p class="text-[10px] text-slate-500 dark:text-slate-400">Sessions</p>
+              <p class="text-sm font-bold text-slate-900 dark:text-white">{{ profile.stats?.active_sessions || 0 }}</p>
             </div>
-            <div class="text-center p-2 bg-slate-50 dark:bg-slate-700/50 rounded">
-              <p class="text-xs text-slate-500 dark:text-slate-400">Vouchers</p>
-              <p class="text-lg font-bold text-slate-900 dark:text-white">{{ profile.stats?.total_vouchers || 0 }}</p>
+            <div class="text-center p-1.5 bg-slate-50 dark:bg-slate-700/50 rounded">
+              <p class="text-[10px] text-slate-500 dark:text-slate-400">Vouchers</p>
+              <p class="text-sm font-bold text-slate-900 dark:text-white">{{ profile.stats?.total_vouchers || 0 }}</p>
             </div>
-            <div class="text-center p-2 bg-slate-50 dark:bg-slate-700/50 rounded">
-              <p class="text-xs text-slate-500 dark:text-slate-400">Points Earned</p>
-              <p class="text-lg font-bold text-slate-900 dark:text-white">{{ client.total_points_earned || 0 }}</p>
+            <div class="text-center p-1.5 bg-slate-50 dark:bg-slate-700/50 rounded">
+              <p class="text-[10px] text-slate-500 dark:text-slate-400">Points Earned</p>
+              <p class="text-sm font-bold text-slate-900 dark:text-white">{{ client.total_points_earned || 0 }}</p>
             </div>
           </div>
         </div>
 
         <!-- Advanced Tab -->
-        <div v-if="activeTab === 'advanced'" class="space-y-4">
+        <div v-if="activeTab === 'advanced'" class="space-y-3">
           <!-- Analytics -->
           <div>
-            <h4 class="text-sm font-semibold text-slate-900 dark:text-white mb-3">Analytics & Insights</h4>
-            <div class="grid grid-cols-2 gap-3">
-              <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                <p class="text-xs text-slate-600 dark:text-slate-400 mb-1">Lifetime Value</p>
-                <p class="text-xl font-bold text-slate-900 dark:text-white">KSh {{ formatNumber(analytics.ltv) }}</p>
+            <h4 class="text-xs font-semibold text-slate-900 dark:text-white mb-2">Analytics & Insights</h4>
+            <div class="grid grid-cols-2 gap-2">
+              <div class="p-2 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                <p class="text-[10px] text-slate-600 dark:text-slate-400 mb-0.5">Lifetime Value</p>
+                <p class="text-base font-bold text-slate-900 dark:text-white">KSh {{ formatNumber(analytics.ltv) }}</p>
               </div>
-              <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                <p class="text-xs text-slate-600 dark:text-slate-400 mb-1">Engagement Score</p>
-                <p class="text-xl font-bold text-slate-900 dark:text-white">{{ analytics.engagement_score }}%</p>
+              <div class="p-2 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                <p class="text-[10px] text-slate-600 dark:text-slate-400 mb-0.5">Engagement Score</p>
+                <p class="text-base font-bold text-slate-900 dark:text-white">{{ analytics.engagement_score }}%</p>
               </div>
-              <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                <p class="text-xs text-slate-600 dark:text-slate-400 mb-1">Churn Risk</p>
-                <p class="text-xl font-bold" :class="analytics.churn_risk === 'low' ? 'text-emerald-600' : 'text-red-600'">{{ analytics.churn_risk }}</p>
+              <div class="p-2 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                <p class="text-[10px] text-slate-600 dark:text-slate-400 mb-0.5">Churn Risk</p>
+                <p class="text-base font-bold" :class="analytics.churn_risk === 'low' ? 'text-emerald-600' : 'text-red-600'">{{ analytics.churn_risk }}</p>
               </div>
-              <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                <p class="text-xs text-slate-600 dark:text-slate-400 mb-1">Avg Transaction</p>
-                <p class="text-xl font-bold text-slate-900 dark:text-white">KSh {{ formatNumber(analytics.avg_transaction) }}</p>
+              <div class="p-2 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                <p class="text-[10px] text-slate-600 dark:text-slate-400 mb-0.5">Avg Transaction</p>
+                <p class="text-base font-bold text-slate-900 dark:text-white">KSh {{ formatNumber(analytics.avg_transaction) }}</p>
               </div>
             </div>
           </div>
 
           <!-- Quick Actions -->
           <div>
-            <h4 class="text-sm font-semibold text-slate-900 dark:text-white mb-3">Quick Actions</h4>
-            <div class="grid grid-cols-2 gap-3">
-              <button @click="showBalanceModal = true" class="p-4 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 rounded-lg text-left transition-colors">
-                <p class="font-medium text-blue-700 dark:text-blue-400">Adjust Balance</p>
-                <p class="text-xs text-blue-600 dark:text-blue-500 mt-1">Add or deduct balance</p>
+            <h4 class="text-xs font-semibold text-slate-900 dark:text-white mb-2">Quick Actions</h4>
+            <div class="grid grid-cols-2 gap-2">
+              <button @click="showBalanceModal = true" class="p-2.5 bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 rounded-lg text-left transition-colors">
+                <p class="text-xs font-medium text-blue-700 dark:text-blue-400">Adjust Balance</p>
+                <p class="text-[10px] text-blue-600 dark:text-blue-500 mt-0.5">Add or deduct balance</p>
               </button>
-              <button @click="showPointsModal = true" class="p-4 bg-purple-50 dark:bg-purple-500/10 hover:bg-purple-100 dark:hover:bg-purple-500/20 rounded-lg text-left transition-colors">
-                <p class="font-medium text-purple-700 dark:text-purple-400">Award Points</p>
-                <p class="text-xs text-purple-600 dark:text-purple-500 mt-1">Give reward points</p>
+              <button @click="showPointsModal = true" class="p-2.5 bg-purple-50 dark:bg-purple-500/10 hover:bg-purple-100 dark:hover:bg-purple-500/20 rounded-lg text-left transition-colors">
+                <p class="text-xs font-medium text-purple-700 dark:text-purple-400">Award Points</p>
+                <p class="text-[10px] text-purple-600 dark:text-purple-500 mt-0.5">Give reward points</p>
               </button>
-              <button @click="suspendClient" class="p-4 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 rounded-lg text-left transition-colors">
-                <p class="font-medium text-amber-700 dark:text-amber-400">Suspend Account</p>
-                <p class="text-xs text-amber-600 dark:text-amber-500 mt-1">Temporarily disable</p>
+              <button @click="toggleSuspend" class="p-2.5 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100 dark:hover:bg-amber-500/20 rounded-lg text-left transition-colors">
+                <p class="text-xs font-medium text-amber-700 dark:text-amber-400">{{ client.status === 'suspended' ? 'Activate' : 'Suspend' }}</p>
+                <p class="text-[10px] text-amber-600 dark:text-amber-500 mt-0.5">{{ client.status === 'suspended' ? 'Reactivate account' : 'Temporarily disable' }}</p>
               </button>
-              <button @click="forceLogout" class="p-4 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-lg text-left transition-colors">
-                <p class="font-medium text-red-700 dark:text-red-400">Force Logout</p>
-                <p class="text-xs text-red-600 dark:text-red-500 mt-1">End all sessions</p>
+              <button @click="forceLogout" class="p-2.5 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 rounded-lg text-left transition-colors">
+                <p class="text-xs font-medium text-red-700 dark:text-red-400">Force Logout</p>
+                <p class="text-[10px] text-red-600 dark:text-red-500 mt-0.5">End all sessions</p>
               </button>
             </div>
           </div>
@@ -237,14 +236,15 @@ export default {
       }
     }
 
-    const suspendClient = async () => {
-      if (!confirm('Suspend this client?')) return
+    const toggleSuspend = async () => {
+      const action = props.client.status === 'suspended' ? 'activate' : 'suspend'
+      if (!confirm(`${action === 'suspend' ? 'Suspend' : 'Activate'} this client?`)) return
       try {
-        await makeRequest('post', `suapi/clients/${props.client.id}/suspend/`, { reason: 'Admin action' })
+        await makeRequest('post', `suapi/clients/${props.client.id}/${action}/`, { reason: 'Admin action' })
         emit('refresh')
         emit('close')
       } catch (error) {
-        console.error('Error suspending client:', error)
+        console.error(`Error ${action}ing client:`, error)
       }
     }
 
@@ -301,7 +301,7 @@ export default {
       activeTab, tabs, profile, analytics,
       showBalanceModal, showPointsModal,
       balanceAmount, balanceReason, pointsAmount, pointsReason,
-      adjustBalance, awardPoints, suspendClient, forceLogout,
+      adjustBalance, awardPoints, toggleSuspend, forceLogout,
       getInitials, formatNumber, formatDate, formatBytes, getTierBadge, getStatusBadge
     }
   }

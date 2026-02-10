@@ -52,28 +52,45 @@ class ClientViewSet(viewsets.ModelViewSet):
             from packages.models import DispatchVoucher
             from finance.models import PaymentTransaction
             
-            # Get related data
-            devices = client.devices.all()[:10]
-            sessions = client.sessions.filter(is_active=True)[:10]
-            vouchers = DispatchVoucher.objects.filter(user=client.user).order_by('-activated_at')[:10]
-            transactions = PaymentTransaction.objects.filter(phone_number=client.phone_number).order_by('-transaction_time')[:10]
+            # Get related data with error handling
+            try:
+                devices = list(client.devices.all()[:10])
+            except:
+                devices = []
+            
+            try:
+                sessions = list(client.sessions.filter(is_active=True)[:10])
+            except:
+                sessions = []
+            
+            try:
+                vouchers = list(DispatchVoucher.objects.filter(user=client.user).order_by('-activated_at')[:10])
+            except:
+                vouchers = []
+            
+            try:
+                transactions = list(PaymentTransaction.objects.filter(phone_number=client.phone_number).order_by('-transaction_time')[:10])
+            except:
+                transactions = []
             
             return Response({
                 'client': ClientSerializer(client, context={'request': request}).data,
-                'devices': [{'id': d.id, 'name': d.device_name, 'mac': d.mac_address, 'type': d.device_type, 'last_seen': str(d.last_seen) if d.last_seen else None} for d in devices],
-                'sessions': [{'id': s.id, 'device': s.device.device_name if s.device else 'Unknown', 'ip': s.ip_address, 'login_time': str(s.login_time), 'is_active': s.is_active} for s in sessions],
-                'vouchers': [{'id': v.id, 'package': v.package.name if v.package else 'Unknown', 'status': v.status, 'activated_at': str(v.activated_at) if v.activated_at else None, 'expires_at': str(v.expires_at) if v.expires_at else None} for v in vouchers],
+                'devices': [{'id': d.id, 'name': d.device_name, 'mac': d.mac_address, 'type': d.device_type, 'last_seen': str(d.last_seen) if hasattr(d, 'last_seen') and d.last_seen else None} for d in devices],
+                'sessions': [{'id': s.id, 'device': s.device.device_name if hasattr(s, 'device') and s.device else 'Unknown', 'ip': s.ip_address, 'login_time': str(s.login_time), 'is_active': s.is_active} for s in sessions],
+                'vouchers': [{'id': v.id, 'package': v.package.name if hasattr(v, 'package') and v.package else 'Unknown', 'status': v.status, 'activated_at': str(v.activated_at) if v.activated_at else None, 'expires_at': str(v.expires_at) if v.expires_at else None} for v in vouchers],
                 'transactions': [{'id': t.id, 'amount': float(t.amount), 'result_code': t.result_code, 'transaction_time': str(t.transaction_time)} for t in transactions],
                 'stats': {
-                    'total_devices': devices.count(),
-                    'active_sessions': sessions.count(),
-                    'total_vouchers': vouchers.count(),
+                    'total_devices': len(devices),
+                    'active_sessions': len(sessions),
+                    'total_vouchers': len(vouchers),
                     'total_spent': float(client.total_spent),
                     'lifetime_data': client.lifetime_data_used
                 }
             })
         except Exception as e:
             logger.error(f"Error fetching client profile: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             return Response({'error': str(e)}, status=500)
     
     @action(detail=True, methods=['post'])
