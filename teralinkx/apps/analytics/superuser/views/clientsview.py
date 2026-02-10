@@ -69,7 +69,7 @@ class ClientViewSet(viewsets.ModelViewSet):
                 vouchers = []
             
             try:
-                transactions = list(PaymentTransaction.objects.filter(phone_number=client.phone_number).order_by('-transaction_time')[:10])
+                transactions = list(PaymentTransaction.objects.filter(user=client.user).order_by('-transaction_time')[:10])
             except:
                 transactions = []
             
@@ -194,7 +194,7 @@ class ClientViewSet(viewsets.ModelViewSet):
             
             # Calculate LTV
             total_revenue = PaymentTransaction.objects.filter(
-                phone_number=client.phone_number,
+                user=client.user,
                 result_code=0
             ).aggregate(total=Sum('amount'))['total'] or 0
             

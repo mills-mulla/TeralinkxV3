@@ -34,9 +34,10 @@
         <div v-if="activeTab === 'general'" class="space-y-3">
           <!-- Profile Image & Key Metrics -->
           <div class="flex items-start gap-3 mb-3">
-            <img v-if="client.profile_image" :src="client.profile_image" alt="Profile" class="w-16 h-16 rounded-lg object-cover" @error="$event.target.style.display='none'" />
-            <div v-else class="w-16 h-16 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold">
-              {{ getInitials(client.user_username) }}
+            <div v-if="client.profile_image" class="w-16 h-16 rounded-lg overflow-hidden">
+              <img :src="client.profile_image" alt="Profile" class="w-full h-full object-cover" @error="$event.target.parentElement.innerHTML = getUserIcon()" />
+            </div>
+            <div v-else class="w-16 h-16 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center" v-html="getUserIcon()">
             </div>
             <div class="flex-1 grid grid-cols-3 gap-2">
               <div class="p-2 bg-blue-50 dark:bg-blue-500/10 rounded-lg">
@@ -258,9 +259,8 @@ export default {
       }
     }
 
-    const getInitials = (name) => {
-      if (!name) return '?'
-      return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    const getUserIcon = () => {
+      return `<svg class="w-10 h-10 text-slate-400 dark:text-slate-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`
     }
 
     const formatNumber = (num) => new Intl.NumberFormat().format(num || 0)
@@ -302,7 +302,7 @@ export default {
       showBalanceModal, showPointsModal,
       balanceAmount, balanceReason, pointsAmount, pointsReason,
       adjustBalance, awardPoints, toggleSuspend, forceLogout,
-      getInitials, formatNumber, formatDate, formatBytes, getTierBadge, getStatusBadge
+      getUserIcon, formatNumber, formatDate, formatBytes, getTierBadge, getStatusBadge
     }
   }
 }
