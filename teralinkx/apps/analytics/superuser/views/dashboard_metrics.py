@@ -306,7 +306,7 @@ class DeviceBreakdownView(APIView):
     
     def get(self, request):
         try:
-            from analytics.models import UserDevice
+            from users.models import UserDevice
             devices = UserDevice.objects.values('device_type').annotate(count=Count('id')).order_by('-count')
             return Response({'data': list(devices)})
         except Exception as e:

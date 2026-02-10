@@ -121,8 +121,9 @@ class ClientViewSet(viewsets.ModelViewSet):
     def adjust_balance(self, request, pk=None):
         """Adjust client balance"""
         try:
+            from decimal import Decimal
             client = self.get_object()
-            amount = float(request.data.get('amount', 0))
+            amount = Decimal(str(request.data.get('amount', 0)))
             reason = request.data.get('reason', 'Manual adjustment')
             
             client.balance += amount
