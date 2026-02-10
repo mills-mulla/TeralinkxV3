@@ -193,27 +193,37 @@ class ClientViewSet(viewsets.ModelViewSet):
             from finance.models import PaymentTransaction
             
             # Calculate LTV
-            total_revenue = PaymentTransaction.objects.filter(
-                user=client.user,
-                result_code=0
-            ).aggregate(total=Sum('amount'))['total'] or 0
+            try:
+                total_revenue = PaymentTransaction.objects.filter(
+                    user=client.user,
+                    result_code=0
+                ).aggregate(total=Sum('amount'))['total'] or 0
+            except:
+                total_revenue = 0
             
             # Usage patterns
-            vouchers = DispatchVoucher.objects.filter(user=client.user)
+            try:
+                vouchers = DispatchVoucher.objects.filter(user=client.user)
+                voucher_count = vouchers.count()
+            except:
+                voucher_count = 0
             
             # Engagement score
             days_since_signup = (timezone.now() - client.created_at).days or 1
-            engagement_score = min(100, (vouchers.count() / days_since_signup) * 100)
+            engagement_score = min(100, (voucher_count / days_since_signup) * 100)
             
             return Response({
                 'ltv': float(total_revenue),
-                'avg_transaction': float(total_revenue / vouchers.count()) if vouchers.count() > 0 else 0,
-                'total_vouchers': vouchers.count(),
+                'avg_transaction': float(total_revenue / voucher_count) if voucher_count > 0 else 0,
+                'total_vouchers': voucher_count,
                 'engagement_score': round(engagement_score, 1),
                 'days_since_signup': days_since_signup,
                 'churn_risk': 'low' if engagement_score > 50 else 'high'
             })
         except Exception as e:
+            logger.error(f"Error fetching client analytics: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             return Response({'error': str(e)}, status=500)
     
     @action(detail=True, methods=['get'])

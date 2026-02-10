@@ -4,8 +4,7 @@
       <!-- Header -->
       <div class="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
         <div class="flex items-center gap-3">
-          <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-lg font-bold">
-            {{ getInitials(client.user_username) }}
+          <div class="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center" v-html="getUserIcon()">
           </div>
           <div>
             <h2 class="text-base font-semibold text-slate-900 dark:text-white">{{ client.user_username }}</h2>
@@ -203,7 +202,12 @@ export default {
       if (!props.client?.id) return
       try {
         profile.value = await makeRequest('get', `suapi/clients/${props.client.id}/profile/`)
-        analytics.value = await makeRequest('get', `suapi/clients/${props.client.id}/analytics/`)
+        try {
+          analytics.value = await makeRequest('get', `suapi/clients/${props.client.id}/analytics/`)
+        } catch (error) {
+          console.error('Error fetching analytics:', error)
+          analytics.value = { ltv: 0, engagement_score: 0, churn_risk: 'unknown', avg_transaction: 0 }
+        }
       } catch (error) {
         console.error('Error fetching profile:', error)
       }
