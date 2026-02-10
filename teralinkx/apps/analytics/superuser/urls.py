@@ -9,7 +9,8 @@ from .views.dashboard_metrics import (
     RecentActivityView, VoucherStatusView, HourlyUsageView,
     ConversionFunnelView, DeviceBreakdownView, RewardTierDistributionView,
     SessionMetricsView, RefundMetricsView, CohortAnalysisView,
-    RFMSegmentationView, FinancialAnalyticsView, FunnelAnalysisView
+    RFMSegmentationView, FinancialAnalyticsView, FunnelAnalysisView,
+    ChurnPredictionView, RevenueForecastView, NetworkAnalyticsView
 )
 
 from .views.auth import (
@@ -75,5 +76,8 @@ urlpatterns = [
     path('dashboard-metrics/rfm-segmentation/', RFMSegmentationView.as_view(), name='rfm-segmentation'),
     path('dashboard-metrics/financial-analytics/', FinancialAnalyticsView.as_view(), name='financial-analytics'),
     path('dashboard-metrics/funnel-analysis/', FunnelAnalysisView.as_view(), name='funnel-analysis'),
+    path('dashboard-metrics/churn-prediction/', ChurnPredictionView.as_view(), name='churn-prediction'),
+    path('dashboard-metrics/revenue-forecast/', RevenueForecastView.as_view(), name='revenue-forecast'),
+    path('dashboard-metrics/network-analytics/', NetworkAnalyticsView.as_view(), name='network-analytics'),
     path('system-status/', SystemStatusView.as_view(), name='system-status'),
 ]

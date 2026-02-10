@@ -221,6 +221,7 @@
 import { useTheme } from './composables/useTheme'
 import Sidebar from './components/Sidebar.vue'
 import Dashboard from './views/Dashboard.vue'
+import Analytics from './views/Analytics.vue'
 import Clients from './views/Clients.vue'
 import Users from './views/Users.vue'
 import Devices from './views/Devices.vue'
@@ -252,6 +253,7 @@ export default {
   components: {
     Sidebar,
     Dashboard,
+    Analytics,
     Clients,
     Users,
     Devices,

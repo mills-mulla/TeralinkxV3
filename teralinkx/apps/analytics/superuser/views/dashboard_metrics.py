@@ -601,3 +601,187 @@ class FunnelAnalysisView(APIView):
         except Exception as e:
             logger.error(f"Error fetching funnel analysis: {e}")
             return Response({'error': 'Failed to fetch funnel analysis'}, status=500)
+
+class ChurnPredictionView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        try:
+            now = timezone.now()
+            at_risk_users = []
+            
+            # Identify users at risk of churning
+            clients = ClientH.objects.annotate(
+                last_activity=Max('user__dispatchvoucher__activated_at'),
+                total_purchases=Count('user__dispatchvoucher')
+            ).filter(total_purchases__gt=0)
+            
+            for client in clients:
+                if not client.last_activity:
+                    continue
+                    
+                days_inactive = (now - client.last_activity).days
+                
+                # Churn risk scoring
+                if days_inactive > 90:
+                    risk = 'high'
+                    probability = 85
+                elif days_inactive > 60:
+                    risk = 'medium'
+                    probability = 60
+                elif days_inactive > 30:
+                    risk = 'low'
+                    probability = 35
+                else:
+                    continue
+                
+                at_risk_users.append({
+                    'user_id': client.user.id,
+                    'username': client.user.username,
+                    'days_inactive': days_inactive,
+                    'total_purchases': client.total_purchases,
+                    'risk_level': risk,
+                    'churn_probability': probability
+                })
+            
+            # Sort by risk
+            at_risk_users.sort(key=lambda x: x['churn_probability'], reverse=True)
+            
+            # Summary
+            high_risk = len([u for u in at_risk_users if u['risk_level'] == 'high'])
+            medium_risk = len([u for u in at_risk_users if u['risk_level'] == 'medium'])
+            low_risk = len([u for u in at_risk_users if u['risk_level'] == 'low'])
+            
+            return Response({
+                'at_risk_users': at_risk_users[:50],
+                'summary': {
+                    'high_risk': high_risk,
+                    'medium_risk': medium_risk,
+                    'low_risk': low_risk,
+                    'total_at_risk': len(at_risk_users)
+                },
+                'churn_rate': round((len(at_risk_users) / ClientH.objects.count() * 100) if ClientH.objects.count() > 0 else 0, 1)
+            })
+        except Exception as e:
+            logger.error(f"Error fetching churn prediction: {e}")
+            return Response({'error': 'Failed to fetch churn prediction'}, status=500)
+
+class RevenueForecastView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        try:
+            # Get historical revenue (last 12 months)
+            historical = []
+            for i in range(12, 0, -1):
+                month_start = timezone.now().replace(day=1) - timedelta(days=30*i)
+                month_end = month_start + timedelta(days=30)
+                
+                revenue = PaymentTransaction.objects.filter(
+                    transaction_time__gte=month_start,
+                    transaction_time__lt=month_end,
+                    result_code=0
+                ).aggregate(total=Sum('amount'))['total'] or 0
+                
+                historical.append({
+                    'month': month_start.strftime('%Y-%m'),
+                    'revenue': float(revenue)
+                })
+            
+            # Simple linear regression forecast (next 6 months)
+            if len(historical) > 0:
+                avg_growth = sum([historical[i]['revenue'] - historical[i-1]['revenue'] 
+                                for i in range(1, len(historical))]) / (len(historical) - 1)
+                
+                last_revenue = historical[-1]['revenue']
+                forecast = []
+                
+                for i in range(1, 7):
+                    month = timezone.now().replace(day=1) + timedelta(days=30*i)
+                    predicted = last_revenue + (avg_growth * i)
+                    
+                    forecast.append({
+                        'month': month.strftime('%Y-%m'),
+                        'predicted_revenue': round(predicted, 2),
+                        'confidence': max(50, 95 - (i * 5))  # Decreasing confidence
+                    })
+            else:
+                forecast = []
+            
+            return Response({
+                'historical': historical,
+                'forecast': forecast,
+                'avg_monthly_growth': round(avg_growth, 2) if len(historical) > 0 else 0,
+                'trend': 'upward' if avg_growth > 0 else 'downward'
+            })
+        except Exception as e:
+            logger.error(f"Error fetching revenue forecast: {e}")
+            return Response({'error': 'Failed to fetch revenue forecast'}, status=500)
+
+class NetworkAnalyticsView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        try:
+            from locations.models import Location
+            from analytics.models import ActiveSession
+            
+            # Location-based network stats
+            locations = Location.objects.filter(is_active=True)
+            network_stats = []
+            
+            for location in locations:
+                # Active sessions at location
+                active_sessions = ActiveSession.objects.filter(
+                    location=location,
+                    is_authenticated=True
+                ).count()
+                
+                # Total vouchers sold at location
+                total_vouchers = DispatchVoucher.objects.filter(location=location).count()
+                
+                # Calculate utilization
+                utilization = (active_sessions / location.max_concurrent_users * 100) if location.max_concurrent_users > 0 else 0
+                
+                # Health status
+                if utilization > 90:
+                    health = 'critical'
+                elif utilization > 70:
+                    health = 'warning'
+                else:
+                    health = 'healthy'
+                
+                network_stats.append({
+                    'location_id': location.id,
+                    'location_name': location.name,
+                    'active_sessions': active_sessions,
+                    'max_capacity': location.max_concurrent_users,
+                    'utilization': round(utilization, 1),
+                    'health_status': health,
+                    'total_vouchers': total_vouchers,
+                    'router_ip': location.router_ip
+                })
+            
+            # Sort by utilization
+            network_stats.sort(key=lambda x: x['utilization'], reverse=True)
+            
+            # Overall network health
+            total_capacity = sum([loc.max_concurrent_users for loc in locations])
+            total_active = sum([stat['active_sessions'] for stat in network_stats])
+            overall_utilization = (total_active / total_capacity * 100) if total_capacity > 0 else 0
+            
+            return Response({
+                'locations': network_stats,
+                'overall': {
+                    'total_locations': len(locations),
+                    'total_capacity': total_capacity,
+                    'total_active_sessions': total_active,
+                    'overall_utilization': round(overall_utilization, 1),
+                    'healthy_locations': len([s for s in network_stats if s['health_status'] == 'healthy']),
+                    'warning_locations': len([s for s in network_stats if s['health_status'] == 'warning']),
+                    'critical_locations': len([s for s in network_stats if s['health_status'] == 'critical'])
+                }
+            })
+        except Exception as e:
+            logger.error(f"Error fetching network analytics: {e}")
+            return Response({'error': 'Failed to fetch network analytics'}, status=500)
