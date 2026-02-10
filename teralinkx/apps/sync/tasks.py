@@ -9,12 +9,128 @@ from decimal import Decimal
 logger = logging.getLogger(__name__)
 
 @shared_task(bind=True, soft_time_limit=300, time_limit=600)
-def task_query_unprocessed_checkoutrqs(self):
+def task_query_pending_transactions(self):
+    """Query M-Pesa for pending transactions older than 1 minute"""
     try:
-        from .scheduler import task_query_unprocessed_checkoutrqs
-        task_query_unprocessed_checkoutrqs()
+        from django.utils import timezone
+        from datetime import timedelta
+        from finance.models import TransactionQueue
+        import requests
+        import base64
+        from finance.models import PaymentGateway
+        
+        # Get pending transactions older than 1 minute
+        one_minute_ago = timezone.now() - timedelta(minutes=1)
+        pending_transactions = TransactionQueue.objects.filter(
+            status='pending',
+            created_at__lte=one_minute_ago,
+            checkout_request_id__isnull=False
+        ).exclude(checkout_request_id='')
+        
+        if not pending_transactions.exists():
+            logger.info("No pending transactions to query")
+            return {'queried': 0, 'completed': 0, 'failed': 0}
+        
+        # Get M-Pesa gateway config
+        mpesa_gateway = PaymentGateway.objects.filter(gateway_type='mpesa', status='active').first()
+        if not mpesa_gateway:
+            logger.error("M-Pesa gateway not configured")
+            return {'error': 'Gateway not configured'}
+        
+        config = mpesa_gateway.config
+        
+        # Get access token
+        auth_url = f"{config['api_base_url']}{config['access_token_url']}"
+        auth_string = f"{config['consumer_key']}:{config['consumer_secret']}"
+        auth_bytes = base64.b64encode(auth_string.encode())
+        
+        headers = {'Authorization': f'Basic {auth_bytes.decode()}'}
+        auth_response = requests.get(auth_url, headers=headers, timeout=30)
+        access_token = auth_response.json().get('access_token')
+        
+        if not access_token:
+            logger.error("Failed to get M-Pesa access token")
+            return {'error': 'Authentication failed'}
+        
+        # Query each pending transaction
+        queried = 0
+        completed = 0
+        failed = 0
+        
+        query_url = f"{config['api_base_url']}/mpesa/stkpushquery/v1/query"
+        headers = {'Authorization': f'Bearer {access_token}', 'Content-Type': 'application/json'}
+        
+        for transaction in pending_transactions[:50]:  # Limit to 50 per run
+            try:
+                timestamp = timezone.now().strftime('%Y%m%d%H%M%S')
+                password = base64.b64encode(
+                    f"{config['shortcode']}{config['lipa_na_mpesa_passkey']}{timestamp}".encode()
+                ).decode()
+                
+                payload = {
+                    'BusinessShortCode': config['shortcode'],
+                    'Password': password,
+                    'Timestamp': timestamp,
+                    'CheckoutRequestID': transaction.checkout_request_id
+                }
+                
+                response = requests.post(query_url, json=payload, headers=headers, timeout=30)
+                result = response.json()
+                
+                queried += 1
+                
+                # Check result
+                result_code = result.get('ResultCode')
+                if result_code == '0':  # Success
+                    # Credit client account
+                    from decimal import Decimal
+                    from finance.models import BalanceTransaction
+                    
+                    client = transaction.user
+                    amount = Decimal(str(transaction.price))
+                    
+                    # Record balance before
+                    balance_before = client.balance
+                    
+                    # Credit account
+                    client.balance += amount
+                    client.save()
+                    
+                    # Create balance transaction record
+                    BalanceTransaction.objects.create(
+                        user=client,
+                        transaction_type='topup',
+                        credit=amount,
+                        debit=0,
+                        balance_before=balance_before,
+                        balance_after=client.balance,
+                        description=f'M-Pesa payment - {transaction.checkout_request_id}',
+                        reference=transaction.checkout_request_id
+                    )
+                    
+                    transaction.mark_completed()
+                    completed += 1
+                    logger.info(f"Transaction {transaction.checkout_request_id} completed - Credited {amount} to {client.account}")
+                elif result_code in ['1032', '1037']:  # Cancelled or timeout
+                    transaction.mark_failed(
+                        reason=result.get('ResultDesc', 'Transaction cancelled or timeout'),
+                        error_code=result_code,
+                        failure_category='user_error'
+                    )
+                    failed += 1
+                    
+            except Exception as e:
+                logger.error(f"Error querying transaction {transaction.checkout_request_id}: {e}")
+                continue
+        
+        result = {'queried': queried, 'completed': completed, 'failed': failed}
+        logger.info(f"Pending transaction query complete: {result}")
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error in task_query_pending_transactions: {e}")
+        return {'error': str(e)}
     finally:
-        # Cleanup any resources
         import gc
         gc.collect()
 
@@ -121,20 +237,6 @@ def push_notification_task(self, channel, event, payload):
         import gc
         gc.collect()
 
-@shared_task(bind=True, soft_time_limit=180, time_limit=300)
-def mark_dispatch_as_expired(self, voucher_id):
-    try:
-        voucher = DispatchVoucher.objects.get(dispatch_id=voucher_id)
-        if voucher.dispatch_status != "expired":
-            voucher.dispatch_status = "expired"
-            voucher.save(update_fields=["dispatch_status"])
-            return f"Voucher {voucher_id} marked as expired."
-        return f"Voucher {voucher_id} already expired."
-    except DispatchVoucher.DoesNotExist:
-        return f"Voucher {voucher_id} not found."
-    finally:
-        import gc
-        gc.collect()
 
 
 # ============================================================================
