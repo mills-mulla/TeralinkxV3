@@ -25,17 +25,20 @@ class ClientViewSet(viewsets.ModelViewSet):
     def stats(self, request):
         """Get client statistics"""
         try:
+            from django.db.models import Sum
             total_clients = ClientH.objects.count()
             active_clients = ClientH.objects.filter(status='active').count()
             premium_clients = ClientH.objects.filter(account_tier__in=['premium', 'business', 'enterprise']).count()
             week_ago = timezone.now() - timedelta(days=7)
             new_clients_7d = ClientH.objects.filter(created_at__gte=week_ago).count()
+            total_balance = ClientH.objects.aggregate(total=Sum('balance'))['total'] or 0
             
             return Response({
                 'total_clients': total_clients,
                 'active_clients': active_clients,
                 'premium_clients': premium_clients,
-                'new_clients_7d': new_clients_7d
+                'new_clients_7d': new_clients_7d,
+                'total_balance': float(total_balance)
             })
         except Exception as e:
             logger.error(f"Error fetching client stats: {e}")
