@@ -74,6 +74,22 @@
     <div v-if="activeTab === 'builder'">
       <DashboardBuilder />
     </div>
+
+    <div v-if="activeTab === 'testing'">
+      <ABTesting :data="abTestData" :loading="loading" />
+    </div>
+
+    <div v-if="activeTab === 'health'">
+      <CustomerHealth :data="healthData" :loading="loading" />
+    </div>
+
+    <div v-if="activeTab === 'audit'">
+      <AuditLogs :data="auditData" :loading="loading" />
+    </div>
+
+    <div v-if="activeTab === 'quality'">
+      <DataQuality :data="qualityData" :loading="loading" />
+    </div>
   </div>
 </template>
 
@@ -89,6 +105,10 @@ import ChurnPrediction from '../components/ChurnPrediction.vue'
 import RevenueForecast from '../components/RevenueForecast.vue'
 import NetworkAnalytics from '../components/NetworkAnalytics.vue'
 import DashboardBuilder from '../components/DashboardBuilder.vue'
+import ABTesting from '../components/ABTesting.vue'
+import CustomerHealth from '../components/CustomerHealth.vue'
+import AuditLogs from '../components/AuditLogs.vue'
+import DataQuality from '../components/DataQuality.vue'
 
 export default {
   name: 'Analytics',
@@ -102,7 +122,11 @@ export default {
     ChurnPrediction,
     RevenueForecast,
     NetworkAnalytics,
-    DashboardBuilder
+    DashboardBuilder,
+    ABTesting,
+    CustomerHealth,
+    AuditLogs,
+    DataQuality
   },
   setup() {
     const { loading, makeRequest } = useApi()
@@ -117,6 +141,10 @@ export default {
         { id: 'retention', name: 'Retention' },
         { id: 'predictive', name: 'Predictive' },
         { id: 'network', name: 'Network' },
+        { id: 'testing', name: 'A/B Testing' },
+        { id: 'health', name: 'Health' },
+        { id: 'audit', name: 'Audit' },
+        { id: 'quality', name: 'Quality' },
         { id: 'builder', name: 'Builder' }
       ],
       dateRange: {},
@@ -128,7 +156,11 @@ export default {
       funnelData: {},
       churnData: {},
       forecastData: {},
-      networkData: {}
+      networkData: {},
+      abTestData: {},
+      healthData: {},
+      auditData: {},
+      qualityData: {}
     }
   },
   computed: {
@@ -162,7 +194,11 @@ export default {
         this.fetchFunnelAnalysis(),
         this.fetchChurnPrediction(),
         this.fetchRevenueForecast(),
-        this.fetchNetworkAnalytics()
+        this.fetchNetworkAnalytics(),
+        this.fetchABTesting(),
+        this.fetchCustomerHealth(),
+        this.fetchAuditLogs(),
+        this.fetchDataQuality()
       ])
     },
 
@@ -230,6 +266,38 @@ export default {
         this.networkData = await this.makeRequest('get', 'suapi/dashboard-metrics/network-analytics/')
       } catch (error) {
         console.error('Error fetching network analytics:', error)
+      }
+    },
+
+    async fetchABTesting() {
+      try {
+        this.abTestData = await this.makeRequest('get', 'suapi/dashboard-metrics/ab-testing/')
+      } catch (error) {
+        console.error('Error fetching A/B testing:', error)
+      }
+    },
+
+    async fetchCustomerHealth() {
+      try {
+        this.healthData = await this.makeRequest('get', 'suapi/dashboard-metrics/customer-health/')
+      } catch (error) {
+        console.error('Error fetching customer health:', error)
+      }
+    },
+
+    async fetchAuditLogs() {
+      try {
+        this.auditData = await this.makeRequest('get', 'suapi/dashboard-metrics/audit-logs/')
+      } catch (error) {
+        console.error('Error fetching audit logs:', error)
+      }
+    },
+
+    async fetchDataQuality() {
+      try {
+        this.qualityData = await this.makeRequest('get', 'suapi/dashboard-metrics/data-quality/')
+      } catch (error) {
+        console.error('Error fetching data quality:', error)
       }
     },
 

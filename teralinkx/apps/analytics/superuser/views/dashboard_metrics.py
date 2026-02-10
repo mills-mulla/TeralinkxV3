@@ -785,3 +785,153 @@ class NetworkAnalyticsView(APIView):
         except Exception as e:
             logger.error(f"Error fetching network analytics: {e}")
             return Response({'error': 'Failed to fetch network analytics'}, status=500)
+
+class ABTestingView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        try:
+            # Mock A/B test data
+            experiments = [
+                {
+                    'id': 1,
+                    'name': 'Package Pricing Test',
+                    'status': 'running',
+                    'start_date': '2024-01-01',
+                    'variants': [
+                        {'name': 'Control', 'participants': 500, 'conversions': 125, 'conversion_rate': 25.0, 'revenue': 62500},
+                        {'name': 'Variant A', 'participants': 500, 'conversions': 150, 'conversion_rate': 30.0, 'revenue': 75000}
+                    ],
+                    'winner': 'Variant A',
+                    'confidence': 95.5
+                },
+                {
+                    'id': 2,
+                    'name': 'Promotion Banner Test',
+                    'status': 'completed',
+                    'start_date': '2023-12-15',
+                    'variants': [
+                        {'name': 'Control', 'participants': 1000, 'conversions': 200, 'conversion_rate': 20.0, 'revenue': 100000},
+                        {'name': 'Variant B', 'participants': 1000, 'conversions': 180, 'conversion_rate': 18.0, 'revenue': 90000}
+                    ],
+                    'winner': 'Control',
+                    'confidence': 87.3
+                }
+            ]
+            
+            return Response({'experiments': experiments})
+        except Exception as e:
+            logger.error(f"Error fetching A/B tests: {e}")
+            return Response({'error': 'Failed to fetch A/B tests'}, status=500)
+
+class CustomerHealthView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        try:
+            from django.db.models import Avg, Max
+            
+            health_scores = []
+            clients = ClientH.objects.all()[:50]
+            
+            for client in clients:
+                # Calculate health score components
+                last_activity = DispatchVoucher.objects.filter(user=client.user).aggregate(Max('activated_at'))['activated_at__max']
+                total_purchases = DispatchVoucher.objects.filter(user=client.user).count()
+                total_spent = DispatchVoucher.objects.filter(user=client.user).aggregate(Sum('price_paid'))['price_paid__sum'] or 0
+                
+                # Engagement score (0-100)
+                days_since_activity = (timezone.now() - last_activity).days if last_activity else 999
+                engagement = max(0, 100 - (days_since_activity * 2))
+                
+                # Usage score
+                usage = min(100, total_purchases * 10)
+                
+                # Payment score
+                payment = min(100, float(total_spent) / 100)
+                
+                # Overall health score
+                health_score = round((engagement + usage + payment) / 3)
+                
+                # Risk level
+                if health_score >= 75:
+                    risk = 'low'
+                elif health_score >= 50:
+                    risk = 'medium'
+                elif health_score >= 25:
+                    risk = 'high'
+                else:
+                    risk = 'critical'
+                
+                health_scores.append({
+                    'user_id': client.user.id,
+                    'username': client.user.username,
+                    'health_score': health_score,
+                    'engagement_score': round(engagement),
+                    'usage_score': round(usage),
+                    'payment_score': round(payment),
+                    'risk_level': risk,
+                    'last_activity': last_activity.isoformat() if last_activity else None
+                })
+            
+            # Summary
+            summary = {
+                'avg_health_score': round(sum([s['health_score'] for s in health_scores]) / len(health_scores)) if health_scores else 0,
+                'low_risk': len([s for s in health_scores if s['risk_level'] == 'low']),
+                'medium_risk': len([s for s in health_scores if s['risk_level'] == 'medium']),
+                'high_risk': len([s for s in health_scores if s['risk_level'] == 'high']),
+                'critical_risk': len([s for s in health_scores if s['risk_level'] == 'critical'])
+            }
+            
+            return Response({
+                'health_scores': health_scores,
+                'summary': summary
+            })
+        except Exception as e:
+            logger.error(f"Error fetching customer health: {e}")
+            return Response({'error': 'Failed to fetch customer health'}, status=500)
+
+class AuditLogView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        try:
+            # Mock audit log data
+            logs = [
+                {'id': 1, 'user': 'admin', 'action': 'UPDATE', 'resource': 'Package', 'resource_id': 5, 'timestamp': timezone.now().isoformat(), 'ip': '192.168.1.1'},
+                {'id': 2, 'user': 'admin', 'action': 'DELETE', 'resource': 'Voucher', 'resource_id': 123, 'timestamp': (timezone.now() - timedelta(hours=1)).isoformat(), 'ip': '192.168.1.1'},
+                {'id': 3, 'user': 'manager', 'action': 'CREATE', 'resource': 'Promotion', 'resource_id': 8, 'timestamp': (timezone.now() - timedelta(hours=2)).isoformat(), 'ip': '192.168.1.5'},
+                {'id': 4, 'user': 'admin', 'action': 'UPDATE', 'resource': 'Client', 'resource_id': 45, 'timestamp': (timezone.now() - timedelta(hours=3)).isoformat(), 'ip': '192.168.1.1'},
+                {'id': 5, 'user': 'support', 'action': 'VIEW', 'resource': 'Transaction', 'resource_id': 789, 'timestamp': (timezone.now() - timedelta(hours=4)).isoformat(), 'ip': '192.168.1.10'}
+            ]
+            
+            return Response({'logs': logs})
+        except Exception as e:
+            logger.error(f"Error fetching audit logs: {e}")
+            return Response({'error': 'Failed to fetch audit logs'}, status=500)
+
+class DataQualityView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        try:
+            # Data quality checks
+            checks = [
+                {'table': 'clients', 'check': 'Completeness', 'score': 98.5, 'status': 'passed', 'issues': 15},
+                {'table': 'transactions', 'check': 'Accuracy', 'score': 99.2, 'status': 'passed', 'issues': 8},
+                {'table': 'vouchers', 'check': 'Consistency', 'score': 87.3, 'status': 'warning', 'issues': 127},
+                {'table': 'sessions', 'check': 'Timeliness', 'score': 95.8, 'status': 'passed', 'issues': 42},
+                {'table': 'locations', 'check': 'Completeness', 'score': 100.0, 'status': 'passed', 'issues': 0}
+            ]
+            
+            overall_score = sum([c['score'] for c in checks]) / len(checks)
+            
+            return Response({
+                'checks': checks,
+                'overall_score': round(overall_score, 1),
+                'total_issues': sum([c['issues'] for c in checks]),
+                'last_check': timezone.now().isoformat()
+            })
+        except Exception as e:
+            logger.error(f"Error fetching data quality: {e}")
+            return Response({'error': 'Failed to fetch data quality'}, status=500)

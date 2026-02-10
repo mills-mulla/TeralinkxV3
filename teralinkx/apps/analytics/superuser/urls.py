@@ -10,7 +10,8 @@ from .views.dashboard_metrics import (
     ConversionFunnelView, DeviceBreakdownView, RewardTierDistributionView,
     SessionMetricsView, RefundMetricsView, CohortAnalysisView,
     RFMSegmentationView, FinancialAnalyticsView, FunnelAnalysisView,
-    ChurnPredictionView, RevenueForecastView, NetworkAnalyticsView
+    ChurnPredictionView, RevenueForecastView, NetworkAnalyticsView,
+    ABTestingView, CustomerHealthView, AuditLogView, DataQualityView
 )
 
 from .views.auth import (
@@ -79,5 +80,9 @@ urlpatterns = [
     path('dashboard-metrics/churn-prediction/', ChurnPredictionView.as_view(), name='churn-prediction'),
     path('dashboard-metrics/revenue-forecast/', RevenueForecastView.as_view(), name='revenue-forecast'),
     path('dashboard-metrics/network-analytics/', NetworkAnalyticsView.as_view(), name='network-analytics'),
+    path('dashboard-metrics/ab-testing/', ABTestingView.as_view(), name='ab-testing'),
+    path('dashboard-metrics/customer-health/', CustomerHealthView.as_view(), name='customer-health'),
+    path('dashboard-metrics/audit-logs/', AuditLogView.as_view(), name='audit-logs'),
+    path('dashboard-metrics/data-quality/', DataQualityView.as_view(), name='data-quality'),
     path('system-status/', SystemStatusView.as_view(), name='system-status'),
 ]
