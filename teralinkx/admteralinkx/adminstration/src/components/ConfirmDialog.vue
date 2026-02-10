@@ -1,31 +1,26 @@
 <template>
-  <div v-if="show" class="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md transition-colors duration-300">
-      <div class="p-5">
-        <div :class="`w-12 h-12 ${iconBgColor} rounded-xl flex items-center justify-center mx-auto mb-4`">
-          <component :is="icon" :class="`w-6 h-6 ${iconColor}`" />
+  <div v-if="show" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[70] flex items-center justify-center p-4" @click.self="cancel">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-sm w-full p-5">
+      <div class="flex items-start gap-3 mb-4">
+        <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" :class="iconBg">
+          <svg class="w-5 h-5" :class="iconColor" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path v-if="type === 'danger'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            <path v-else-if="type === 'warning'" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
         </div>
-        <h3 class="text-lg font-semibold text-slate-900 dark:text-white text-center mb-2">{{ title }}</h3>
-        <p class="text-slate-600 dark:text-slate-400 text-center mb-6 text-sm" v-html="message"></p>
-        <div class="flex gap-3">
-          <button
-            @click="$emit('cancel')"
-            class="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-all duration-200"
-          >
-            {{ cancelText }}
-          </button>
-          <button
-            @click="$emit('confirm')"
-            :disabled="loading"
-            :class="[
-              'flex-1 px-4 py-2 text-white rounded-lg transition-all duration-200 flex items-center justify-center gap-2',
-              loading ? `${confirmBgColor} opacity-50 cursor-not-allowed` : `${confirmBgColor} ${confirmHoverColor}`
-            ]"
-          >
-            <ArrowPathIcon v-if="loading" class="w-4 h-4 animate-spin" />
-            <span>{{ confirmText }}</span>
-          </button>
+        <div class="flex-1">
+          <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-1">{{ title }}</h3>
+          <p class="text-xs text-slate-600 dark:text-slate-400">{{ message }}</p>
         </div>
+      </div>
+      <div class="flex gap-2">
+        <button @click="cancel" class="flex-1 px-3 py-2 text-xs font-medium bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-900 dark:text-white rounded-lg transition-colors">
+          {{ cancelText }}
+        </button>
+        <button @click="confirm" class="flex-1 px-3 py-2 text-xs font-medium text-white rounded-lg transition-colors" :class="confirmBtnClass">
+          {{ confirmText }}
+        </button>
       </div>
     </div>
   </div>
@@ -33,110 +28,50 @@
 
 <script>
 import { computed } from 'vue'
-import {
-  ExclamationTriangleIcon,
-  CheckCircleIcon,
-  InformationCircleIcon,
-  ArrowPathIcon
-} from '@heroicons/vue/24/outline'
 
 export default {
   name: 'ConfirmDialog',
-  components: {
-    ArrowPathIcon
-  },
   props: {
-    show: { type: Boolean, required: true },
-    title: { type: String, required: true },
-    message: { type: String, required: true },
-    type: { type: String, default: 'danger' }, // danger, warning, success, info
+    show: Boolean,
+    type: { type: String, default: 'info' }, // info, warning, danger
+    title: { type: String, default: 'Confirm Action' },
+    message: { type: String, default: 'Are you sure?' },
     confirmText: { type: String, default: 'Confirm' },
-    cancelText: { type: String, default: 'Cancel' },
-    loading: { type: Boolean, default: false }
+    cancelText: { type: String, default: 'Cancel' }
   },
   emits: ['confirm', 'cancel'],
-  setup(props) {
-    const icon = computed(() => {
-      switch (props.type) {
-        case 'danger':
-        case 'warning':
-          return ExclamationTriangleIcon
-        case 'success':
-          return CheckCircleIcon
-        case 'info':
-          return InformationCircleIcon
-        default:
-          return ExclamationTriangleIcon
+  setup(props, { emit }) {
+    const iconBg = computed(() => {
+      const classes = {
+        danger: 'bg-red-100 dark:bg-red-500/20',
+        warning: 'bg-amber-100 dark:bg-amber-500/20',
+        info: 'bg-blue-100 dark:bg-blue-500/20'
       }
+      return classes[props.type] || classes.info
     })
-    
-    const iconBgColor = computed(() => {
-      switch (props.type) {
-        case 'danger':
-          return 'bg-rose-100 dark:bg-rose-500/20'
-        case 'warning':
-          return 'bg-amber-100 dark:bg-amber-500/20'
-        case 'success':
-          return 'bg-emerald-100 dark:bg-emerald-500/20'
-        case 'info':
-          return 'bg-blue-100 dark:bg-blue-500/20'
-        default:
-          return 'bg-rose-100 dark:bg-rose-500/20'
-      }
-    })
-    
+
     const iconColor = computed(() => {
-      switch (props.type) {
-        case 'danger':
-          return 'text-rose-600 dark:text-rose-400'
-        case 'warning':
-          return 'text-amber-600 dark:text-amber-400'
-        case 'success':
-          return 'text-emerald-600 dark:text-emerald-400'
-        case 'info':
-          return 'text-blue-600 dark:text-blue-400'
-        default:
-          return 'text-rose-600 dark:text-rose-400'
+      const classes = {
+        danger: 'text-red-600 dark:text-red-400',
+        warning: 'text-amber-600 dark:text-amber-400',
+        info: 'text-blue-600 dark:text-blue-400'
       }
+      return classes[props.type] || classes.info
     })
-    
-    const confirmBgColor = computed(() => {
-      switch (props.type) {
-        case 'danger':
-          return 'bg-rose-600'
-        case 'warning':
-          return 'bg-amber-600'
-        case 'success':
-          return 'bg-emerald-600'
-        case 'info':
-          return 'bg-blue-600'
-        default:
-          return 'bg-rose-600'
+
+    const confirmBtnClass = computed(() => {
+      const classes = {
+        danger: 'bg-red-500 hover:bg-red-600',
+        warning: 'bg-amber-500 hover:bg-amber-600',
+        info: 'bg-blue-500 hover:bg-blue-600'
       }
+      return classes[props.type] || classes.info
     })
-    
-    const confirmHoverColor = computed(() => {
-      switch (props.type) {
-        case 'danger':
-          return 'hover:bg-rose-700'
-        case 'warning':
-          return 'hover:bg-amber-700'
-        case 'success':
-          return 'hover:bg-emerald-700'
-        case 'info':
-          return 'hover:bg-blue-700'
-        default:
-          return 'hover:bg-rose-700'
-      }
-    })
-    
-    return {
-      icon,
-      iconBgColor,
-      iconColor,
-      confirmBgColor,
-      confirmHoverColor
-    }
+
+    const confirm = () => emit('confirm')
+    const cancel = () => emit('cancel')
+
+    return { iconBg, iconColor, confirmBtnClass, confirm, cancel }
   }
 }
 </script>

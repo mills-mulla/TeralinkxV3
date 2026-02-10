@@ -143,39 +143,80 @@
     </div>
 
     <!-- Balance Modal -->
-    <div v-if="showBalanceModal" class="fixed inset-0 bg-black/60 z-60 flex items-center justify-center p-4" @click.self="showBalanceModal = false">
-      <div class="bg-white dark:bg-slate-800 rounded-xl p-6 max-w-md w-full">
-        <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Adjust Balance</h3>
-        <input v-model="balanceAmount" type="number" placeholder="Amount (+ or -)" class="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white mb-3" />
-        <input v-model="balanceReason" type="text" placeholder="Reason" class="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white mb-4" />
+    <div v-if="showBalanceModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4" @click.self="showBalanceModal = false">
+      <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-sm w-full p-5">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center">
+            <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Adjust Balance</h3>
+            <p class="text-[10px] text-slate-500 dark:text-slate-400">Current: KSh {{ formatNumber(client.balance) }}</p>
+          </div>
+        </div>
+        <div class="space-y-2.5 mb-4">
+          <div>
+            <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Amount</label>
+            <input v-model="balanceAmount" type="number" placeholder="Enter amount (+ or -)" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Reason</label>
+            <input v-model="balanceReason" type="text" placeholder="Enter reason" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+          </div>
+        </div>
         <div class="flex gap-2">
-          <button @click="adjustBalance" class="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg">Confirm</button>
-          <button @click="showBalanceModal = false" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-900 dark:text-white rounded-lg">Cancel</button>
+          <button @click="showBalanceModal = false" class="flex-1 px-3 py-2 text-xs font-medium bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-900 dark:text-white rounded-lg transition-colors">Cancel</button>
+          <button @click="adjustBalance" class="flex-1 px-3 py-2 text-xs font-medium bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors">Confirm</button>
         </div>
       </div>
     </div>
 
     <!-- Points Modal -->
-    <div v-if="showPointsModal" class="fixed inset-0 bg-black/60 z-60 flex items-center justify-center p-4" @click.self="showPointsModal = false">
-      <div class="bg-white dark:bg-slate-800 rounded-xl p-6 max-w-md w-full">
-        <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Award Points</h3>
-        <input v-model="pointsAmount" type="number" placeholder="Points" class="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white mb-3" />
-        <input v-model="pointsReason" type="text" placeholder="Description" class="w-full px-4 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white mb-4" />
+    <div v-if="showPointsModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4" @click.self="showPointsModal = false">
+      <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-sm w-full p-5">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-500/20 flex items-center justify-center">
+            <svg class="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Award Points</h3>
+            <p class="text-[10px] text-slate-500 dark:text-slate-400">Current: {{ client.reward_points }} points</p>
+          </div>
+        </div>
+        <div class="space-y-2.5 mb-4">
+          <div>
+            <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Points</label>
+            <input v-model="pointsAmount" type="number" placeholder="Enter points" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Description</label>
+            <input v-model="pointsReason" type="text" placeholder="Enter description" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+          </div>
+        </div>
         <div class="flex gap-2">
-          <button @click="awardPoints" class="flex-1 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg">Award</button>
-          <button @click="showPointsModal = false" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-900 dark:text-white rounded-lg">Cancel</button>
+          <button @click="showPointsModal = false" class="flex-1 px-3 py-2 text-xs font-medium bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-900 dark:text-white rounded-lg transition-colors">Cancel</button>
+          <button @click="awardPoints" class="flex-1 px-3 py-2 text-xs font-medium bg-purple-500 hover:bg-purple-600 text-white rounded-lg transition-colors">Award</button>
         </div>
       </div>
     </div>
+
+    <!-- Confirm Dialog -->
+    <ConfirmDialog :show="confirmDialog.show" :type="confirmDialog.type" :title="confirmDialog.title" :message="confirmDialog.message" :confirmText="confirmDialog.confirmText" @confirm="confirmDialog.onConfirm" @cancel="confirmDialog.show = false" />
   </div>
 </template>
 
 <script>
-import { ref, watch } from 'vue'
+import { ref, watch, reactive } from 'vue'
 import { useApi } from '../composables/useApi'
+import ConfirmDialog from './ConfirmDialog.vue'
 
 export default {
   name: 'ClientDetailModal',
+  components: { ConfirmDialog },
   props: {
     show: Boolean,
     client: Object
@@ -241,25 +282,48 @@ export default {
       }
     }
 
-    const toggleSuspend = async () => {
+    const confirmDialog = reactive({
+      show: false,
+      type: 'info',
+      title: '',
+      message: '',
+      confirmText: 'Confirm',
+      onConfirm: () => {}
+    })
+
+    const toggleSuspend = () => {
       const action = props.client.status === 'suspended' ? 'activate' : 'suspend'
-      if (!confirm(`${action === 'suspend' ? 'Suspend' : 'Activate'} this client?`)) return
-      try {
-        await makeRequest('post', `suapi/clients/${props.client.id}/${action}/`, { reason: 'Admin action' })
-        emit('refresh')
-        emit('close')
-      } catch (error) {
-        console.error(`Error ${action}ing client:`, error)
+      confirmDialog.show = true
+      confirmDialog.type = action === 'suspend' ? 'warning' : 'info'
+      confirmDialog.title = action === 'suspend' ? 'Suspend Client' : 'Activate Client'
+      confirmDialog.message = action === 'suspend' ? 'This will temporarily disable the client account.' : 'This will reactivate the client account.'
+      confirmDialog.confirmText = action === 'suspend' ? 'Suspend' : 'Activate'
+      confirmDialog.onConfirm = async () => {
+        try {
+          await makeRequest('post', `suapi/clients/${props.client.id}/${action}/`, { reason: 'Admin action' })
+          confirmDialog.show = false
+          emit('refresh')
+          emit('close')
+        } catch (error) {
+          console.error(`Error ${action}ing client:`, error)
+        }
       }
     }
 
-    const forceLogout = async () => {
-      if (!confirm('Force logout all sessions?')) return
-      try {
-        await makeRequest('post', `suapi/clients/${props.client.id}/force_logout/`, { reason: 'Admin action' })
-        fetchProfile()
-      } catch (error) {
-        console.error('Error forcing logout:', error)
+    const forceLogout = () => {
+      confirmDialog.show = true
+      confirmDialog.type = 'danger'
+      confirmDialog.title = 'Force Logout'
+      confirmDialog.message = 'This will end all active sessions for this client.'
+      confirmDialog.confirmText = 'Logout'
+      confirmDialog.onConfirm = async () => {
+        try {
+          await makeRequest('post', `suapi/clients/${props.client.id}/force_logout/`, { reason: 'Admin action' })
+          confirmDialog.show = false
+          fetchProfile()
+        } catch (error) {
+          console.error('Error forcing logout:', error)
+        }
       }
     }
 
@@ -305,6 +369,7 @@ export default {
       activeTab, tabs, profile, analytics,
       showBalanceModal, showPointsModal,
       balanceAmount, balanceReason, pointsAmount, pointsReason,
+      confirmDialog,
       adjustBalance, awardPoints, toggleSuspend, forceLogout,
       getUserIcon, formatNumber, formatDate, formatBytes, getTierBadge, getStatusBadge
     }

@@ -192,40 +192,79 @@ class ClientViewSet(viewsets.ModelViewSet):
             client = self.get_object()
             from packages.models import DispatchVoucher
             from finance.models import PaymentTransaction
+            from decimal import Decimal
             
-            # Calculate LTV
+            # Calculate LTV (Lifetime Value)
             try:
-                total_revenue = PaymentTransaction.objects.filter(
-                    user=client.user,
+                transactions = PaymentTransaction.objects.filter(
+                    user=client,
                     result_code=0
-                ).aggregate(total=Sum('amount'))['total'] or 0
-            except:
-                total_revenue = 0
+                )
+                total_revenue = transactions.aggregate(total=Sum('amount'))['total'] or Decimal('0')
+                transaction_count = transactions.count()
+            except Exception as e:
+                logger.error(f"Error calculating LTV: {e}")
+                total_revenue = Decimal('0')
+                transaction_count = 0
             
-            # Usage patterns
+            # Voucher usage
             try:
                 vouchers = DispatchVoucher.objects.filter(user=client.user)
                 voucher_count = vouchers.count()
-            except:
+                active_vouchers = vouchers.filter(status='active').count()
+            except Exception as e:
+                logger.error(f"Error fetching vouchers: {e}")
                 voucher_count = 0
+                active_vouchers = 0
             
-            # Engagement score
-            days_since_signup = (timezone.now() - client.created_at).days or 1
-            engagement_score = min(100, (voucher_count / days_since_signup) * 100)
+            # Engagement score (based on activity)
+            days_since_signup = max(1, (timezone.now() - client.created_at).days)
+            last_activity_days = (timezone.now() - client.last_login).days if client.last_login else days_since_signup
+            
+            # Engagement: 100% if active in last 7 days, decreases over time
+            if last_activity_days <= 7:
+                engagement_score = 100
+            elif last_activity_days <= 30:
+                engagement_score = 80
+            elif last_activity_days <= 90:
+                engagement_score = 50
+            else:
+                engagement_score = 20
+            
+            # Churn risk (based on last activity and spending)
+            if last_activity_days > 90 or (voucher_count > 0 and active_vouchers == 0 and last_activity_days > 30):
+                churn_risk = 'high'
+            elif last_activity_days > 30:
+                churn_risk = 'medium'
+            else:
+                churn_risk = 'low'
+            
+            # Average transaction
+            avg_transaction = float(total_revenue / transaction_count) if transaction_count > 0 else 0
             
             return Response({
                 'ltv': float(total_revenue),
-                'avg_transaction': float(total_revenue / voucher_count) if voucher_count > 0 else 0,
+                'avg_transaction': avg_transaction,
+                'total_transactions': transaction_count,
                 'total_vouchers': voucher_count,
-                'engagement_score': round(engagement_score, 1),
+                'active_vouchers': active_vouchers,
+                'engagement_score': engagement_score,
                 'days_since_signup': days_since_signup,
-                'churn_risk': 'low' if engagement_score > 50 else 'high'
+                'last_activity_days': last_activity_days,
+                'churn_risk': churn_risk
             })
         except Exception as e:
             logger.error(f"Error fetching client analytics: {e}")
             import traceback
             logger.error(traceback.format_exc())
-            return Response({'error': str(e)}, status=500)
+            return Response({
+                'ltv': 0,
+                'avg_transaction': 0,
+                'total_transactions': 0,
+                'total_vouchers': 0,
+                'engagement_score': 0,
+                'churn_risk': 'unknown'
+            }, status=200)
     
     @action(detail=True, methods=['get'])
     def security_logs(self, request, pk=None):
