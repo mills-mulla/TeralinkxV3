@@ -23,21 +23,49 @@ class ClientViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['get'])
     def stats(self, request):
-        """Get client statistics"""
+        """Get client statistics with weekly trends"""
         try:
             from django.db.models import Sum
+            from datetime import timedelta
+            
+            now = timezone.now()
+            week_ago = now - timedelta(days=7)
+            two_weeks_ago = now - timedelta(days=14)
+            
+            # Current stats
             total_clients = ClientH.objects.count()
             active_clients = ClientH.objects.filter(status='active').count()
             premium_clients = ClientH.objects.filter(account_tier__in=['premium', 'business', 'enterprise']).count()
-            week_ago = timezone.now() - timedelta(days=7)
             new_clients_7d = ClientH.objects.filter(created_at__gte=week_ago).count()
             total_balance = ClientH.objects.aggregate(total=Sum('balance'))['total'] or 0
             
+            # Previous week stats
+            total_clients_prev = ClientH.objects.filter(created_at__lt=week_ago).count()
+            active_clients_prev = ClientH.objects.filter(status='active', created_at__lt=week_ago).count()
+            premium_clients_prev = ClientH.objects.filter(
+                account_tier__in=['premium', 'business', 'enterprise'],
+                created_at__lt=week_ago
+            ).count()
+            
+            # Calculate trends
+            def calc_trend(current, previous):
+                if previous == 0:
+                    return {'value': '0%', 'direction': 'stable'}
+                change = ((current - previous) / previous) * 100
+                return {
+                    'value': f"{abs(change):.1f}%",
+                    'direction': 'up' if change > 0 else 'down' if change < 0 else 'stable'
+                }
+            
             return Response({
                 'total_clients': total_clients,
+                'total_clients_trend': calc_trend(total_clients, total_clients_prev),
                 'active_clients': active_clients,
+                'active_clients_trend': calc_trend(active_clients, active_clients_prev),
                 'premium_clients': premium_clients,
+                'premium_clients_trend': calc_trend(premium_clients, premium_clients_prev),
                 'new_clients_7d': new_clients_7d,
+                'new_clients_7d_trend': {'value': f"{new_clients_7d}", 'direction': 'stable'},
                 'total_balance': float(total_balance)
             })
         except Exception as e:

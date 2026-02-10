@@ -38,28 +38,28 @@
     </div>
 
     <!-- Metrics -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 animate-slide-up">
-      <ModernMetricCard title="Total Clients" :value="stats.total_clients" color="blue">
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 animate-slide-up">
+      <ModernMetricCard title="Total Clients" :value="stats.total_clients" color="blue" :trend="stats.total_clients_trend?.direction" :trendValue="stats.total_clients_trend?.value">
         <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
           <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
         </svg>
       </ModernMetricCard>
-      <ModernMetricCard title="Total Balance" :value="'KSh ' + formatNumber(stats.total_balance)" color="emerald">
+      <ModernMetricCard title="Total Balance" :value="'KSh ' + formatNumber(stats.total_balance)" color="emerald" trend="stable" trendValue="0%">
         <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
           <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
         </svg>
       </ModernMetricCard>
-      <ModernMetricCard title="Active" :value="stats.active_clients" color="cyan">
+      <ModernMetricCard title="Active" :value="stats.active_clients" color="cyan" :trend="stats.active_clients_trend?.direction" :trendValue="stats.active_clients_trend?.value" class="col-span-2 md:col-span-1">
         <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
         </svg>
       </ModernMetricCard>
-      <ModernMetricCard title="Premium" :value="stats.premium_clients" color="purple">
+      <ModernMetricCard title="Premium" :value="stats.premium_clients" color="purple" :trend="stats.premium_clients_trend?.direction" :trendValue="stats.premium_clients_trend?.value">
         <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
           <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
         </svg>
       </ModernMetricCard>
-      <ModernMetricCard title="New (7d)" :value="stats.new_clients_7d" color="amber">
+      <ModernMetricCard title="New (7d)" :value="stats.new_clients_7d" color="amber" :trend="stats.new_clients_7d_trend?.direction" :trendValue="stats.new_clients_7d_trend?.value">
         <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
         </svg>
@@ -112,8 +112,13 @@
               <tr v-for="client in filteredClients" :key="client.id" @click="viewClient(client)" class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer">
                 <td class="px-3 py-2">
                   <div class="flex items-center gap-2">
-                    <div class="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
-                      {{ getInitials(client.user_username) }}
+                    <div v-if="client.profile_image" class="w-7 h-7 rounded-full overflow-hidden flex-shrink-0">
+                      <img :src="client.profile_image" alt="Profile" class="w-full h-full object-cover" @error="handleImageError" />
+                    </div>
+                    <div v-else class="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+                      <svg class="w-4 h-4 text-slate-400 dark:text-slate-500" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                      </svg>
                     </div>
                     <div>
                       <p class="text-xs font-medium text-slate-900 dark:text-white">{{ client.user_username }}</p>
@@ -409,6 +414,14 @@ export default {
       return new Date(date).toLocaleDateString()
     }
 
+    const handleImageError = (event) => {
+      event.target.parentElement.innerHTML = `
+        <svg class="w-4 h-4 text-slate-400 dark:text-slate-500" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+        </svg>
+      `
+    }
+
     onMounted(refreshData)
 
     return {
@@ -416,7 +429,7 @@ export default {
       filteredClients, fetchClients, refreshData, 
       showAddModal, showEditModal, showDetailModal, selectedClient, formData,
       viewClient, editClient, deleteClient, saveClient, closeFormModal,
-      getInitials, getTierBadge, getStatusBadge, formatNumber, formatDate
+      getInitials, getTierBadge, getStatusBadge, formatNumber, formatDate, handleImageError
     }
   }
 }

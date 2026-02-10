@@ -38,7 +38,7 @@
             </div>
             <div v-else class="w-16 h-16 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center" v-html="getUserIcon()">
             </div>
-            <div class="flex-1 grid grid-cols-3 gap-2">
+            <div class="flex-1 grid grid-cols-2 md:grid-cols-3 gap-2">
               <div class="p-2 bg-blue-50 dark:bg-blue-500/10 rounded-lg">
                 <p class="text-[10px] text-blue-600 dark:text-blue-400">Balance</p>
                 <p class="text-sm font-bold text-blue-700 dark:text-blue-300">KSh {{ formatNumber(client.balance) }}</p>
@@ -47,7 +47,7 @@
                 <p class="text-[10px] text-purple-600 dark:text-purple-400">Points</p>
                 <p class="text-sm font-bold text-purple-700 dark:text-purple-300">{{ client.reward_points }}</p>
               </div>
-              <div class="p-2 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg">
+              <div class="p-2 bg-emerald-50 dark:bg-emerald-500/10 rounded-lg col-span-2 md:col-span-1">
                 <p class="text-[10px] text-emerald-600 dark:text-emerald-400">Spent</p>
                 <p class="text-sm font-bold text-emerald-700 dark:text-emerald-300">KSh {{ formatNumber(client.total_spent) }}</p>
               </div>

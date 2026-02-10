@@ -26,10 +26,10 @@
     </div>
 
     <!-- Metrics -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-slide-up">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 animate-slide-up">
       <ModernMetricCard title="Total Users" :value="stats.total_users" icon="👥" color="blue" />
       <ModernMetricCard title="Active Users" :value="stats.active_users" icon="✅" color="emerald" />
-      <ModernMetricCard title="Staff Users" :value="stats.staff_users" icon="👔" color="purple" />
+      <ModernMetricCard title="Staff Users" :value="stats.staff_users" icon="👔" color="purple" class="col-span-2 md:col-span-1" />
       <ModernMetricCard title="Superusers" :value="stats.superusers" icon="⭐" color="amber" />
     </div>
 
