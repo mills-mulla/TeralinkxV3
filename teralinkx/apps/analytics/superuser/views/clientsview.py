@@ -191,16 +191,17 @@ class ClientViewSet(viewsets.ModelViewSet):
         try:
             client = self.get_object()
             from packages.models import DispatchVoucher
-            from finance.models import PaymentTransaction
+            from finance.models import TransactionQueue
             from decimal import Decimal
             
-            # Calculate LTV (Lifetime Value)
+            # Calculate LTV (Lifetime Value) from completed TransactionQueue
             try:
-                transactions = PaymentTransaction.objects.filter(
+                transactions = TransactionQueue.objects.filter(
                     user=client,
-                    result_code=0
+                    status__in=['completed', 'processed'],
+                    method__in=['mpesa', 'mixed']  # Only M-Pesa payments
                 )
-                total_revenue = transactions.aggregate(total=Sum('amount'))['total'] or Decimal('0')
+                total_revenue = transactions.aggregate(total=Sum('price'))['total'] or Decimal('0')
                 transaction_count = transactions.count()
             except Exception as e:
                 logger.error(f"Error calculating LTV: {e}")
