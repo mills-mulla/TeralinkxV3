@@ -1,20 +1,20 @@
 <template>
-  <div class="space-y-6 animate-fade-in">
+  <div class="space-y-4 animate-fade-in">
     <!-- Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-semibold text-slate-900 dark:text-white">Clients</h1>
-        <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Manage client accounts and profiles</p>
+        <h1 class="text-lg font-semibold text-slate-900 dark:text-white">Clients</h1>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Manage client accounts</p>
       </div>
       <div class="flex items-center gap-2">
-        <button @click="showAddModal = true" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-lg transition-colors flex items-center gap-2">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <button @click="showAddModal = true" class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-lg transition-colors flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
           </svg>
           Add Client
         </button>
-        <button @click="refreshData" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors" :class="{ 'animate-spin': loading }">
-          <svg class="w-5 h-5 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <button @click="refreshData" class="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors" :class="{ 'animate-spin': loading }">
+          <svg class="w-4 h-4 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
         </button>
@@ -38,7 +38,7 @@
     </div>
 
     <!-- Metrics -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 animate-slide-up">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 animate-slide-up">
       <ModernMetricCard title="Total Clients" :value="stats.total_clients" color="blue">
         <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
           <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
@@ -67,23 +67,23 @@
     </div>
 
     <!-- Search & Filters -->
-    <div class="space-y-4 animate-slide-up" style="animation-delay: 0.1s">
-      <div class="flex items-center gap-3">
+    <div class="space-y-3 animate-slide-up" style="animation-delay: 0.1s">
+      <div class="flex items-center gap-2">
         <div class="flex-1">
           <input
             v-model="searchTerm"
             type="text"
             placeholder="Search by username, phone, or account..."
-            class="w-full px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-sm"
+            class="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs"
           />
         </div>
-        <select v-model="statusFilter" class="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-sm">
+        <select v-model="statusFilter" class="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs">
           <option value="">All Status</option>
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>
           <option value="suspended">Suspended</option>
         </select>
-        <select v-model="tierFilter" class="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-sm">
+        <select v-model="tierFilter" class="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs">
           <option value="">All Tiers</option>
           <option value="basic">Basic</option>
           <option value="premium">Premium</option>
@@ -98,72 +98,72 @@
           <table class="w-full">
             <thead class="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
               <tr>
-                <th class="px-4 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400">Client</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400">Contact</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400">Tier</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400">Balance</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400">Points</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400">Status</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-slate-600 dark:text-slate-400">Joined</th>
-                <th class="px-4 py-3 text-right text-xs font-medium text-slate-600 dark:text-slate-400">Actions</th>
+                <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Client</th>
+                <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Contact</th>
+                <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Tier</th>
+                <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Balance</th>
+                <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Points</th>
+                <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Status</th>
+                <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Joined</th>
+                <th class="px-3 py-2 text-right text-[10px] font-medium text-slate-600 dark:text-slate-400">Actions</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
               <tr v-for="client in filteredClients" :key="client.id" @click="viewClient(client)" class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer">
-                <td class="px-4 py-3">
-                  <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
+                <td class="px-3 py-2">
+                  <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
                       {{ getInitials(client.user_username) }}
                     </div>
                     <div>
-                      <p class="text-sm font-medium text-slate-900 dark:text-white">{{ client.user_username }}</p>
-                      <p class="text-xs text-slate-500 dark:text-slate-400">{{ client.account }}</p>
+                      <p class="text-xs font-medium text-slate-900 dark:text-white">{{ client.user_username }}</p>
+                      <p class="text-[10px] text-slate-500 dark:text-slate-400">{{ client.account }}</p>
                     </div>
                   </div>
                 </td>
-                <td class="px-4 py-3">
-                  <p class="text-sm text-slate-900 dark:text-white">{{ client.phone_number || 'N/A' }}</p>
-                  <p class="text-xs text-slate-500 dark:text-slate-400">{{ client.user_email || 'No email' }}</p>
+                <td class="px-3 py-2">
+                  <p class="text-xs text-slate-900 dark:text-white">{{ client.phone_number || 'N/A' }}</p>
+                  <p class="text-[10px] text-slate-500 dark:text-slate-400">{{ client.user_email || 'No email' }}</p>
                 </td>
-                <td class="px-4 py-3">
-                  <span class="px-2 py-1 text-xs font-medium rounded-full" :class="getTierBadge(client.account_tier)">
+                <td class="px-3 py-2">
+                  <span class="px-1.5 py-0.5 text-[10px] font-medium rounded-full" :class="getTierBadge(client.account_tier)">
                     {{ client.account_tier }}
                   </span>
                 </td>
-                <td class="px-4 py-3">
-                  <p class="text-sm font-semibold text-slate-900 dark:text-white">KSh {{ formatNumber(client.balance) }}</p>
+                <td class="px-3 py-2">
+                  <p class="text-xs font-semibold text-slate-900 dark:text-white">KSh {{ formatNumber(client.balance) }}</p>
                 </td>
-                <td class="px-4 py-3">
+                <td class="px-3 py-2">
                   <div class="flex items-center gap-1">
-                    <svg class="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-3 h-3 text-amber-500" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
                     </svg>
-                    <span class="text-sm text-slate-900 dark:text-white">{{ client.reward_points }}</span>
+                    <span class="text-xs text-slate-900 dark:text-white">{{ client.reward_points }}</span>
                   </div>
                 </td>
-                <td class="px-4 py-3">
-                  <span class="px-2 py-1 text-xs font-medium rounded-full" :class="getStatusBadge(client.status)">
+                <td class="px-3 py-2">
+                  <span class="px-1.5 py-0.5 text-[10px] font-medium rounded-full" :class="getStatusBadge(client.status)">
                     {{ client.status }}
                   </span>
                 </td>
-                <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
+                <td class="px-3 py-2 text-xs text-slate-600 dark:text-slate-400">
                   {{ formatDate(client.created_at) }}
                 </td>
-                <td class="px-4 py-3 text-right">
-                  <div class="flex items-center justify-end gap-1">
-                    <button @click.stop="viewClient(client)" class="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-600 rounded transition-colors" title="View">
-                      <svg class="w-4 h-4 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <td class="px-3 py-2 text-right">
+                  <div class="flex items-center justify-end gap-0.5">
+                    <button @click.stop="viewClient(client)" class="p-1 hover:bg-slate-100 dark:hover:bg-slate-600 rounded transition-colors" title="View">
+                      <svg class="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                       </svg>
                     </button>
-                    <button @click.stop="editClient(client)" class="p-1.5 hover:bg-blue-100 dark:hover:bg-blue-600 rounded transition-colors" title="Edit">
-                      <svg class="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button @click.stop="editClient(client)" class="p-1 hover:bg-blue-100 dark:hover:bg-blue-600 rounded transition-colors" title="Edit">
+                      <svg class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
                     </button>
-                    <button @click.stop="deleteClient(client)" class="p-1.5 hover:bg-red-100 dark:hover:bg-red-600 rounded transition-colors" title="Delete">
-                      <svg class="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button @click.stop="deleteClient(client)" class="p-1 hover:bg-red-100 dark:hover:bg-red-600 rounded transition-colors" title="Delete">
+                      <svg class="w-3.5 h-3.5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
                     </button>

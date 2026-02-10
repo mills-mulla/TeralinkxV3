@@ -14,10 +14,9 @@ def task_query_pending_transactions(self):
     try:
         from django.utils import timezone
         from datetime import timedelta
-        from finance.models import TransactionQueue
-        import requests
-        import base64
-        from finance.models import PaymentGateway
+        from finance.models import TransactionQueue, BalanceTransaction
+        from finance.queryDaraja import query_stk_status
+        from decimal import Decimal
         
         # Get pending transactions older than 1 minute
         one_minute_ago = timezone.now() - timedelta(minutes=1)
@@ -25,71 +24,28 @@ def task_query_pending_transactions(self):
             status='pending',
             created_at__lte=one_minute_ago,
             checkout_request_id__isnull=False
-        ).exclude(checkout_request_id='')
+        ).exclude(checkout_request_id='')[:50]  # Limit to 50 per run
         
         if not pending_transactions.exists():
             logger.info("No pending transactions to query")
             return {'queried': 0, 'completed': 0, 'failed': 0}
         
-        # Get M-Pesa gateway config
-        mpesa_gateway = PaymentGateway.objects.filter(gateway_type='mpesa', status='active').first()
-        if not mpesa_gateway:
-            logger.error("M-Pesa gateway not configured")
-            return {'error': 'Gateway not configured'}
-        
-        config = mpesa_gateway.config
-        
-        # Get access token
-        auth_url = f"{config['api_base_url']}{config['access_token_url']}"
-        auth_string = f"{config['consumer_key']}:{config['consumer_secret']}"
-        auth_bytes = base64.b64encode(auth_string.encode())
-        
-        headers = {'Authorization': f'Basic {auth_bytes.decode()}'}
-        auth_response = requests.get(auth_url, headers=headers, timeout=30)
-        access_token = auth_response.json().get('access_token')
-        
-        if not access_token:
-            logger.error("Failed to get M-Pesa access token")
-            return {'error': 'Authentication failed'}
-        
-        # Query each pending transaction
         queried = 0
         completed = 0
         failed = 0
         
-        query_url = f"{config['api_base_url']}/mpesa/stkpushquery/v1/query"
-        headers = {'Authorization': f'Bearer {access_token}', 'Content-Type': 'application/json'}
-        
-        for transaction in pending_transactions[:50]:  # Limit to 50 per run
+        for transaction in pending_transactions:
             try:
-                timestamp = timezone.now().strftime('%Y%m%d%H%M%S')
-                password = base64.b64encode(
-                    f"{config['shortcode']}{config['lipa_na_mpesa_passkey']}{timestamp}".encode()
-                ).decode()
-                
-                payload = {
-                    'BusinessShortCode': config['shortcode'],
-                    'Password': password,
-                    'Timestamp': timestamp,
-                    'CheckoutRequestID': transaction.checkout_request_id
-                }
-                
-                response = requests.post(query_url, json=payload, headers=headers, timeout=30)
-                result = response.json()
-                
+                # Use existing queryDaraja function
+                result = query_stk_status(transaction.checkout_request_id)
                 queried += 1
                 
                 # Check result
-                result_code = result.get('ResultCode')
+                result_code = str(result.get('ResultCode', ''))
+                
                 if result_code == '0':  # Success
-                    # Credit client account
-                    from decimal import Decimal
-                    from finance.models import BalanceTransaction
-                    
                     client = transaction.user
                     amount = Decimal(str(transaction.price))
-                    
-                    # Record balance before
                     balance_before = client.balance
                     
                     # Credit account
@@ -110,14 +66,16 @@ def task_query_pending_transactions(self):
                     
                     transaction.mark_completed()
                     completed += 1
-                    logger.info(f"Transaction {transaction.checkout_request_id} completed - Credited {amount} to {client.account}")
-                elif result_code in ['1032', '1037']:  # Cancelled or timeout
+                    logger.info(f"✓ Transaction {transaction.checkout_request_id} completed - Credited {amount} to {client.account}")
+                    
+                elif result_code in ['1032', '1037', '1']:  # Cancelled, timeout, or insufficient funds
                     transaction.mark_failed(
-                        reason=result.get('ResultDesc', 'Transaction cancelled or timeout'),
+                        reason=result.get('ResultDesc', 'Transaction failed'),
                         error_code=result_code,
                         failure_category='user_error'
                     )
                     failed += 1
+                    logger.warning(f"✗ Transaction {transaction.checkout_request_id} failed: {result.get('ResultDesc')}")
                     
             except Exception as e:
                 logger.error(f"Error querying transaction {transaction.checkout_request_id}: {e}")
