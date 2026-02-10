@@ -11,7 +11,9 @@
         class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
         :class="{ 'animate-spin': loading }"
       >
-        <ArrowPathIcon class="w-5 h-5 text-slate-600 dark:text-slate-400" />
+        <svg class="w-5 h-5 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
       </button>
     </div>
 
@@ -22,42 +24,59 @@
         :value="metrics.totalClients || 0"
         trend="up"
         trendValue="12.5%"
-        icon="👥"
         color="blue"
-      />
+      >
+        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+        </svg>
+      </ModernMetricCard>
       <ModernMetricCard
         title="New (7d)"
         :value="metrics.newClients7d || 0"
         trend="up"
         trendValue="8.2%"
-        icon="🚀"
         color="emerald"
-      />
+      >
+        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+        </svg>
+      </ModernMetricCard>
       <ModernMetricCard
         title="Active Users"
         :value="metrics.activeUsers || 0"
         trend="stable"
         trendValue="2.1%"
-        icon="✅"
         color="green"
-      />
+      >
+        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+        </svg>
+      </ModernMetricCard>
       <ModernMetricCard
         title="Revenue"
         :value="`KSh ${formatNumber(metrics.totalRevenue || 0)}`"
         trend="up"
         trendValue="18.7%"
-        icon="💰"
         color="amber"
         :formatted="false"
-      />
+      >
+        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
+        </svg>
+      </ModernMetricCard>
     </div>
 
-    <!-- Charts -->
+    <!-- Charts Row 1 -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-slide-up" style="animation-delay: 0.1s">
       <!-- Revenue Chart -->
       <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 transition-colors duration-300">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-medium text-slate-900 dark:text-white">Revenue Analytics</h3>
+          <div class="flex items-center gap-2">
+            <svg class="w-5 h-5 text-emerald-500" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/>
+            </svg>
+            <h3 class="text-sm font-medium text-slate-900 dark:text-white">Revenue Analytics</h3>
+          </div>
           <select 
             v-model="revenuePeriod" 
             @change="fetchRevenueAnalytics"
@@ -83,7 +102,12 @@
       <!-- Growth Chart -->
       <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 transition-colors duration-300">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-medium text-slate-900 dark:text-white">Client Growth</h3>
+          <div class="flex items-center gap-2">
+            <svg class="w-5 h-5 text-purple-500" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+            </svg>
+            <h3 class="text-sm font-medium text-slate-900 dark:text-white">Client Growth</h3>
+          </div>
           <select 
             v-model="growthPeriod" 
             @change="fetchClientGrowth"
@@ -107,9 +131,227 @@
       </div>
     </div>
 
+    <!-- Charts Row 2: Package Sales & Payment Methods -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-slide-up" style="animation-delay: 0.15s">
+      <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
+        <div class="flex items-center gap-2 mb-4">
+          <svg class="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M20 6h-2.18c.11-.31.18-.65.18-1 0-1.66-1.34-3-3-3-1.05 0-1.96.54-2.5 1.35l-.5.67-.5-.68C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 11 8.76l1-1.36 1 1.36L15.38 12 17 10.83 14.92 8H20v6z"/>
+          </svg>
+          <h3 class="text-sm font-medium text-slate-900 dark:text-white">Package Sales</h3>
+        </div>
+        <div v-if="packageSales.length > 0" class="h-64">
+          <apexchart type="donut" height="100%" :options="packageChartOptions" :series="packageChartSeries" />
+        </div>
+        <div v-else class="h-64 flex items-center justify-center text-slate-400 text-sm">Loading...</div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
+        <div class="flex items-center gap-2 mb-4">
+          <svg class="w-5 h-5 text-cyan-500" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
+          </svg>
+          <h3 class="text-sm font-medium text-slate-900 dark:text-white">Payment Methods</h3>
+        </div>
+        <div v-if="paymentMethods.length > 0" class="h-64">
+          <apexchart type="pie" height="100%" :options="paymentChartOptions" :series="paymentChartSeries" />
+        </div>
+        <div v-else class="h-64 flex items-center justify-center text-slate-400 text-sm">Loading...</div>
+      </div>
+    </div>
+
+    <!-- Voucher Status & Conversion Funnel -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-slide-up" style="animation-delay: 0.2s">
+      <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
+        <div class="flex items-center gap-2 mb-4">
+          <svg class="w-5 h-5 text-orange-500" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z"/>
+          </svg>
+          <h3 class="text-sm font-medium text-slate-900 dark:text-white">Voucher Status</h3>
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+          <div class="bg-emerald-50 dark:bg-emerald-500/10 rounded-lg p-4 text-center">
+            <p class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ voucherStatus.active || 0 }}</p>
+            <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">Active</p>
+          </div>
+          <div class="bg-amber-50 dark:bg-amber-500/10 rounded-lg p-4 text-center">
+            <p class="text-2xl font-bold text-amber-600 dark:text-amber-400">{{ voucherStatus.pending || 0 }}</p>
+            <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">Pending</p>
+          </div>
+          <div class="bg-slate-50 dark:bg-slate-700 rounded-lg p-4 text-center">
+            <p class="text-2xl font-bold text-slate-600 dark:text-slate-400">{{ voucherStatus.expired || 0 }}</p>
+            <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">Expired</p>
+          </div>
+        </div>
+        <div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-600 dark:text-slate-400">Total Vouchers</span>
+            <span class="font-semibold text-slate-900 dark:text-white">{{ voucherStatus.total || 0 }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
+        <div class="flex items-center gap-2 mb-4">
+          <svg class="w-5 h-5 text-indigo-500" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
+          </svg>
+          <h3 class="text-sm font-medium text-slate-900 dark:text-white">Conversion Funnel</h3>
+        </div>
+        <div class="space-y-3">
+          <div class="relative">
+            <div class="flex justify-between text-sm mb-1">
+              <span class="text-slate-600 dark:text-slate-400">Signups</span>
+              <span class="font-semibold text-slate-900 dark:text-white">{{ conversionFunnel.signups || 0 }}</span>
+            </div>
+            <div class="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+              <div class="h-full bg-blue-500" style="width: 100%"></div>
+            </div>
+          </div>
+          <div class="relative">
+            <div class="flex justify-between text-sm mb-1">
+              <span class="text-slate-600 dark:text-slate-400">Purchased</span>
+              <span class="font-semibold text-slate-900 dark:text-white">{{ conversionFunnel.purchased || 0 }}</span>
+            </div>
+            <div class="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+              <div class="h-full bg-purple-500" :style="`width: ${(conversionFunnel.purchased / conversionFunnel.signups * 100) || 0}%`"></div>
+            </div>
+          </div>
+          <div class="relative">
+            <div class="flex justify-between text-sm mb-1">
+              <span class="text-slate-600 dark:text-slate-400">Active</span>
+              <span class="font-semibold text-slate-900 dark:text-white">{{ conversionFunnel.active || 0 }}</span>
+            </div>
+            <div class="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+              <div class="h-full bg-emerald-500" :style="`width: ${(conversionFunnel.active / conversionFunnel.signups * 100) || 0}%`"></div>
+            </div>
+          </div>
+          <div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-600 dark:text-slate-400">Conversion Rate</span>
+              <span class="font-semibold text-emerald-600 dark:text-emerald-400">{{ conversionFunnel.conversion_rate || 0 }}%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Location Performance & Recent Activity -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-slide-up" style="animation-delay: 0.25s">
+      <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
+        <div class="flex items-center gap-2 mb-4">
+          <svg class="w-5 h-5 text-rose-500" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+          </svg>
+          <h3 class="text-sm font-medium text-slate-900 dark:text-white">Top Locations</h3>
+        </div>
+        <div class="space-y-2 max-h-64 overflow-y-auto">
+          <div v-for="(loc, idx) in locationPerformance" :key="idx" class="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full bg-gradient-to-br from-rose-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold">
+                {{ idx + 1 }}
+              </div>
+              <div>
+                <p class="text-sm font-medium text-slate-900 dark:text-white">{{ loc.location__name || 'Unknown' }}</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400">{{ loc.sales }} sales</p>
+              </div>
+            </div>
+            <p class="text-sm font-semibold text-slate-900 dark:text-white">KSh {{ formatNumber(loc.revenue || 0) }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
+        <div class="flex items-center gap-2 mb-4">
+          <svg class="w-5 h-5 text-amber-500" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/>
+          </svg>
+          <h3 class="text-sm font-medium text-slate-900 dark:text-white">Recent Activity</h3>
+        </div>
+        <div class="space-y-2 max-h-64 overflow-y-auto">
+          <div v-for="activity in recentActivity" :key="activity.time" class="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center" :class="activity.type === 'payment' ? 'bg-emerald-100 dark:bg-emerald-500/20' : 'bg-blue-100 dark:bg-blue-500/20'">
+              <svg v-if="activity.type === 'payment'" class="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
+              </svg>
+              <svg v-else class="w-4 h-4 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+              </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm text-slate-900 dark:text-white">{{ activity.description }}</p>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{{ activity.user }} • {{ formatTime(activity.time) }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Additional Metrics Row -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 animate-slide-up" style="animation-delay: 0.3s">
+      <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <svg class="w-5 h-5 text-teal-500" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
+          </svg>
+          <h3 class="text-sm font-medium text-slate-900 dark:text-white">Device Breakdown</h3>
+        </div>
+        <div v-if="deviceBreakdown.length > 0" class="space-y-2">
+          <div v-for="device in deviceBreakdown" :key="device.device_type" class="flex justify-between items-center">
+            <span class="text-sm text-slate-600 dark:text-slate-400">{{ device.device_type || 'Unknown' }}</span>
+            <span class="text-sm font-semibold text-slate-900 dark:text-white">{{ device.count }}</span>
+          </div>
+        </div>
+        <div v-else class="text-center text-slate-400 text-sm py-4">No data</div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+          </svg>
+          <h3 class="text-sm font-medium text-slate-900 dark:text-white">Reward Tiers</h3>
+        </div>
+        <div v-if="rewardTiers.length > 0" class="space-y-2">
+          <div v-for="tier in rewardTiers" :key="tier.reward_tier" class="flex justify-between items-center">
+            <span class="text-sm text-slate-600 dark:text-slate-400">{{ tier.reward_tier || 'None' }}</span>
+            <span class="text-sm font-semibold text-slate-900 dark:text-white">{{ tier.count }}</span>
+          </div>
+        </div>
+        <div v-else class="text-center text-slate-400 text-sm py-4">No data</div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M11 15h2v2h-2zm0-8h2v6h-2zm.99-5C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"/>
+          </svg>
+          <h3 class="text-sm font-medium text-slate-900 dark:text-white">Refund Metrics</h3>
+        </div>
+        <div class="space-y-3">
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-slate-600 dark:text-slate-400">Total Refunds</span>
+            <span class="text-sm font-semibold text-slate-900 dark:text-white">{{ refundMetrics.total_refunds || 0 }}</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-slate-600 dark:text-slate-400">Amount</span>
+            <span class="text-sm font-semibold text-slate-900 dark:text-white">KSh {{ formatNumber(refundMetrics.total_amount || 0) }}</span>
+          </div>
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-slate-600 dark:text-slate-400">Refund Rate</span>
+            <span class="text-sm font-semibold text-red-600 dark:text-red-400">{{ refundMetrics.refund_rate || 0 }}%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- System Status -->
-    <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 transition-colors duration-300 animate-slide-up" style="animation-delay: 0.2s">
-      <h3 class="text-sm font-medium text-slate-900 dark:text-white mb-4">System Status</h3>
+    <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 transition-colors duration-300 animate-slide-up" style="animation-delay: 0.35s">
+      <div class="flex items-center gap-2 mb-4">
+        <svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+        </svg>
+        <h3 class="text-sm font-medium text-slate-900 dark:text-white">System Status</h3>
+      </div>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div v-for="stat in systemStats" :key="stat.name" class="flex items-center gap-3">
           <div :class="`w-2 h-2 rounded-full ${stat.statusColor}`"></div>

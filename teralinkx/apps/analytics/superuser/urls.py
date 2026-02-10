@@ -3,7 +3,13 @@ from rest_framework.routers import DefaultRouter
 
 from .views.clientsview import ClientViewSet
 from .views.transactionsview import TransactionViewSet
-from .views.dashboard_metrics import DashboardMetricsView, RevenueAnalyticsView, ClientGrowthView
+from .views.dashboard_metrics import (
+    DashboardMetricsView, RevenueAnalyticsView, ClientGrowthView,
+    PackageSalesView, LocationPerformanceView, PaymentMethodsView,
+    RecentActivityView, VoucherStatusView, HourlyUsageView,
+    ConversionFunnelView, DeviceBreakdownView, RewardTierDistributionView,
+    SessionMetricsView, RefundMetricsView
+)
 
 from .views.auth import (
     AdminLoginView, 
@@ -53,5 +59,16 @@ urlpatterns = [
     path('dashboard-metrics/', DashboardMetricsView.as_view(), name='dashboard-metrics'),
     path('dashboard-metrics/revenue-analytics/', RevenueAnalyticsView.as_view(), name='revenue-analytics'),
     path('dashboard-metrics/client-growth/', ClientGrowthView.as_view(), name='client-growth'),
+    path('dashboard-metrics/package-sales/', PackageSalesView.as_view(), name='package-sales'),
+    path('dashboard-metrics/location-performance/', LocationPerformanceView.as_view(), name='location-performance'),
+    path('dashboard-metrics/payment-methods/', PaymentMethodsView.as_view(), name='payment-methods'),
+    path('dashboard-metrics/recent-activity/', RecentActivityView.as_view(), name='recent-activity'),
+    path('dashboard-metrics/voucher-status/', VoucherStatusView.as_view(), name='voucher-status'),
+    path('dashboard-metrics/hourly-usage/', HourlyUsageView.as_view(), name='hourly-usage'),
+    path('dashboard-metrics/conversion-funnel/', ConversionFunnelView.as_view(), name='conversion-funnel'),
+    path('dashboard-metrics/device-breakdown/', DeviceBreakdownView.as_view(), name='device-breakdown'),
+    path('dashboard-metrics/reward-tiers/', RewardTierDistributionView.as_view(), name='reward-tiers'),
+    path('dashboard-metrics/session-metrics/', SessionMetricsView.as_view(), name='session-metrics'),
+    path('dashboard-metrics/refund-metrics/', RefundMetricsView.as_view(), name='refund-metrics'),
     path('system-status/', SystemStatusView.as_view(), name='system-status'),
 ]

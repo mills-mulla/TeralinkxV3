@@ -7,43 +7,180 @@
         <Sidebar 
           @component-selected="setActiveComponent"
           @refresh-data="refreshData"
-          :class="{ 'mobile-open': isMobileSidebarOpen }"
+          :is-mobile-open="isMobileSidebarOpen"
+          @close-mobile="closeMobileSidebar"
           :user="user"
+          :stats="sidebarStats"
         />
 
         <!-- Main Content Area -->
         <main class="lg:ml-64 transition-all duration-300 min-h-screen" :class="{ 'ml-0': !isMobileSidebarOpen }">
-          <!-- Header with user info and logout -->
+          <!-- Header with search, notifications, and user menu -->
           <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-300">
-            <div class="px-6 py-4 flex justify-between items-center">
-              <div class="flex items-center space-x-4">
+            <div class="px-3 md:px-6 py-3 flex justify-between items-center gap-2">
+              <div class="flex items-center space-x-4 flex-1">
+                <!-- Mobile Menu Button -->
                 <button 
                   @click="toggleMobileSidebar"
-                  class="lg:hidden p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                  class="lg:hidden p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
                 >
-                  <svg class="w-6 h-6 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg v-if="!isMobileSidebarOpen" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                   </svg>
+                  <svg v-else class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
                 </button>
-                <h1 class="text-xl font-semibold text-slate-900 dark:text-white capitalize">
-                  {{ activeComponent.replace(/([A-Z])/g, ' $1').trim() }}
-                </h1>
+                
+                <!-- Breadcrumbs -->
+                <div class="hidden lg:flex items-center space-x-2 text-sm">
+                  <svg class="w-4 h-4 text-slate-400 dark:text-slate-500" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                  </svg>
+                  <span class="text-slate-400 dark:text-slate-500">/</span>
+                  <span class="text-slate-900 dark:text-white font-medium">{{ activeComponent.replace(/([A-Z])/g, ' $1').trim() }}</span>
+                </div>
+
+                <!-- Global Search -->
+                <div class="relative flex-1 max-w-md ml-2 md:ml-4">
+                  <input
+                    v-model="globalSearch"
+                    @focus="showSearchResults = true"
+                    @blur="hideSearchResults"
+                    type="text"
+                    placeholder="Search..."
+                    class="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-all"
+                  />
+                  <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                  </svg>
+                  
+                  <!-- Search Results Dropdown -->
+                  <div v-if="showSearchResults && globalSearch" class="absolute top-full mt-2 w-full bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 max-h-96 overflow-y-auto z-50">
+                    <div v-if="searchResults.length === 0" class="p-4 text-center text-slate-500 dark:text-slate-400 text-sm">
+                      No results found
+                    </div>
+                    <button
+                      v-for="result in searchResults"
+                      :key="result.id"
+                      @mousedown="navigateToResult(result)"
+                      class="w-full px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors border-b border-slate-100 dark:border-slate-700 last:border-0"
+                    >
+                      <div class="flex items-center space-x-3">
+                        <span class="text-lg">{{ result.icon }}</span>
+                        <div class="flex-1">
+                          <p class="text-sm font-medium text-slate-900 dark:text-white">{{ result.title }}</p>
+                          <p class="text-xs text-slate-500 dark:text-slate-400">{{ result.subtitle }}</p>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              <div class="flex items-center space-x-4">
-                <div class="text-right">
-                  <p class="text-sm font-medium text-slate-900 dark:text-white">{{ user?.username }}</p>
-                  <p class="text-xs text-slate-500 dark:text-slate-400 capitalize">{{ user?.role || 'Administrator' }}</p>
+              <div class="flex items-center space-x-2 md:space-x-3">
+                <!-- Notifications -->
+                <div class="relative">
+                  <button 
+                    @click="toggleNotifications"
+                    class="relative p-2 rounded-lg bg-gradient-to-r from-emerald-500/90 to-green-600/90 text-white hover:from-emerald-600 hover:to-green-700 transition-all shadow-md hover:shadow-lg"
+                  >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                    </svg>
+                    <span v-if="unreadNotifications > 0" class="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-white text-xs rounded-full flex items-center justify-center font-bold shadow-lg">{{ unreadNotifications > 9 ? '9+' : unreadNotifications }}</span>
+                  </button>
+                  
+                  <!-- Notifications Dropdown -->
+                  <div v-if="showNotifications" class="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 z-50 max-w-[calc(100vw-2rem)]">
+                    <div class="p-3 md:p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+                      <h3 class="text-sm font-semibold text-slate-900 dark:text-white">Notifications</h3>
+                      <button @click="markAllAsRead" class="text-xs text-blue-600 dark:text-blue-400 hover:underline">Mark all read</button>
+                    </div>
+                    <div class="max-h-96 overflow-y-auto">
+                      <div v-if="notifications.length === 0" class="p-4 text-center text-slate-500 dark:text-slate-400 text-sm">
+                        No notifications
+                      </div>
+                      <button
+                        v-for="notif in notifications"
+                        :key="notif.id"
+                        @click="handleNotificationClick(notif)"
+                        class="w-full px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors border-b border-slate-100 dark:border-slate-700 last:border-0"
+                        :class="{ 'bg-blue-50 dark:bg-blue-500/10': !notif.read }"
+                      >
+                        <div class="flex items-start space-x-3">
+                          <svg class="w-5 h-5 text-blue-500 mt-0.5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+                          </svg>
+                          <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-slate-900 dark:text-white truncate">{{ notif.title }}</p>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{{ notif.message }}</p>
+                            <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">{{ notif.time }}</p>
+                          </div>
+                          <div v-if="!notif.read" class="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <button 
-                  @click="handleLogout"
-                  class="px-4 py-2 text-sm text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 border border-rose-300 dark:border-rose-700 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all duration-200 flex items-center space-x-2"
-                >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                  </svg>
-                  <span>Logout</span>
-                </button>
+
+                <!-- User Menu -->
+                <div class="relative">
+                  <button 
+                    @click="toggleUserMenu"
+                    class="flex items-center space-x-3 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    <svg class="w-8 h-8 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                    </svg>
+                    <div class="hidden md:block text-left">
+                      <p class="text-sm font-medium text-slate-900 dark:text-white">{{ user?.username }}</p>
+                      <p class="text-xs text-slate-500 dark:text-slate-400">{{ user?.role || 'Admin' }}</p>
+                    </div>
+                    <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                  </button>
+                  
+                  <!-- User Menu Dropdown -->
+                  <div v-if="showUserMenu" class="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 z-50">
+                    <div class="p-3 md:p-4 border-b border-slate-200 dark:border-slate-700">
+                      <p class="text-sm font-semibold text-slate-900 dark:text-white truncate">{{ user?.username }}</p>
+                      <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">{{ user?.email || 'admin@teralinkx.com' }}</p>
+                    </div>
+                    <div class="py-2">
+                      <button class="w-full px-4 py-2 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center space-x-2">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                        </svg>
+                        <span>Profile</span>
+                      </button>
+                      <button class="w-full px-4 py-2 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center space-x-2">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11.03L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.22,8.95 2.27,9.22 2.46,9.37L4.57,11.03C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.22,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.68 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"/>
+                        </svg>
+                        <span>Settings</span>
+                      </button>
+                      <button class="w-full px-4 py-2 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center space-x-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                        </svg>
+                        <span>Preferences</span>
+                      </button>
+                    </div>
+                    <div class="border-t border-slate-200 dark:border-slate-700 py-2">
+                      <button 
+                        @click="handleLogout"
+                        class="w-full px-4 py-2 text-left text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors flex items-center space-x-2"
+                      >
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                        </svg>
+                        <span>Logout</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </header>
@@ -139,7 +276,56 @@ export default {
       authChecked: false,
       user: null,
       refreshTokenInterval: null,
-      axiosInterceptor: null
+      axiosInterceptor: null,
+      globalSearch: '',
+      showSearchResults: false,
+      showNotifications: false,
+      showUserMenu: false,
+      notifications: [
+        { id: 1, icon: '🔔', title: 'New User Registration', message: '5 new users registered today', time: '5 min ago', read: false },
+        { id: 2, icon: '💳', title: 'Payment Received', message: 'Payment of $150 received', time: '1 hour ago', read: false },
+        { id: 3, icon: '⚠️', title: 'System Alert', message: 'High server load detected', time: '2 hours ago', read: true },
+      ],
+      sidebarStats: {
+        activeUsers: 0,
+        activeSessions: 0,
+        activeDevices: 0,
+        pendingRefunds: 0
+      }
+    }
+  },
+  computed: {
+    unreadNotifications() {
+      return this.notifications.filter(n => !n.read).length
+    },
+    searchResults() {
+      if (!this.globalSearch) return []
+      const query = this.globalSearch.toLowerCase()
+      const results = []
+      
+      const pages = [
+        { id: 'dashboard', icon: '📊', title: 'Dashboard', subtitle: 'Overview and analytics', component: 'Dashboard' },
+        { id: 'clients', icon: '👥', title: 'Clients', subtitle: 'Manage client profiles', component: 'Clients' },
+        { id: 'users', icon: '🔐', title: 'Users', subtitle: 'User management', component: 'Users' },
+        { id: 'devices', icon: '📱', title: 'Devices', subtitle: 'Connected devices', component: 'Devices' },
+        { id: 'sessions', icon: '🔌', title: 'Sessions', subtitle: 'Active sessions', component: 'Sessions' },
+        { id: 'packages', icon: '📦', title: 'Packages', subtitle: 'Data packages', component: 'Packages' },
+        { id: 'vouchers', icon: '🎫', title: 'Vouchers', subtitle: 'Voucher management', component: 'Vouchers' },
+        { id: 'coupons', icon: '🎟️', title: 'Coupons', subtitle: 'Discount coupons', component: 'Coupons' },
+        { id: 'promotions', icon: '🎁', title: 'Promotions', subtitle: 'Marketing promotions', component: 'Promotions' },
+        { id: 'points', icon: '🏆', title: 'Points', subtitle: 'Reward points', component: 'PointTransactions' },
+        { id: 'locations', icon: '📍', title: 'Locations', subtitle: 'Network locations', component: 'Locations' },
+        { id: 'transactions', icon: '💳', title: 'Transactions', subtitle: 'Payment transactions', component: 'Transactions' },
+        { id: 'refunds', icon: '🔄', title: 'Refunds', subtitle: 'Refund requests', component: 'Refunds' },
+      ]
+      
+      pages.forEach(page => {
+        if (page.title.toLowerCase().includes(query) || page.subtitle.toLowerCase().includes(query)) {
+          results.push(page)
+        }
+      })
+      
+      return results.slice(0, 5)
     }
   },
   methods: {
@@ -148,6 +334,71 @@ export default {
       // Close mobile sidebar when component changes on mobile
       if (window.innerWidth < 1024) {
         this.isMobileSidebarOpen = false;
+      }
+      // Close dropdowns
+      this.showNotifications = false
+      this.showUserMenu = false
+      this.showSearchResults = false
+    },
+    
+    getUserInitials() {
+      if (!this.user?.username) return 'AD'
+      const parts = this.user.username.split(' ')
+      if (parts.length >= 2) {
+        return (parts[0][0] + parts[1][0]).toUpperCase()
+      }
+      return this.user.username.substring(0, 2).toUpperCase()
+    },
+    
+    toggleNotifications() {
+      this.showNotifications = !this.showNotifications
+      this.showUserMenu = false
+      this.showSearchResults = false
+    },
+    
+    toggleUserMenu() {
+      this.showUserMenu = !this.showUserMenu
+      this.showNotifications = false
+      this.showSearchResults = false
+    },
+    
+    hideSearchResults() {
+      setTimeout(() => {
+        this.showSearchResults = false
+      }, 200)
+    },
+    
+    navigateToResult(result) {
+      this.setActiveComponent(result.component)
+      this.globalSearch = ''
+      this.showSearchResults = false
+    },
+    
+    markAllAsRead() {
+      this.notifications.forEach(n => n.read = true)
+    },
+    
+    handleNotificationClick(notif) {
+      notif.read = true
+      this.showNotifications = false
+    },
+    
+    async fetchSidebarStats() {
+      try {
+        const [usersRes, sessionsRes, devicesRes] = await Promise.all([
+          axios.get('/suapi/users/stats/'),
+          axios.get('/suapi/sessions/stats/'),
+          axios.get('/suapi/devices/stats/')
+        ])
+        
+        this.sidebarStats = {
+          activeUsers: usersRes.data.active_users || 0,
+          activeSessions: sessionsRes.data.active_sessions || 0,
+          activeDevices: devicesRes.data.online_devices || 0,
+          pendingRefunds: 0
+        }
+      } catch (error) {
+        console.error('Error fetching sidebar stats:', error)
       }
     },
     
@@ -172,6 +423,11 @@ export default {
 
     toggleMobileSidebar() {
       this.isMobileSidebarOpen = !this.isMobileSidebarOpen;
+      console.log('Mobile sidebar toggled:', this.isMobileSidebarOpen)
+    },
+    
+    closeMobileSidebar() {
+      this.isMobileSidebarOpen = false;
     },
 
     // Set up axios interceptor for automatic token refresh
@@ -417,8 +673,12 @@ export default {
   
   provide() {
     return {
-      closeMobileSidebar: () => this.isMobileSidebarOpen = false,
-      openMobileSidebar: () => this.isMobileSidebarOpen = true
+      closeMobileSidebar: () => {
+        this.isMobileSidebarOpen = false
+      },
+      openMobileSidebar: () => {
+        this.isMobileSidebarOpen = true
+      }
     }
   },
   
@@ -436,6 +696,40 @@ export default {
     
     // Set up token expiration monitoring
     this.setupTokenExpirationCheck();
+    
+    // Fetch sidebar stats
+    if (this.isAuthenticated) {
+      this.fetchSidebarStats()
+      // Refresh stats every 30 seconds
+      setInterval(() => {
+        if (this.isAuthenticated) {
+          this.fetchSidebarStats()
+        }
+      }, 30000)
+    }
+    
+    // Global keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      // Ctrl+K for search
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault()
+        document.querySelector('input[placeholder*="Search"]')?.focus()
+      }
+      // Escape to close dropdowns
+      if (e.key === 'Escape') {
+        this.showNotifications = false
+        this.showUserMenu = false
+        this.showSearchResults = false
+      }
+    })
+    
+    // Close dropdowns on outside click
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.relative')) {
+        this.showNotifications = false
+        this.showUserMenu = false
+      }
+    })
     
     console.log('✅ App.vue initialization complete');
   },

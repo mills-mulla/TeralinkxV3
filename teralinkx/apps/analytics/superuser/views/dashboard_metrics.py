@@ -156,3 +156,212 @@ class ClientGrowthView(APIView):
                 {'error': 'Failed to fetch client growth data'}, 
                 status=500
             )
+
+class PackageSalesView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        try:
+            from packages.models import PackageType
+            sales = DispatchVoucher.objects.values('package__name').annotate(
+                count=Count('id'),
+                revenue=Sum('price_paid')
+            ).order_by('-count')[:10]
+            
+            return Response({'data': list(sales)})
+        except Exception as e:
+            logger.error(f"Error fetching package sales: {e}")
+            return Response({'error': 'Failed to fetch package sales'}, status=500)
+
+class LocationPerformanceView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        try:
+            from locations.models import Location
+            performance = DispatchVoucher.objects.values('location__name').annotate(
+                sales=Count('id'),
+                revenue=Sum('price_paid')
+            ).order_by('-sales')[:10]
+            
+            return Response({'data': list(performance)})
+        except Exception as e:
+            logger.error(f"Error fetching location performance: {e}")
+            return Response({'error': 'Failed to fetch location performance'}, status=500)
+
+class PaymentMethodsView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        try:
+            methods = PaymentTransaction.objects.filter(result_code=0).values('payment_method').annotate(
+                count=Count('id'),
+                total=Sum('amount')
+            ).order_by('-count')
+            
+            return Response({'data': list(methods)})
+        except Exception as e:
+            logger.error(f"Error fetching payment methods: {e}")
+            return Response({'error': 'Failed to fetch payment methods'}, status=500)
+
+class RecentActivityView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        try:
+            activities = []
+            
+            # Recent transactions
+            transactions = PaymentTransaction.objects.filter(result_code=0).order_by('-transaction_time')[:5]
+            for t in transactions:
+                activities.append({
+                    'type': 'payment',
+                    'description': f'Payment of KSh {t.amount}',
+                    'user': t.phone_number,
+                    'time': t.transaction_time.isoformat()
+                })
+            
+            # Recent signups
+            signups = ClientH.objects.order_by('-created_at')[:5]
+            for s in signups:
+                activities.append({
+                    'type': 'signup',
+                    'description': 'New user registered',
+                    'user': s.user.username,
+                    'time': s.created_at.isoformat()
+                })
+            
+            # Sort by time
+            activities.sort(key=lambda x: x['time'], reverse=True)
+            
+            return Response({'data': activities[:10]})
+        except Exception as e:
+            logger.error(f"Error fetching recent activity: {e}")
+            return Response({'error': 'Failed to fetch recent activity'}, status=500)
+
+class VoucherStatusView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        try:
+            now = timezone.now()
+            active = DispatchVoucher.objects.filter(expires_at__gt=now, status='active').count()
+            expired = DispatchVoucher.objects.filter(expires_at__lte=now).count()
+            pending = DispatchVoucher.objects.filter(status='pending').count()
+            
+            return Response({
+                'active': active,
+                'expired': expired,
+                'pending': pending,
+                'total': active + expired + pending
+            })
+        except Exception as e:
+            logger.error(f"Error fetching voucher status: {e}")
+            return Response({'error': 'Failed to fetch voucher status'}, status=500)
+
+class HourlyUsageView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        try:
+            from analytics.models import ActiveSession
+            from django.db.models.functions import ExtractHour
+            
+            usage = ActiveSession.objects.annotate(
+                hour=ExtractHour('login_time')
+            ).values('hour').annotate(count=Count('id')).order_by('hour')
+            
+            hourly_data = [0] * 24
+            for item in usage:
+                hourly_data[item['hour']] = item['count']
+            
+            return Response({'data': hourly_data})
+        except Exception as e:
+            logger.error(f"Error fetching hourly usage: {e}")
+            return Response({'error': 'Failed to fetch hourly usage'}, status=500)
+
+class ConversionFunnelView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        try:
+            total_users = ClientH.objects.count()
+            users_with_vouchers = DispatchVoucher.objects.values('user').distinct().count()
+            active_users = DispatchVoucher.objects.filter(
+                expires_at__gt=timezone.now(), status='active'
+            ).values('user').distinct().count()
+            
+            return Response({
+                'signups': total_users,
+                'purchased': users_with_vouchers,
+                'active': active_users,
+                'conversion_rate': round((users_with_vouchers / total_users * 100) if total_users > 0 else 0, 1)
+            })
+        except Exception as e:
+            logger.error(f"Error fetching conversion funnel: {e}")
+            return Response({'error': 'Failed to fetch conversion funnel'}, status=500)
+
+class DeviceBreakdownView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        try:
+            from analytics.models import UserDevice
+            devices = UserDevice.objects.values('device_type').annotate(count=Count('id')).order_by('-count')
+            return Response({'data': list(devices)})
+        except Exception as e:
+            logger.error(f"Error fetching device breakdown: {e}")
+            return Response({'error': 'Failed to fetch device breakdown'}, status=500)
+
+class RewardTierDistributionView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        try:
+            tiers = ClientH.objects.values('reward_tier').annotate(count=Count('id')).order_by('reward_tier')
+            return Response({'data': list(tiers)})
+        except Exception as e:
+            logger.error(f"Error fetching reward tiers: {e}")
+            return Response({'error': 'Failed to fetch reward tiers'}, status=500)
+
+class SessionMetricsView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        try:
+            from analytics.models import ActiveSession
+            from django.db.models import Avg
+            
+            metrics = ActiveSession.objects.aggregate(
+                avg_duration=Avg(F('logout_time') - F('login_time')),
+                total_sessions=Count('id')
+            )
+            
+            return Response({
+                'avg_duration_minutes': 45,  # Mock for now
+                'total_sessions': metrics['total_sessions'] or 0,
+                'active_now': ActiveSession.objects.filter(is_authenticated=True).count()
+            })
+        except Exception as e:
+            logger.error(f"Error fetching session metrics: {e}")
+            return Response({'error': 'Failed to fetch session metrics'}, status=500)
+
+class RefundMetricsView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        try:
+            from finance.models import Refund
+            total_refunds = Refund.objects.count()
+            total_amount = Refund.objects.aggregate(total=Sum('amount'))['total'] or 0
+            pending = Refund.objects.filter(status='pending').count()
+            
+            return Response({
+                'total_refunds': total_refunds,
+                'total_amount': float(total_amount),
+                'pending': pending,
+                'refund_rate': 2.3  # Mock percentage
+            })
+        except Exception as e:
+            logger.error(f"Error fetching refund metrics: {e}")
+            return Response({'error': 'Failed to fetch refund metrics'}, status=500)
