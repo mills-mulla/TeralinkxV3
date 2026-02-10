@@ -59,15 +59,15 @@ class ClientViewSet(viewsets.ModelViewSet):
             transactions = PaymentTransaction.objects.filter(phone_number=client.phone_number).order_by('-transaction_time')[:10]
             
             return Response({
-                'client': ClientSerializer(client).data,
-                'devices': [{'id': d.id, 'name': d.device_name, 'mac': d.mac_address, 'type': d.device_type, 'last_seen': d.last_seen} for d in devices],
-                'sessions': [{'id': s.id, 'device': s.device.device_name, 'ip': s.ip_address, 'login_time': s.login_time, 'is_active': s.is_active} for s in sessions],
-                'vouchers': [{'id': v.id, 'package': v.package.name, 'status': v.status, 'activated_at': v.activated_at, 'expires_at': v.expires_at} for v in vouchers],
-                'transactions': [{'id': t.id, 'amount': float(t.amount), 'result_code': t.result_code, 'transaction_time': t.transaction_time} for t in transactions],
+                'client': ClientSerializer(client, context={'request': request}).data,
+                'devices': [{'id': d.id, 'name': d.device_name, 'mac': d.mac_address, 'type': d.device_type, 'last_seen': str(d.last_seen) if d.last_seen else None} for d in devices],
+                'sessions': [{'id': s.id, 'device': s.device.device_name if s.device else 'Unknown', 'ip': s.ip_address, 'login_time': str(s.login_time), 'is_active': s.is_active} for s in sessions],
+                'vouchers': [{'id': v.id, 'package': v.package.name if v.package else 'Unknown', 'status': v.status, 'activated_at': str(v.activated_at) if v.activated_at else None, 'expires_at': str(v.expires_at) if v.expires_at else None} for v in vouchers],
+                'transactions': [{'id': t.id, 'amount': float(t.amount), 'result_code': t.result_code, 'transaction_time': str(t.transaction_time)} for t in transactions],
                 'stats': {
-                    'total_devices': client.devices.count(),
-                    'active_sessions': client.sessions.filter(is_active=True).count(),
-                    'total_vouchers': DispatchVoucher.objects.filter(user=client.user).count(),
+                    'total_devices': devices.count(),
+                    'active_sessions': sessions.count(),
+                    'total_vouchers': vouchers.count(),
                     'total_spent': float(client.total_spent),
                     'lifetime_data': client.lifetime_data_used
                 }
