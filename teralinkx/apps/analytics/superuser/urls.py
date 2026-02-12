@@ -19,7 +19,7 @@ from .views.dashboard_metrics import (
     RFMSegmentationView, FinancialAnalyticsView, FunnelAnalysisView,
     ChurnPredictionView, RevenueForecastView, NetworkAnalyticsView,
 )
-from .views.system_health import SystemHealthView
+from .views.system_health import( SystemHealthView,
     ABTestingView, CustomerHealthView, AuditLogView, DataQualityView
 )
 
