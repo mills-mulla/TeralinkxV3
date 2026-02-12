@@ -313,8 +313,11 @@ class LocationPerformanceView(APIView):
             locations = request.GET.get('locations', '').split(',') if request.GET.get('locations') else []
             packages = request.GET.get('packages', '').split(',') if request.GET.get('packages') else []
             
-            # Base queryset
-            qs = DispatchVoucher.objects.all()
+            # Base queryset - Use TransactionQueue for revenue
+            qs = TransactionQueue.objects.filter(
+                method='mpesa',
+                status__in=['completed', 'processed']
+            )
             
             # Apply filters
             if start_date:
@@ -322,16 +325,24 @@ class LocationPerformanceView(APIView):
             if end_date:
                 qs = qs.filter(created_at__date__lte=end_date)
             if locations:
-                qs = qs.filter(location_id__in=locations)
+                qs = qs.filter(user__clienth__location_id__in=locations)
             if packages:
-                qs = qs.filter(package_id__in=packages)
+                qs = qs.filter(package_code__in=packages)
             
-            performance = qs.values('location__name').annotate(
+            # Get location performance from queue
+            performance = qs.values('user__clienth__location__name').annotate(
                 sales=Count('id'),
-                revenue=Sum('price_paid')
-            ).order_by('-sales')[:10]
+                revenue=Sum('price')
+            ).order_by('-revenue')[:10]
             
-            return Response({'data': list(performance)})
+            # Rename field for frontend compatibility
+            data = [{
+                'location__name': p['user__clienth__location__name'],
+                'sales': p['sales'],
+                'revenue': p['revenue']
+            } for p in performance]
+            
+            return Response({'data': data})
         except Exception as e:
             logger.error(f"Error fetching location performance: {e}")
             return Response({'error': 'Failed to fetch location performance'}, status=500)

@@ -201,7 +201,7 @@
           </svg>
           <h3 class="text-sm font-medium text-slate-900 dark:text-white">Package Sales</h3>
         </div>
-        <div v-if="packageSales.length > 0" class="h-64">
+        <div v-if="packageSales.length > 0" class="h-80">
           <apexchart type="pie" height="100%" :options="packageChartOptions" :series="packageChartSeries" />
         </div>
         <div v-else class="h-64 flex items-center justify-center text-slate-400 text-sm">Loading...</div>
@@ -505,41 +505,43 @@ export default {
       growthChartSeries: [{ name: 'Signups', data: [] }],
 
       packageChartOptions: {
-        chart: { type: 'donut' },
+        chart: { type: 'pie' },
         colors: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316'],
         labels: [],
-        legend: { position: 'bottom', fontSize: '11px' },
-        dataLabels: { 
-          enabled: true, 
-          style: { fontSize: '12px', fontWeight: 'bold' },
-          dropShadow: { enabled: true, blur: 2, opacity: 0.5 }
+        legend: { 
+          position: 'right',
+          fontSize: '12px',
+          offsetY: 0,
+          height: 230,
+          markers: {
+            width: 12,
+            height: 12,
+            radius: 2
+          },
+          itemMargin: {
+            horizontal: 5,
+            vertical: 5
+          }
         },
-        plotOptions: { 
-          pie: { 
-            donut: { 
-              size: '70%',
-              labels: {
-                show: true,
-                name: { show: true, fontSize: '14px', fontWeight: 600 },
-                value: { show: true, fontSize: '20px', fontWeight: 700 },
-                total: {
-                  show: true,
-                  label: 'Total Sales',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  formatter: () => this.packageSales.reduce((sum, p) => sum + p.count, 0)
-                }
-              }
-            },
-            expandOnClick: true
-          } 
+        dataLabels: { 
+          enabled: true,
+          style: { fontSize: '14px', fontWeight: 'bold' },
+          dropShadow: { enabled: false }
         },
         stroke: { width: 2, colors: ['#fff'] },
         tooltip: {
           y: {
             formatter: (val) => `${val} sales`
           }
-        }
+        },
+        responsive: [{
+          breakpoint: 480,
+          options: {
+            legend: {
+              position: 'bottom'
+            }
+          }
+        }]
       },
       packageChartSeries: [],
 
