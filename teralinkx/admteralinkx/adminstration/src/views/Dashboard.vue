@@ -136,7 +136,11 @@
             class="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-slate-900 dark:text-white"
           >
             <option value="7d">7 days</option>
+            <option value="14d">14 days</option>
             <option value="30d">30 days</option>
+            <option value="90d">90 days</option>
+            <option value="6m">6 months</option>
+            <option value="1y">1 year</option>
           </select>
         </div>
         <div v-if="revenueData.length > 0" class="h-64">
@@ -167,7 +171,11 @@
             class="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-slate-900 dark:text-white"
           >
             <option value="7d">7 days</option>
+            <option value="14d">14 days</option>
             <option value="30d">30 days</option>
+            <option value="90d">90 days</option>
+            <option value="6m">6 months</option>
+            <option value="1y">1 year</option>
           </select>
         </div>
         <div v-if="clientGrowthData.length > 0" class="h-64">
@@ -194,7 +202,7 @@
           <h3 class="text-sm font-medium text-slate-900 dark:text-white">Package Sales</h3>
         </div>
         <div v-if="packageSales.length > 0" class="h-64">
-          <apexchart type="donut" height="100%" :options="packageChartOptions" :series="packageChartSeries" />
+          <apexchart type="pie" height="100%" :options="packageChartOptions" :series="packageChartSeries" />
         </div>
         <div v-else class="h-64 flex items-center justify-center text-slate-400 text-sm">Loading...</div>
       </div>
@@ -454,6 +462,8 @@ export default {
       systemStats: [],
       packageSales: [],
       paymentMethods: [],
+      packageColors: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316'],
+      paymentColors: ['#06B6D4', '#10B981', '#F59E0B', '#8B5CF6'],
       locationPerformance: [],
       recentActivity: [],
       voucherStatus: {},
@@ -496,20 +506,64 @@ export default {
 
       packageChartOptions: {
         chart: { type: 'donut' },
-        colors: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'],
+        colors: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316'],
         labels: [],
         legend: { position: 'bottom', fontSize: '11px' },
-        dataLabels: { enabled: true, style: { fontSize: '11px' } },
-        plotOptions: { pie: { donut: { size: '65%' } } }
+        dataLabels: { 
+          enabled: true, 
+          style: { fontSize: '12px', fontWeight: 'bold' },
+          dropShadow: { enabled: true, blur: 2, opacity: 0.5 }
+        },
+        plotOptions: { 
+          pie: { 
+            donut: { 
+              size: '70%',
+              labels: {
+                show: true,
+                name: { show: true, fontSize: '14px', fontWeight: 600 },
+                value: { show: true, fontSize: '20px', fontWeight: 700 },
+                total: {
+                  show: true,
+                  label: 'Total Sales',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  formatter: () => this.packageSales.reduce((sum, p) => sum + p.count, 0)
+                }
+              }
+            },
+            expandOnClick: true
+          } 
+        },
+        stroke: { width: 2, colors: ['#fff'] },
+        tooltip: {
+          y: {
+            formatter: (val) => `${val} sales`
+          }
+        }
       },
       packageChartSeries: [],
 
       paymentChartOptions: {
         chart: { type: 'pie' },
-        colors: ['#06B6D4', '#10B981', '#F59E0B'],
+        colors: ['#06B6D4', '#10B981', '#F59E0B', '#8B5CF6'],
         labels: [],
         legend: { position: 'bottom', fontSize: '11px' },
-        dataLabels: { enabled: true, style: { fontSize: '11px' } }
+        dataLabels: { 
+          enabled: true, 
+          style: { fontSize: '12px', fontWeight: 'bold' },
+          dropShadow: { enabled: true, blur: 2, opacity: 0.5 }
+        },
+        plotOptions: {
+          pie: {
+            expandOnClick: true
+          }
+        },
+        stroke: { width: 2, colors: ['#fff'] },
+        tooltip: {
+          y: {
+            formatter: (val) => `${val} transactions`
+          }
+        }
       },
       paymentChartSeries: []
     }

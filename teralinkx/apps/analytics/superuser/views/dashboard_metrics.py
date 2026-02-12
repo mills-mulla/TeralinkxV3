@@ -150,12 +150,16 @@ class RevenueAnalyticsView(APIView):
             locations = request.GET.get('locations', '').split(',') if request.GET.get('locations') else []
             packages = request.GET.get('packages', '').split(',') if request.GET.get('packages') else []
             
-            if period == '7d':
-                days = 7
-            elif period == '30d':
-                days = 30
-            else:  # 90d
-                days = 90
+            # Map period to days
+            period_map = {
+                '7d': 7,
+                '14d': 14,
+                '30d': 30,
+                '90d': 90,
+                '6m': 180,
+                '1y': 365
+            }
+            days = period_map.get(period, 7)
                 
             end = timezone.now().date()
             start = end - timedelta(days=days-1)
@@ -213,12 +217,16 @@ class ClientGrowthView(APIView):
             end_date = request.GET.get('end_date')
             locations = request.GET.get('locations', '').split(',') if request.GET.get('locations') else []
             
-            if period == '7d':
-                days = 7
-            elif period == '30d':
-                days = 30
-            else:  # 90d
-                days = 90
+            # Map period to days
+            period_map = {
+                '7d': 7,
+                '14d': 14,
+                '30d': 30,
+                '90d': 90,
+                '6m': 180,
+                '1y': 365
+            }
+            days = period_map.get(period, 30)
                 
             end = timezone.now().date()
             start = end - timedelta(days=days-1)
