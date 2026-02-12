@@ -267,7 +267,7 @@ export default {
 
     const fetchPoints = async () => {
       try {
-        const data = await makeRequest('get', 'suapi/point-transactions/')
+        const data = await makeRequest('get', 'suapi/point-transactions-txn/')
         points.value = data.results || data
       } catch (err) { console.error('Error:', err) }
     }

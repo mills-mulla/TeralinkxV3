@@ -60,6 +60,36 @@ router.register(r'promotions', FeaturedPromotionViewSet, basename='promotions')
 router.register(r'point-transactions', PointTransactionViewSet, basename='point-transactions')
 router.register(r'locations', LocationViewSet, basename='locations')
 
+# Create a simple stats view
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
+from django.db.models import Sum, Count, Q
+
+class TransactionStatsView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        from finance.models import PaymentTransaction, BalanceTransaction, TransactionQueue
+        from packages.models import PointTransaction
+        
+        payment_stats = PaymentTransaction.objects.aggregate(
+            total_revenue=Sum('amount_base'),
+            completed_count=Count('id', filter=Q(status='completed'))
+        )
+        
+        queue_stats = TransactionQueue.objects.aggregate(
+            pending_count=Count('id', filter=Q(status='pending')),
+            failed_count=Count('id', filter=Q(status='failed'))
+        )
+        
+        return Response({
+            'total_revenue': payment_stats['total_revenue'] or 0,
+            'completed_count': payment_stats['completed_count'] or 0,
+            'pending_count': queue_stats['pending_count'] or 0,
+            'failed_count': queue_stats['failed_count'] or 0
+        })
+
 urlpatterns = [
     path('', include(router.urls)),
     
@@ -70,7 +100,7 @@ urlpatterns = [
     path('token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     
-    path('transactions/stats/', TransactionStatsViewSet.as_view({'get': 'stats'}), name='transaction-stats'),
+    path('transactions/stats/', TransactionStatsView.as_view(), name='transaction-stats'),
     
     path('dashboard-metrics/', DashboardMetricsView.as_view(), name='dashboard-metrics'),
     path('dashboard-metrics/revenue-analytics/', RevenueAnalyticsView.as_view(), name='revenue-analytics'),
