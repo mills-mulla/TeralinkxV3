@@ -341,12 +341,17 @@ class PaymentMethodsView(APIView):
     
     def get(self, request):
         try:
-            methods = PaymentTransaction.objects.filter(result_code=0).values('payment_method').annotate(
+            methods = TransactionQueue.objects.filter(
+                status__in=['completed', 'processed']
+            ).values('method').annotate(
                 count=Count('id'),
-                total=Sum('amount')
+                total=Sum('price')
             ).order_by('-count')
             
-            return Response({'data': list(methods)})
+            # Rename 'method' to 'payment_method' for frontend compatibility
+            data = [{'payment_method': m['method'], 'count': m['count'], 'total': m['total']} for m in methods]
+            
+            return Response({'data': data})
         except Exception as e:
             logger.error(f"Error fetching payment methods: {e}")
             return Response({'error': 'Failed to fetch payment methods'}, status=500)
