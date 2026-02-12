@@ -42,6 +42,8 @@ class LocationViewSet(viewsets.ModelViewSet):
         try:
             total_locations = Location.objects.count()
             active_locations = Location.objects.filter(is_active=True).count()
+            hotspot_locations = Location.objects.filter(location_type='hotspot').count()
+            branch_locations = Location.objects.filter(location_type='branch').count()
             
             # Locations by type
             by_type = Location.objects.values('location_type').annotate(
@@ -56,6 +58,8 @@ class LocationViewSet(viewsets.ModelViewSet):
             return Response({
                 'total_locations': total_locations,
                 'active_locations': active_locations,
+                'hotspot_locations': hotspot_locations,
+                'branch_locations': branch_locations,
                 'by_type': list(by_type),
                 'top_locations': LocationSerializer(top_locations, many=True).data
             })

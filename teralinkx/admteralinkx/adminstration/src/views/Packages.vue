@@ -81,9 +81,13 @@
             <thead class="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
               <tr>
                 <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Package</th>
+                <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Code</th>
+                <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Category</th>
+                <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Tier</th>
                 <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Price</th>
+                <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Duration</th>
+                <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Speed</th>
                 <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Data</th>
-                <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Validity</th>
                 <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Status</th>
                 <th class="px-3 py-2 text-right text-[10px] font-medium text-slate-600 dark:text-slate-400">Actions</th>
               </tr>
@@ -103,9 +107,21 @@
                     </div>
                   </div>
                 </td>
+                <td class="px-3 py-2 text-xs font-mono text-slate-900 dark:text-white">{{ pkg.code }}</td>
+                <td class="px-3 py-2">
+                  <span class="px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400">
+                    {{ pkg.category }}
+                  </span>
+                </td>
+                <td class="px-3 py-2">
+                  <span class="px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-400">
+                    {{ pkg.tier }}
+                  </span>
+                </td>
                 <td class="px-3 py-2 text-xs font-semibold text-slate-900 dark:text-white">KSh {{ formatNumber(pkg.price) }}</td>
-                <td class="px-3 py-2 text-xs text-slate-900 dark:text-white">{{ pkg.data_limit_gb }} GB</td>
-                <td class="px-3 py-2 text-xs text-slate-900 dark:text-white">{{ pkg.validity_days }} days</td>
+                <td class="px-3 py-2 text-xs text-slate-900 dark:text-white">{{ formatDuration(pkg.duration) }}</td>
+                <td class="px-3 py-2 text-xs text-slate-900 dark:text-white">{{ pkg.speed_limit_mbps }} Mbps</td>
+                <td class="px-3 py-2 text-xs text-slate-900 dark:text-white">{{ formatData(pkg.data_limit_mb) }}</td>
                 <td class="px-3 py-2">
                   <span class="px-1.5 py-0.5 text-[10px] font-medium rounded-full" :class="pkg.is_active ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-400'">
                     {{ pkg.is_active ? 'Active' : 'Inactive' }}
@@ -146,25 +162,72 @@
         <div class="p-5 overflow-y-auto max-h-[calc(90vh-140px)]">
           <div class="grid grid-cols-2 gap-4">
             <div class="col-span-2">
-              <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Package Name</label>
-              <input v-model="formData.name" type="text" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" />
+              <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Package Name *</label>
+              <input v-model="formData.name" type="text" required class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" />
             </div>
             <div>
-              <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Price (KSh)</label>
-              <input v-model="formData.price" type="number" step="0.01" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" />
+              <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Code *</label>
+              <input v-model="formData.code" type="text" required class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" />
             </div>
             <div>
-              <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Data Limit (GB)</label>
-              <input v-model="formData.data_limit_gb" type="number" step="0.1" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" />
+              <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Category *</label>
+              <select v-model="formData.category" required class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white">
+                <option value="time_based_unlimited">Time-Based-Unlimited</option>
+                <option value="data_based">Data-Based</option>
+                <option value="unlimited">Unlimited</option>
+                <option value="hybrid">Hybrid</option>
+                <option value="corporate">Corporate</option>
+              </select>
             </div>
             <div>
-              <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Validity (Days)</label>
-              <input v-model="formData.validity_days" type="number" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" />
+              <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Tier *</label>
+              <select v-model="formData.tier" required class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white">
+                <option value="basic">Basic</option>
+                <option value="standard">Standard</option>
+                <option value="premium">Premium</option>
+                <option value="business">Business</option>
+                <option value="enterprise">Enterprise</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Price (KSh) *</label>
+              <input v-model="formData.price" type="number" step="0.01" required class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Duration (hours) *</label>
+              <input v-model="formData.duration_hours" type="number" required class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Speed Limit (Mbps) *</label>
+              <input v-model="formData.speed_limit_mbps" type="number" required class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Data Limit (MB)</label>
+              <input v-model="formData.data_limit_mb" type="number" placeholder="Leave blank for unlimited" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Device Limit</label>
+              <input v-model="formData.device_limit" type="number" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">QoS Priority</label>
+              <select v-model="formData.qos_priority" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white">
+                <option value="standard">Standard</option>
+                <option value="premium">Premium</option>
+                <option value="business">Business</option>
+                <option value="real_time">Real-time</option>
+              </select>
             </div>
             <div class="flex items-center">
               <label class="flex items-center gap-2 cursor-pointer">
                 <input v-model="formData.is_active" type="checkbox" class="w-4 h-4 text-blue-600 border-slate-300 dark:border-slate-600 rounded" />
                 <span class="text-xs text-slate-700 dark:text-slate-300">Active Package</span>
+              </label>
+            </div>
+            <div class="flex items-center">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input v-model="formData.is_public" type="checkbox" class="w-4 h-4 text-blue-600 border-slate-300 dark:border-slate-600 rounded" />
+                <span class="text-xs text-slate-700 dark:text-slate-300">Public Package</span>
               </label>
             </div>
             <div class="col-span-2">
@@ -208,11 +271,18 @@ export default {
     const deleteLoading = ref(false)
     const formData = ref({
       name: '',
+      code: '',
+      category: 'time_based_unlimited',
+      tier: 'basic',
       price: 0,
-      data_limit_gb: 0,
-      validity_days: 0,
+      duration_hours: 1,
+      speed_limit_mbps: 10,
+      data_limit_mb: null,
+      device_limit: 1,
+      qos_priority: 'standard',
       description: '',
-      is_active: true
+      is_active: true,
+      is_public: true
     })
 
     const filteredPackages = computed(() => {
@@ -246,16 +316,33 @@ export default {
 
     const refreshData = () => Promise.all([fetchPackages(), fetchStats()])
     const formatNumber = (num) => new Intl.NumberFormat().format(num)
+    const formatDuration = (duration) => {
+      if (!duration) return 'N/A'
+      const match = duration.match(/PT(\d+)H/)
+      return match ? `${match[1]}h` : duration
+    }
+    const formatData = (mb) => {
+      if (!mb) return 'Unlimited'
+      if (mb >= 1024) return `${(mb / 1024).toFixed(1)} GB`
+      return `${mb} MB`
+    }
     
     const openAddModal = () => {
       selectedPackage.value = null
       formData.value = {
         name: '',
+        code: '',
+        category: 'time_based_unlimited',
+        tier: 'basic',
         price: 0,
-        data_limit_gb: 0,
-        validity_days: 0,
+        duration_hours: 1,
+        speed_limit_mbps: 10,
+        data_limit_mb: null,
+        device_limit: 1,
+        qos_priority: 'standard',
         description: '',
-        is_active: true
+        is_active: true,
+        is_public: true
       }
       showFormModal.value = true
     }
@@ -264,11 +351,18 @@ export default {
       selectedPackage.value = pkg
       formData.value = {
         name: pkg.name || '',
+        code: pkg.code || '',
+        category: pkg.category || 'time_based_unlimited',
+        tier: pkg.tier || 'basic',
         price: pkg.price || 0,
-        data_limit_gb: pkg.data_limit_gb || 0,
-        validity_days: pkg.validity_days || 0,
+        duration_hours: pkg.duration_hours || 1,
+        speed_limit_mbps: pkg.speed_limit_mbps || 10,
+        data_limit_mb: pkg.data_limit_mb || null,
+        device_limit: pkg.device_limit || 1,
+        qos_priority: pkg.qos_priority || 'standard',
         description: pkg.description || '',
-        is_active: pkg.is_active || false
+        is_active: pkg.is_active || false,
+        is_public: pkg.is_public || false
       }
       showFormModal.value = true
     }
@@ -289,15 +383,20 @@ export default {
     const savePackage = async () => {
       saveLoading.value = true
       try {
+        const payload = { ...formData.value }
+        // Convert duration_hours to ISO 8601 duration format
+        payload.duration = `PT${payload.duration_hours}H`
+        delete payload.duration_hours
+        
         if (selectedPackage.value?.id) {
-          await makeRequest('patch', `suapi/packages/${selectedPackage.value.id}/`, formData.value)
+          await makeRequest('patch', `suapi/packages/${selectedPackage.value.id}/`, payload)
         } else {
-          await makeRequest('post', 'suapi/packages/', formData.value)
+          await makeRequest('post', 'suapi/packages/', payload)
         }
         await refreshData()
         closeFormModal()
       } catch (err) {
-        alert('Error: ' + (err.response?.data?.error || err.message))
+        alert('Error: ' + (err.response?.data?.error || JSON.stringify(err.response?.data) || err.message))
       } finally {
         saveLoading.value = false
       }
@@ -323,7 +422,7 @@ export default {
 
     return {
       loading, error, packages, stats, searchTerm, statusFilter, showFormModal, showDeleteModal, selectedPackage, packageToDelete,
-      saveLoading, deleteLoading, formData, filteredPackages, fetchPackages, refreshData, formatNumber,
+      saveLoading, deleteLoading, formData, filteredPackages, fetchPackages, refreshData, formatNumber, formatDuration, formatData,
       openAddModal, openEditModal, closeFormModal, savePackage, openDeleteModal, closeDeleteModal, confirmDelete
     }
   }
