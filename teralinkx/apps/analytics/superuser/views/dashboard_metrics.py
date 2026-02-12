@@ -37,9 +37,10 @@ class DashboardMetricsView(APIView):
                 status='active'
             ).values('user').distinct().count()
             
-            # Revenue metrics (from M-Pesa transactions in queue)
+            # Revenue metrics (from completed/processed M-Pesa transactions in queue)
             total_revenue = TransactionQueue.objects.filter(
-                method='mpesa'
+                method='mpesa',
+                status__in=['completed', 'processed']
             ).aggregate(total=Sum('price'))['total'] or 0
             
             # Packages sold
@@ -72,6 +73,7 @@ class DashboardMetricsView(APIView):
             # Revenue trend calculation
             prev_week_revenue = TransactionQueue.objects.filter(
                 method='mpesa',
+                status__in=['completed', 'processed'],
                 created_at__date__lt=week_ago
             ).aggregate(total=Sum('price'))['total'] or 0
             revenue_trend = 'up' if total_revenue > prev_week_revenue else 'down' if total_revenue < prev_week_revenue else 'stable'
