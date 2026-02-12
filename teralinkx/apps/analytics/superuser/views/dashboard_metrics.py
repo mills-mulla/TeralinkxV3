@@ -42,14 +42,6 @@ class DashboardMetricsView(APIView):
                 method='mpesa'
             ).aggregate(total=Sum('price'))['total'] or 0
             
-            prev_week_revenue = TransactionQueue.objects.filter(
-                method='mpesa',
-                created_at__date__lt=week_ago
-            ).aggregate(total=Sum('price'))['total'] or 0
-            
-            revenue_trend = 'up' if total_revenue > prev_week_revenue else 'down' if total_revenue < prev_week_revenue else 'stable'
-            revenue_trend_value = f"{abs(round((total_revenue - prev_week_revenue) / prev_week_revenue * 100, 1)) if prev_week_revenue > 0 else 0}%"
-            
             # Packages sold
             packages_sold = DispatchVoucher.objects.filter(
                 activated_at__date__gte=month_ago
@@ -76,6 +68,14 @@ class DashboardMetricsView(APIView):
             ).values('user').distinct().count()
             active_users_trend = 'up' if active_users > prev_week_active else 'down' if active_users < prev_week_active else 'stable'
             active_users_trend_value = f"{abs(round((active_users - prev_week_active) / prev_week_active * 100, 1)) if prev_week_active > 0 else 0}%"
+            
+            # Revenue trend calculation
+            prev_week_revenue = TransactionQueue.objects.filter(
+                method='mpesa',
+                created_at__date__lt=week_ago
+            ).aggregate(total=Sum('price'))['total'] or 0
+            revenue_trend = 'up' if total_revenue > prev_week_revenue else 'down' if total_revenue < prev_week_revenue else 'stable'
+            revenue_trend_value = f"{abs(round((total_revenue - prev_week_revenue) / prev_week_revenue * 100, 1)) if prev_week_revenue > 0 else 0}%"
             
             # Active ratio (clients with active vouchers vs total clients)
             active_ratio = (active_users / total_clients * 100) if total_clients > 0 else 0
