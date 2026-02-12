@@ -2,7 +2,14 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
 from .views.clientsview import ClientViewSet
-from .views.transactionsview import TransactionViewSet
+from .views.transactionsview import (
+    TransactionViewSet,
+    PaymentTransactionViewSet,
+    BalanceTransactionViewSet,
+    TransactionQueueViewSet,
+    PointTransactionViewSet as PointTxnViewSet,
+    TransactionStatsViewSet
+)
 from .views.dashboard_metrics import (
     DashboardMetricsView, RevenueAnalyticsView, ClientGrowthView,
     PackageSalesView, LocationPerformanceView, PaymentMethodsView,
@@ -38,6 +45,10 @@ router = DefaultRouter()
 
 router.register(r'clients', ClientViewSet, basename='clients')
 router.register(r'transactions', TransactionViewSet, basename='transactions')
+router.register(r'payment-transactions', PaymentTransactionViewSet, basename='payment-transactions')
+router.register(r'balance-transactions', BalanceTransactionViewSet, basename='balance-transactions')
+router.register(r'transaction-queue', TransactionQueueViewSet, basename='transaction-queue')
+router.register(r'point-transactions-txn', PointTxnViewSet, basename='point-transactions-txn')
 
 router.register(r'users', DjangoUserViewSet, basename='users')
 router.register(r'devices', UserDeviceViewSet, basename='devices')
@@ -58,6 +69,8 @@ urlpatterns = [
     path('auth/verify/', VerifyTokenView.as_view(), name='verify-token'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    
+    path('transactions/stats/', TransactionStatsViewSet.as_view({'get': 'stats'}), name='transaction-stats'),
     
     path('dashboard-metrics/', DashboardMetricsView.as_view(), name='dashboard-metrics'),
     path('dashboard-metrics/revenue-analytics/', RevenueAnalyticsView.as_view(), name='revenue-analytics'),
