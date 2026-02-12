@@ -17,34 +17,64 @@ class DashboardMetricsView(APIView):
     
     def get(self, request):
         try:
+            # Get filter parameters
+            start_date = request.GET.get('start_date')
+            end_date = request.GET.get('end_date')
+            locations = request.GET.get('locations', '').split(',') if request.GET.get('locations') else []
+            packages = request.GET.get('packages', '').split(',') if request.GET.get('packages') else []
+            
             # Calculate date ranges
             today = timezone.now().date()
             week_ago = today - timedelta(days=7)
             month_ago = today - timedelta(days=30)
             
+            # Base querysets
+            clients_qs = ClientH.objects.all()
+            vouchers_qs = DispatchVoucher.objects.all()
+            queue_qs = TransactionQueue.objects.all()
+            
+            # Apply date filters
+            if start_date:
+                clients_qs = clients_qs.filter(created_at__date__gte=start_date)
+                vouchers_qs = vouchers_qs.filter(created_at__date__gte=start_date)
+                queue_qs = queue_qs.filter(created_at__date__gte=start_date)
+            if end_date:
+                clients_qs = clients_qs.filter(created_at__date__lte=end_date)
+                vouchers_qs = vouchers_qs.filter(created_at__date__lte=end_date)
+                queue_qs = queue_qs.filter(created_at__date__lte=end_date)
+            
+            # Apply location filters
+            if locations:
+                vouchers_qs = vouchers_qs.filter(location_id__in=locations)
+            
+            # Apply package filters
+            if packages:
+                vouchers_qs = vouchers_qs.filter(package_id__in=packages)
+                queue_qs = queue_qs.filter(package_code__in=packages)
+            
             # Client metrics
-            total_clients = ClientH.objects.count()
-            new_clients_today = ClientH.objects.filter(
+            total_clients = clients_qs.count()
+            new_clients_today = clients_qs.filter(
                 created_at__date=today
             ).count()
-            new_clients_7d = ClientH.objects.filter(
+            new_clients_7d = clients_qs.filter(
                 created_at__date__gte=week_ago
             ).count()
             
             # Active users (clients with active vouchers)
-            active_users = DispatchVoucher.objects.filter(
+            active_users = vouchers_qs.filter(
                 expires_at__gt=timezone.now(),
                 status='active'
             ).values('user').distinct().count()
             
             # Revenue metrics (from completed/processed M-Pesa transactions in queue)
-            total_revenue = TransactionQueue.objects.filter(
+            total_revenue = queue_qs.filter(
                 method='mpesa',
                 status__in=['completed', 'processed']
             ).aggregate(total=Sum('price'))['total'] or 0
             
             # Packages sold
-            packages_sold = DispatchVoucher.objects.filter(
+            packages_sold = vouchers_qs.filter(
                 activated_at__date__gte=month_ago
             ).count()
             
@@ -115,6 +145,10 @@ class RevenueAnalyticsView(APIView):
     def get(self, request):
         try:
             period = request.GET.get('period', '7d')
+            start_date = request.GET.get('start_date')
+            end_date = request.GET.get('end_date')
+            locations = request.GET.get('locations', '').split(',') if request.GET.get('locations') else []
+            packages = request.GET.get('packages', '').split(',') if request.GET.get('packages') else []
             
             if period == '7d':
                 days = 7
@@ -123,16 +157,34 @@ class RevenueAnalyticsView(APIView):
             else:  # 90d
                 days = 90
                 
-            end_date = timezone.now().date()
-            start_date = end_date - timedelta(days=days-1)
+            end = timezone.now().date()
+            start = end - timedelta(days=days-1)
+            
+            # Override with custom dates if provided
+            if start_date:
+                start = timezone.datetime.strptime(start_date, '%Y-%m-%d').date()
+            if end_date:
+                end = timezone.datetime.strptime(end_date, '%Y-%m-%d').date()
+                days = (end - start).days + 1
             
             daily_revenue = []
             for i in range(days):
-                date = start_date + timedelta(days=i)
-                day_revenue = PaymentTransaction.objects.filter(
-                    transaction_time__date=date,
-                    result_code=0
-                ).aggregate(total=Sum('amount'))['total'] or 0
+                date = start + timedelta(days=i)
+                
+                # Base queryset
+                qs = TransactionQueue.objects.filter(
+                    created_at__date=date,
+                    method='mpesa',
+                    status__in=['completed', 'processed']
+                )
+                
+                # Apply filters
+                if locations:
+                    qs = qs.filter(user__clienth__location_id__in=locations)
+                if packages:
+                    qs = qs.filter(package_code__in=packages)
+                
+                day_revenue = qs.aggregate(total=Sum('price'))['total'] or 0
                 
                 daily_revenue.append({
                     'date': date.isoformat(),
@@ -157,6 +209,9 @@ class ClientGrowthView(APIView):
     def get(self, request):
         try:
             period = request.GET.get('period', '30d')
+            start_date = request.GET.get('start_date')
+            end_date = request.GET.get('end_date')
+            locations = request.GET.get('locations', '').split(',') if request.GET.get('locations') else []
             
             if period == '7d':
                 days = 7
@@ -165,15 +220,28 @@ class ClientGrowthView(APIView):
             else:  # 90d
                 days = 90
                 
-            end_date = timezone.now().date()
-            start_date = end_date - timedelta(days=days-1)
+            end = timezone.now().date()
+            start = end - timedelta(days=days-1)
+            
+            # Override with custom dates if provided
+            if start_date:
+                start = timezone.datetime.strptime(start_date, '%Y-%m-%d').date()
+            if end_date:
+                end = timezone.datetime.strptime(end_date, '%Y-%m-%d').date()
+                days = (end - start).days + 1
             
             daily_growth = []
             for i in range(days):
-                date = start_date + timedelta(days=i)
-                daily_signups = ClientH.objects.filter(
-                    created_at__date=date
-                ).count()
+                date = start + timedelta(days=i)
+                
+                # Base queryset
+                qs = ClientH.objects.filter(created_at__date=date)
+                
+                # Apply location filter
+                if locations:
+                    qs = qs.filter(location_id__in=locations)
+                
+                daily_signups = qs.count()
                 
                 daily_growth.append({
                     'date': date.isoformat(),
@@ -198,7 +266,25 @@ class PackageSalesView(APIView):
     def get(self, request):
         try:
             from packages.models import PackageType
-            sales = DispatchVoucher.objects.values('package__name').annotate(
+            start_date = request.GET.get('start_date')
+            end_date = request.GET.get('end_date')
+            locations = request.GET.get('locations', '').split(',') if request.GET.get('locations') else []
+            packages = request.GET.get('packages', '').split(',') if request.GET.get('packages') else []
+            
+            # Base queryset
+            qs = DispatchVoucher.objects.all()
+            
+            # Apply filters
+            if start_date:
+                qs = qs.filter(created_at__date__gte=start_date)
+            if end_date:
+                qs = qs.filter(created_at__date__lte=end_date)
+            if locations:
+                qs = qs.filter(location_id__in=locations)
+            if packages:
+                qs = qs.filter(package_id__in=packages)
+            
+            sales = qs.values('package__name').annotate(
                 count=Count('id'),
                 revenue=Sum('price_paid')
             ).order_by('-count')[:10]
@@ -214,7 +300,25 @@ class LocationPerformanceView(APIView):
     def get(self, request):
         try:
             from locations.models import Location
-            performance = DispatchVoucher.objects.values('location__name').annotate(
+            start_date = request.GET.get('start_date')
+            end_date = request.GET.get('end_date')
+            locations = request.GET.get('locations', '').split(',') if request.GET.get('locations') else []
+            packages = request.GET.get('packages', '').split(',') if request.GET.get('packages') else []
+            
+            # Base queryset
+            qs = DispatchVoucher.objects.all()
+            
+            # Apply filters
+            if start_date:
+                qs = qs.filter(created_at__date__gte=start_date)
+            if end_date:
+                qs = qs.filter(created_at__date__lte=end_date)
+            if locations:
+                qs = qs.filter(location_id__in=locations)
+            if packages:
+                qs = qs.filter(package_id__in=packages)
+            
+            performance = qs.values('location__name').annotate(
                 sales=Count('id'),
                 revenue=Sum('price_paid')
             ).order_by('-sales')[:10]

@@ -34,6 +34,42 @@
     <!-- Real-Time Monitor -->
     <RealTimeMonitor />
 
+    <!-- Divider with Dive Animation -->
+    <div class="relative my-8">
+      <div class="absolute inset-0 flex items-center" aria-hidden="true">
+        <div class="w-full border-t-2 border-slate-200 dark:border-slate-700"></div>
+      </div>
+      <div class="relative flex justify-center">
+        <button 
+          @click="toggleMetrics" 
+          class="bg-slate-50 dark:bg-slate-900 px-4 py-2 rounded-full border-2 border-slate-200 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-400 transition-all group"
+        >
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-medium text-slate-600 dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400">Performance Metrics</span>
+            <svg 
+              class="w-4 h-4 text-slate-400 group-hover:text-blue-500 transition-transform duration-300" 
+              :class="showMetrics ? 'rotate-180' : ''"
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Metrics Grid with Slide Animation -->
+    <transition
+      enter-active-class="transition-all duration-500 ease-out"
+      enter-from-class="opacity-0 -translate-y-4 max-h-0"
+      enter-to-class="opacity-100 translate-y-0 max-h-[5000px]"
+      leave-active-class="transition-all duration-300 ease-in"
+      leave-from-class="opacity-100 translate-y-0 max-h-[5000px]"
+      leave-to-class="opacity-0 -translate-y-4 max-h-0"
+    >
+      <div v-show="showMetrics" class="space-y-6">
     <!-- Metrics Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-slide-up">
       <ModernMetricCard
@@ -377,8 +413,10 @@
             <p class="text-sm font-medium text-slate-900 dark:text-white">{{ stat.value }}</p>
           </div>
         </div>
+        </div>
       </div>
     </div>
+    </transition>
   </div>
 </template>
 
@@ -407,6 +445,7 @@ export default {
   },
   data() {
     return {
+      showMetrics: true,
       revenuePeriod: '7d',
       growthPeriod: '30d',
       metrics: {},
@@ -550,7 +589,17 @@ export default {
 
     async fetchDashboardMetrics() {
       try {
-        this.metrics = await this.makeRequest('get', 'suapi/dashboard-metrics/')
+        let url = 'suapi/dashboard-metrics/'
+        const params = new URLSearchParams()
+        
+        if (this.dateRange.start) params.append('start_date', this.dateRange.start)
+        if (this.dateRange.end) params.append('end_date', this.dateRange.end)
+        if (this.selectedLocations.length) params.append('locations', this.selectedLocations.join(','))
+        if (this.selectedPackages.length) params.append('packages', this.selectedPackages.join(','))
+        
+        if (params.toString()) url += `?${params.toString()}`
+        
+        this.metrics = await this.makeRequest('get', url)
       } catch (error) {
         console.error('Error fetching metrics:', error)
       }
@@ -558,7 +607,17 @@ export default {
 
     async fetchRevenueAnalytics() {
       try {
-        const data = await this.makeRequest('get', `suapi/dashboard-metrics/revenue-analytics/?period=${this.revenuePeriod}`)
+        let url = `suapi/dashboard-metrics/revenue-analytics/?period=${this.revenuePeriod}`
+        const params = new URLSearchParams({ period: this.revenuePeriod })
+        
+        if (this.dateRange.start) params.append('start_date', this.dateRange.start)
+        if (this.dateRange.end) params.append('end_date', this.dateRange.end)
+        if (this.selectedLocations.length) params.append('locations', this.selectedLocations.join(','))
+        if (this.selectedPackages.length) params.append('packages', this.selectedPackages.join(','))
+        
+        url = `suapi/dashboard-metrics/revenue-analytics/?${params.toString()}`
+        
+        const data = await this.makeRequest('get', url)
         this.revenueData = data.data
         this.revenueChartSeries = [{
           name: 'Revenue',
@@ -571,7 +630,16 @@ export default {
 
     async fetchClientGrowth() {
       try {
-        const data = await this.makeRequest('get', `suapi/dashboard-metrics/client-growth/?period=${this.growthPeriod}`)
+        let url = `suapi/dashboard-metrics/client-growth/?period=${this.growthPeriod}`
+        const params = new URLSearchParams({ period: this.growthPeriod })
+        
+        if (this.dateRange.start) params.append('start_date', this.dateRange.start)
+        if (this.dateRange.end) params.append('end_date', this.dateRange.end)
+        if (this.selectedLocations.length) params.append('locations', this.selectedLocations.join(','))
+        
+        url = `suapi/dashboard-metrics/client-growth/?${params.toString()}`
+        
+        const data = await this.makeRequest('get', url)
         this.clientGrowthData = data.data
         this.growthChartSeries = [{
           name: 'Signups',
@@ -598,7 +666,17 @@ export default {
 
     async fetchPackageSales() {
       try {
-        const data = await this.makeRequest('get', 'suapi/dashboard-metrics/package-sales/')
+        let url = 'suapi/dashboard-metrics/package-sales/'
+        const params = new URLSearchParams()
+        
+        if (this.dateRange.start) params.append('start_date', this.dateRange.start)
+        if (this.dateRange.end) params.append('end_date', this.dateRange.end)
+        if (this.selectedLocations.length) params.append('locations', this.selectedLocations.join(','))
+        if (this.selectedPackages.length) params.append('packages', this.selectedPackages.join(','))
+        
+        if (params.toString()) url += `?${params.toString()}`
+        
+        const data = await this.makeRequest('get', url)
         this.packageSales = data.data
         this.packageChartOptions.labels = this.packageSales.map(p => p.package__name || 'Unknown')
         this.packageChartSeries = this.packageSales.map(p => p.count)
@@ -620,7 +698,17 @@ export default {
 
     async fetchLocationPerformance() {
       try {
-        const data = await this.makeRequest('get', 'suapi/dashboard-metrics/location-performance/')
+        let url = 'suapi/dashboard-metrics/location-performance/'
+        const params = new URLSearchParams()
+        
+        if (this.dateRange.start) params.append('start_date', this.dateRange.start)
+        if (this.dateRange.end) params.append('end_date', this.dateRange.end)
+        if (this.selectedLocations.length) params.append('locations', this.selectedLocations.join(','))
+        if (this.selectedPackages.length) params.append('packages', this.selectedPackages.join(','))
+        
+        if (params.toString()) url += `?${params.toString()}`
+        
+        const data = await this.makeRequest('get', url)
         this.locationPerformance = data.data
       } catch (error) {
         console.error('Error fetching location performance:', error)
@@ -695,6 +783,10 @@ export default {
       if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
       if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
       return `${Math.floor(diff / 86400)}d ago`
+    },
+
+    toggleMetrics() {
+      this.showMetrics = !this.showMetrics
     }
   }
 }

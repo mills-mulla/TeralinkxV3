@@ -194,6 +194,9 @@
           </div>
         </main>
 
+        <!-- Real-Time Notifications -->
+        <RealTimeNotifications />
+
         <!-- Toast Notification -->
         <div v-if="showToast" class="fixed top-4 right-4 bg-emerald-500 dark:bg-emerald-600 text-white px-5 py-3 rounded-lg shadow-lg z-50 animate-fade-in">
           <div class="flex items-center space-x-2">
@@ -221,6 +224,7 @@
 <script>
 import { useTheme } from './composables/useTheme'
 import Sidebar from './components/Sidebar.vue'
+import RealTimeNotifications from './components/RealTimeNotifications.vue'
 import Dashboard from './views/Dashboard.vue'
 import Analytics from './views/Analytics.vue'
 import Clients from './views/Clients.vue'
@@ -253,6 +257,7 @@ export default {
   },
   components: {
     Sidebar,
+    RealTimeNotifications,
     Dashboard,
     Analytics,
     Clients,
