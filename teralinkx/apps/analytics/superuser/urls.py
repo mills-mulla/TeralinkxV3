@@ -18,6 +18,8 @@ from .views.dashboard_metrics import (
     SessionMetricsView, RefundMetricsView, CohortAnalysisView,
     RFMSegmentationView, FinancialAnalyticsView, FunnelAnalysisView,
     ChurnPredictionView, RevenueForecastView, NetworkAnalyticsView,
+)
+from .views.system_health import SystemHealthView
     ABTestingView, CustomerHealthView, AuditLogView, DataQualityView
 )
 
@@ -127,5 +129,5 @@ urlpatterns = [
     path('dashboard-metrics/customer-health/', CustomerHealthView.as_view(), name='customer-health'),
     path('dashboard-metrics/audit-logs/', AuditLogView.as_view(), name='audit-logs'),
     path('dashboard-metrics/data-quality/', DataQualityView.as_view(), name='data-quality'),
-    path('system-status/', SystemStatusView.as_view(), name='system-status'),
+    path('system-status/', SystemHealthView.as_view(), name='system-status'),
 ]

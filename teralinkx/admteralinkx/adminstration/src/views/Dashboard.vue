@@ -201,7 +201,7 @@
           </svg>
           <h3 class="text-sm font-medium text-slate-900 dark:text-white">Package Sales</h3>
         </div>
-        <div v-if="packageSales.length > 0" class="h-80">
+        <div v-if="packageSales.length > 0" class="h-96">
           <apexchart type="pie" height="100%" :options="packageChartOptions" :series="packageChartSeries" />
         </div>
         <div v-else class="h-64 flex items-center justify-center text-slate-400 text-sm">Loading...</div>
@@ -407,11 +407,24 @@
 
     <!-- System Status -->
     <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 transition-colors duration-300 animate-slide-up" style="animation-delay: 0.35s">
-      <div class="flex items-center gap-2 mb-4">
-        <svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-        </svg>
-        <h3 class="text-sm font-medium text-slate-900 dark:text-white">System Status</h3>
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2">
+          <svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+          </svg>
+          <h3 class="text-sm font-medium text-slate-900 dark:text-white">System Health</h3>
+        </div>
+        <select 
+          v-model="systemStatusInterval" 
+          @change="updateSystemStatusInterval"
+          class="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-slate-900 dark:text-white"
+        >
+          <option value="5000">5 seconds</option>
+          <option value="10000">10 seconds</option>
+          <option value="30000">30 seconds</option>
+          <option value="60000">1 minute</option>
+          <option value="300000">5 minutes</option>
+        </select>
       </div>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div v-for="stat in systemStats" :key="stat.name" class="flex items-center gap-3">
@@ -460,6 +473,8 @@ export default {
       revenueData: [],
       clientGrowthData: [],
       systemStats: [],
+      systemStatusInterval: 30000,
+      systemStatusTimer: null,
       packageSales: [],
       paymentMethods: [],
       packageColors: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316'],
@@ -512,7 +527,7 @@ export default {
           position: 'right',
           fontSize: '12px',
           offsetY: 0,
-          height: 230,
+          height: 320,
           markers: {
             width: 12,
             height: 12,
@@ -588,6 +603,12 @@ export default {
   async mounted() {
     await this.fetchFilterOptions()
     await this.fetchAllData()
+    this.updateSystemStatusInterval()
+  },
+  beforeUnmount() {
+    if (this.systemStatusTimer) {
+      clearInterval(this.systemStatusTimer)
+    }
   },
   methods: {
     async fetchFilterOptions() {
@@ -710,14 +731,23 @@ export default {
       try {
         const data = await this.makeRequest('get', 'suapi/system-status/')
         this.systemStats = [
-          { name: 'Response', value: data.apiResponseTime, statusColor: 'bg-emerald-500' },
-          { name: 'Uptime', value: data.uptime, statusColor: 'bg-emerald-500' },
-          { name: 'Sessions', value: data.activeSessions, statusColor: 'bg-blue-500' },
-          { name: 'Errors', value: `${data.errorRate}%`, statusColor: 'bg-amber-500' }
+          { name: 'Database', value: data.database_response, statusColor: data.database_status === 'healthy' ? 'bg-emerald-500' : data.database_status === 'warning' ? 'bg-amber-500' : 'bg-rose-500' },
+          { name: 'Internet', value: data.internet_response, statusColor: data.internet_status === 'healthy' ? 'bg-emerald-500' : data.internet_status === 'warning' ? 'bg-amber-500' : 'bg-rose-500' },
+          { name: 'Sessions', value: data.active_sessions, statusColor: 'bg-blue-500' },
+          { name: 'Uptime', value: data.uptime, statusColor: data.uptime_status === 'healthy' ? 'bg-emerald-500' : 'bg-amber-500' }
         ]
       } catch (error) {
-        console.error('Error fetching status:', error)
+        console.error('Error fetching system status:', error)
       }
+    },
+
+    updateSystemStatusInterval() {
+      if (this.systemStatusTimer) {
+        clearInterval(this.systemStatusTimer)
+      }
+      this.systemStatusTimer = setInterval(() => {
+        this.fetchSystemStatus()
+      }, parseInt(this.systemStatusInterval))
     },
 
     async fetchPackageSales() {
