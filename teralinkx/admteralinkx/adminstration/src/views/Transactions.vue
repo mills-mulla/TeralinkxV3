@@ -274,11 +274,31 @@ export default {
 
     const fetchStats = async () => {
       try {
-        stats.value = await makeRequest('get', 'suapi/transactions/stats/')
-      } catch (err) { console.error('Error:', err) }
+        // Calculate total revenue from completed M-Pesa transactions in queue
+        const completedMpesa = queue.value.filter(t => 
+          (t.status === 'completed' || t.status === 'processed') && t.method === 'mpesa'
+        )
+        const paymentTotal = completedMpesa.reduce((sum, t) => sum + parseFloat(t.price || 0), 0)
+        const queuePending = queue.value.filter(t => t.status === 'pending' || t.status === 'Pending...').length
+        const queueFailed = queue.value.filter(t => t.status === 'failed').length
+        const paymentCompleted = completedMpesa.length
+        
+        stats.value = {
+          total_revenue: paymentTotal,
+          completed_count: paymentCompleted,
+          pending_count: queuePending,
+          failed_count: queueFailed
+        }
+      } catch (err) { 
+        console.error('Error calculating stats:', err)
+        stats.value = { total_revenue: 0, completed_count: 0, pending_count: 0, failed_count: 0 }
+      }
     }
 
-    const refreshData = () => Promise.all([fetchPayments(), fetchBalance(), fetchQueue(), fetchPoints(), fetchStats()])
+    const refreshData = async () => {
+      await Promise.all([fetchPayments(), fetchBalance(), fetchQueue(), fetchPoints()])
+      await fetchStats()
+    }
 
     const formatCurrency = (amount) => {
       if (!amount) return 'KSh 0'

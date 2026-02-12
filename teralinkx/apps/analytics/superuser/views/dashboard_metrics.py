@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from users.models import ClientH
 from packages.models import DispatchVoucher
-from finance.models import PaymentTransaction
+from finance.models import PaymentTransaction, TransactionQueue
 import logging
 
 logger = logging.getLogger(__name__)
@@ -37,32 +37,65 @@ class DashboardMetricsView(APIView):
                 status='active'
             ).values('user').distinct().count()
             
-            # Revenue metrics (from transactions)
-            revenue_data = PaymentTransaction.objects.filter(
-                result_code=0  # Successful transactions
-            ).aggregate(
-                total_revenue=Sum('amount'),
-                total_orders=Count('id')
-            )
+            # Revenue metrics (from M-Pesa transactions in queue)
+            total_revenue = TransactionQueue.objects.filter(
+                method='mpesa'
+            ).aggregate(total=Sum('price'))['total'] or 0
+            
+            prev_week_revenue = TransactionQueue.objects.filter(
+                method='mpesa',
+                created_at__date__lt=week_ago
+            ).aggregate(total=Sum('price'))['total'] or 0
+            
+            revenue_trend = 'up' if total_revenue > prev_week_revenue else 'down' if total_revenue < prev_week_revenue else 'stable'
+            revenue_trend_value = f"{abs(round((total_revenue - prev_week_revenue) / prev_week_revenue * 100, 1)) if prev_week_revenue > 0 else 0}%"
             
             # Packages sold
             packages_sold = DispatchVoucher.objects.filter(
                 activated_at__date__gte=month_ago
             ).count()
             
+            # Calculate trends
+            prev_week_clients = ClientH.objects.filter(
+                created_at__date__lt=week_ago
+            ).count()
+            clients_trend = 'up' if total_clients > prev_week_clients else 'down' if total_clients < prev_week_clients else 'stable'
+            clients_trend_value = f"{abs(round((total_clients - prev_week_clients) / prev_week_clients * 100, 1)) if prev_week_clients > 0 else 0}%"
+            
+            prev_week_new = ClientH.objects.filter(
+                created_at__date__gte=week_ago - timedelta(days=7),
+                created_at__date__lt=week_ago
+            ).count()
+            new_clients_trend = 'up' if new_clients_7d > prev_week_new else 'down' if new_clients_7d < prev_week_new else 'stable'
+            new_clients_trend_value = f"{abs(round((new_clients_7d - prev_week_new) / prev_week_new * 100, 1)) if prev_week_new > 0 else 0}%"
+            
+            prev_week_active = DispatchVoucher.objects.filter(
+                expires_at__gt=timezone.now() - timedelta(days=7),
+                status='active',
+                created_at__date__lt=week_ago
+            ).values('user').distinct().count()
+            active_users_trend = 'up' if active_users > prev_week_active else 'down' if active_users < prev_week_active else 'stable'
+            active_users_trend_value = f"{abs(round((active_users - prev_week_active) / prev_week_active * 100, 1)) if prev_week_active > 0 else 0}%"
+            
             # Active ratio (clients with active vouchers vs total clients)
             active_ratio = (active_users / total_clients * 100) if total_clients > 0 else 0
             
             metrics = {
                 'totalClients': total_clients,
+                'clientsTrend': clients_trend,
+                'clientsTrendValue': clients_trend_value,
                 'newClientsToday': new_clients_today,
                 'newClients7d': new_clients_7d,
+                'newClientsTrend': new_clients_trend,
+                'newClientsTrendValue': new_clients_trend_value,
                 'activeUsers': active_users,
-                'totalRevenue': float(revenue_data['total_revenue'] or 0),
-                'totalProcessedOrders': revenue_data['total_orders'] or 0,
+                'activeUsersTrend': active_users_trend,
+                'activeUsersTrendValue': active_users_trend_value,
+                'totalRevenue': float(total_revenue),
+                'revenueTrend': revenue_trend,
+                'revenueTrendValue': revenue_trend_value,
                 'totalPackagesSold': packages_sold,
-                'activeRatio': round(active_ratio, 1),
-                'clientGrowth': 12.5  # This could be calculated based on previous period
+                'activeRatio': round(active_ratio, 1)
             }
             
             return Response(metrics)

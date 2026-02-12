@@ -9,15 +9,16 @@
           @refresh-data="refreshData"
           :is-mobile-open="isMobileSidebarOpen"
           @close-mobile="closeMobileSidebar"
+          @sidebar-toggle="handleSidebarToggle"
           :user="user"
           :stats="sidebarStats"
         />
 
         <!-- Main Content Area -->
-        <main class="lg:ml-64 transition-all duration-300 min-h-screen" :class="{ 'ml-0': !isMobileSidebarOpen }">
+        <main class="transition-all duration-300 min-h-screen" :class="isSidebarCollapsed ? 'lg:ml-16' : 'lg:ml-56'">
           <!-- Header with search, notifications, and user menu -->
-          <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-300">
-            <div class="px-3 md:px-6 py-3 flex justify-between items-center gap-2">
+          <header class="bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 sticky top-0 z-40 transition-colors duration-300">
+            <div class="px-3 md:px-6 py-2 flex justify-between items-center gap-2">
               <div class="flex items-center space-x-4 flex-1">
                 <!-- Mobile Menu Button -->
                 <button 
@@ -272,6 +273,7 @@ export default {
     return {
       activeComponent: 'Dashboard',
       isMobileSidebarOpen: false,
+      isSidebarCollapsed: false,
       showToast: false,
       toastMessage: '',
       isAuthenticated: false,
@@ -430,6 +432,10 @@ export default {
     
     closeMobileSidebar() {
       this.isMobileSidebarOpen = false;
+    },
+
+    handleSidebarToggle(isCollapsed) {
+      this.isSidebarCollapsed = isCollapsed;
     },
 
     // Set up axios interceptor for automatic token refresh

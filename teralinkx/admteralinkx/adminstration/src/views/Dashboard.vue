@@ -39,8 +39,8 @@
       <ModernMetricCard
         title="Total Clients"
         :value="metrics.totalClients || 0"
-        trend="up"
-        trendValue="12.5%"
+        :trend="metrics.clientsTrend || 'stable'"
+        :trendValue="metrics.clientsTrendValue || '0%'"
         color="blue"
       >
         <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
@@ -50,8 +50,8 @@
       <ModernMetricCard
         title="New (7d)"
         :value="metrics.newClients7d || 0"
-        trend="up"
-        trendValue="8.2%"
+        :trend="metrics.newClientsTrend || 'stable'"
+        :trendValue="metrics.newClientsTrendValue || '0%'"
         color="emerald"
       >
         <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
@@ -59,10 +59,10 @@
         </svg>
       </ModernMetricCard>
       <ModernMetricCard
-        title="Active Users"
+        title="Active Vouchers"
         :value="metrics.activeUsers || 0"
-        trend="stable"
-        trendValue="2.1%"
+        :trend="metrics.activeUsersTrend || 'stable'"
+        :trendValue="metrics.activeUsersTrendValue || '0%'"
         color="green"
       >
         <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
@@ -72,8 +72,8 @@
       <ModernMetricCard
         title="Revenue"
         :value="`KSh ${formatNumber(metrics.totalRevenue || 0)}`"
-        trend="up"
-        trendValue="18.7%"
+        :trend="metrics.revenueTrend || 'stable'"
+        :trendValue="metrics.revenueTrendValue || '0%'"
         color="amber"
         :formatted="false"
       >
