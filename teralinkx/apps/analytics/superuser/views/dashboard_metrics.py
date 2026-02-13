@@ -953,34 +953,37 @@ class ABTestingView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUser]
     
     def get(self, request):
+        from packages.models import FeaturedPromotion
+        from django.db.models import F
+        
         try:
-            # Mock A/B test data
-            experiments = [
-                {
-                    'id': 1,
-                    'name': 'Package Pricing Test',
-                    'status': 'running',
-                    'start_date': '2024-01-01',
-                    'variants': [
-                        {'name': 'Control', 'participants': 500, 'conversions': 125, 'conversion_rate': 25.0, 'revenue': 62500},
-                        {'name': 'Variant A', 'participants': 500, 'conversions': 150, 'conversion_rate': 30.0, 'revenue': 75000}
-                    ],
-                    'winner': 'Variant A',
-                    'confidence': 95.5
-                },
-                {
-                    'id': 2,
-                    'name': 'Promotion Banner Test',
-                    'status': 'completed',
-                    'start_date': '2023-12-15',
-                    'variants': [
-                        {'name': 'Control', 'participants': 1000, 'conversions': 200, 'conversion_rate': 20.0, 'revenue': 100000},
-                        {'name': 'Variant B', 'participants': 1000, 'conversions': 180, 'conversion_rate': 18.0, 'revenue': 90000}
-                    ],
-                    'winner': 'Control',
-                    'confidence': 87.3
-                }
-            ]
+            # Get active promotions with performance metrics
+            promotions = FeaturedPromotion.objects.filter(
+                is_active=True,
+                start_date__lte=timezone.now(),
+                end_date__gte=timezone.now()
+            ).annotate(
+                ctr=F('clicks') * 100.0 / F('views'),
+                cvr=F('conversions') * 100.0 / F('clicks')
+            )[:10]
+            
+            experiments = []
+            for promo in promotions:
+                experiments.append({
+                    'id': promo.id,
+                    'name': promo.name,
+                    'status': 'running' if promo.is_live else 'ended',
+                    'start_date': promo.start_date.isoformat(),
+                    'variants': [{
+                        'name': promo.promotion_type,
+                        'participants': promo.views,
+                        'conversions': promo.conversions,
+                        'conversion_rate': round(promo.conversion_rate, 2),
+                        'revenue': float(promo.final_price * promo.conversions)
+                    }],
+                    'winner': promo.promotion_type if promo.conversion_rate > 20 else 'Control',
+                    'confidence': min(95, promo.conversion_rate * 3)
+                })
             
             return Response({'experiments': experiments})
         except Exception as e:
@@ -1058,17 +1061,42 @@ class AuditLogView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUser]
     
     def get(self, request):
+        from security.models import SecurityLog
+        
         try:
-            # Mock audit log data
-            logs = [
-                {'id': 1, 'user': 'admin', 'action': 'UPDATE', 'resource': 'Package', 'resource_id': 5, 'timestamp': timezone.now().isoformat(), 'ip': '192.168.1.1'},
-                {'id': 2, 'user': 'admin', 'action': 'DELETE', 'resource': 'Voucher', 'resource_id': 123, 'timestamp': (timezone.now() - timedelta(hours=1)).isoformat(), 'ip': '192.168.1.1'},
-                {'id': 3, 'user': 'manager', 'action': 'CREATE', 'resource': 'Promotion', 'resource_id': 8, 'timestamp': (timezone.now() - timedelta(hours=2)).isoformat(), 'ip': '192.168.1.5'},
-                {'id': 4, 'user': 'admin', 'action': 'UPDATE', 'resource': 'Client', 'resource_id': 45, 'timestamp': (timezone.now() - timedelta(hours=3)).isoformat(), 'ip': '192.168.1.1'},
-                {'id': 5, 'user': 'support', 'action': 'VIEW', 'resource': 'Transaction', 'resource_id': 789, 'timestamp': (timezone.now() - timedelta(hours=4)).isoformat(), 'ip': '192.168.1.10'}
-            ]
+            # Get recent logs (last 100)
+            recent_logs = SecurityLog.objects.select_related('user').order_by('-created_at')[:100]
             
-            return Response({'logs': logs})
+            logs = []
+            for log in recent_logs:
+                logs.append({
+                    'id': log.id,
+                    'user': log.user.account if log.user else 'System',
+                    'action': log.action_type.upper(),
+                    'resource': log.action_category,
+                    'resource_id': log.details.get('device_id', log.details.get('session_id', '')),
+                    'timestamp': log.created_at.isoformat(),
+                    'ip': log.ip_address or 'N/A',
+                    'severity': log.severity,
+                    'description': log.description
+                })
+            
+            # Get summary stats
+            last_24h = timezone.now() - timedelta(hours=24)
+            stats = SecurityLog.objects.filter(created_at__gte=last_24h).aggregate(
+                total=Count('id'),
+                critical=Count('id', filter=Q(severity='critical')),
+                suspicious=Count('id', filter=Q(is_suspicious=True))
+            )
+            
+            return Response({
+                'logs': logs,
+                'summary': {
+                    'total_24h': stats['total'],
+                    'critical_24h': stats['critical'],
+                    'suspicious_24h': stats['suspicious']
+                }
+            })
         except Exception as e:
             logger.error(f"Error fetching audit logs: {e}")
             return Response({'error': 'Failed to fetch audit logs'}, status=500)
@@ -1077,14 +1105,84 @@ class DataQualityView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUser]
     
     def get(self, request):
+        from users.models import UserDevice
+        
         try:
-            # Data quality checks
+            # Check data completeness
+            total_clients = ClientH.objects.count()
+            
+            # Clients with complete profiles
+            complete_profiles = ClientH.objects.exclude(
+                Q(phone_number='') | Q(display_name='')
+            ).count()
+            profile_score = (complete_profiles / total_clients * 100) if total_clients > 0 else 100
+            profile_issues = total_clients - complete_profiles
+            
+            # Devices with proper identification
+            total_devices = UserDevice.objects.count()
+            identified_devices = UserDevice.objects.exclude(
+                Q(device_name='') | Q(device_type='other')
+            ).count()
+            device_score = (identified_devices / total_devices * 100) if total_devices > 0 else 100
+            device_issues = total_devices - identified_devices
+            
+            # Vouchers with proper tracking
+            total_vouchers = DispatchVoucher.objects.count()
+            tracked_vouchers = DispatchVoucher.objects.exclude(transaction_id='').count()
+            voucher_score = (tracked_vouchers / total_vouchers * 100) if total_vouchers > 0 else 100
+            voucher_issues = total_vouchers - tracked_vouchers
+            
+            # Transactions with complete data
+            total_transactions = PaymentTransaction.objects.count()
+            complete_transactions = PaymentTransaction.objects.exclude(
+                Q(initiator='') | Q(gateway_reference='')
+            ).count()
+            transaction_score = (complete_transactions / total_transactions * 100) if total_transactions > 0 else 100
+            transaction_issues = total_transactions - complete_transactions
+            
+            # Sessions with proper data
+            from analytics.models import ActiveSession
+            total_sessions = ActiveSession.objects.count()
+            valid_sessions = ActiveSession.objects.exclude(Q(ip_address='') | Q(mac_address='')).count()
+            session_score = (valid_sessions / total_sessions * 100) if total_sessions > 0 else 100
+            session_issues = total_sessions - valid_sessions
+            
             checks = [
-                {'table': 'clients', 'check': 'Completeness', 'score': 98.5, 'status': 'passed', 'issues': 15},
-                {'table': 'transactions', 'check': 'Accuracy', 'score': 99.2, 'status': 'passed', 'issues': 8},
-                {'table': 'vouchers', 'check': 'Consistency', 'score': 87.3, 'status': 'warning', 'issues': 127},
-                {'table': 'sessions', 'check': 'Timeliness', 'score': 95.8, 'status': 'passed', 'issues': 42},
-                {'table': 'locations', 'check': 'Completeness', 'score': 100.0, 'status': 'passed', 'issues': 0}
+                {
+                    'table': 'clients',
+                    'check': 'Completeness',
+                    'score': round(profile_score, 1),
+                    'status': 'passed' if profile_score >= 95 else 'warning' if profile_score >= 85 else 'failed',
+                    'issues': profile_issues
+                },
+                {
+                    'table': 'transactions',
+                    'check': 'Accuracy',
+                    'score': round(transaction_score, 1),
+                    'status': 'passed' if transaction_score >= 95 else 'warning' if transaction_score >= 85 else 'failed',
+                    'issues': transaction_issues
+                },
+                {
+                    'table': 'vouchers',
+                    'check': 'Consistency',
+                    'score': round(voucher_score, 1),
+                    'status': 'passed' if voucher_score >= 95 else 'warning' if voucher_score >= 85 else 'failed',
+                    'issues': voucher_issues
+                },
+                {
+                    'table': 'sessions',
+                    'check': 'Timeliness',
+                    'score': round(session_score, 1),
+                    'status': 'passed' if session_score >= 95 else 'warning' if session_score >= 85 else 'failed',
+                    'issues': session_issues
+                },
+                {
+                    'table': 'devices',
+                    'check': 'Completeness',
+                    'score': round(device_score, 1),
+                    'status': 'passed' if device_score >= 95 else 'warning' if device_score >= 85 else 'failed',
+                    'issues': device_issues
+                }
             ]
             
             overall_score = sum([c['score'] for c in checks]) / len(checks)

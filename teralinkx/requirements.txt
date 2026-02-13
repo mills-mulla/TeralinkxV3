@@ -145,3 +145,4 @@ whitenoise==6.9.0
 wsproto==1.2.0
 yarl==1.9.4
 zope.interface==6.3
+psutil==6.1.1
