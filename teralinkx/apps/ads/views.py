@@ -189,26 +189,72 @@ class AdvertisementManagementView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUser]
     
     def get(self, request):
-        """List all advertisements"""
+        """List all advertisements with analytics"""
         try:
-            ads = Advertisement.objects.all().order_by('-created_at')
+            ads = Advertisement.objects.all().prefetch_related('media_files').order_by('-created_at')
             serializer = AdvertisementSerializer(ads, many=True, context={'request': request})
             
             # Summary stats
+            total_impressions = sum(ad.impressions for ad in ads)
+            total_clicks = sum(ad.clicks for ad in ads)
+            total_spent = sum(ad.total_spent for ad in ads)
+            
             stats = {
                 'total': ads.count(),
                 'active': ads.filter(status='active').count(),
                 'draft': ads.filter(status='draft').count(),
                 'paused': ads.filter(status='paused').count(),
-                'total_impressions': sum(ad.impressions for ad in ads),
-                'total_clicks': sum(ad.clicks for ad in ads),
-                'total_spent': float(sum(ad.total_spent for ad in ads))
+                'expired': ads.filter(status='expired').count(),
+                'total_impressions': total_impressions,
+                'total_clicks': total_clicks,
+                'total_spent': float(total_spent),
+                'avg_ctr': round((total_clicks / total_impressions * 100) if total_impressions > 0 else 0, 2),
+                'total_budget': float(sum(ad.budget for ad in ads))
             }
+            
+            # Analytics by type
+            analytics_by_type = {}
+            for ad_type, _ in Advertisement.AD_TYPES:
+                type_ads = ads.filter(ad_type=ad_type)
+                if type_ads.exists():
+                    type_impressions = sum(ad.impressions for ad in type_ads)
+                    type_clicks = sum(ad.clicks for ad in type_ads)
+                    analytics_by_type[ad_type] = {
+                        'count': type_ads.count(),
+                        'impressions': type_impressions,
+                        'clicks': type_clicks,
+                        'ctr': round((type_clicks / type_impressions * 100) if type_impressions > 0 else 0, 2),
+                        'spent': float(sum(ad.total_spent for ad in type_ads))
+                    }
+            
+            # Top performing ads
+            top_ads = sorted(ads, key=lambda x: x.clicks, reverse=True)[:5]
+            top_performers = [{
+                'id': ad.id,
+                'title': ad.title,
+                'clicks': ad.clicks,
+                'impressions': ad.impressions,
+                'ctr': round((ad.clicks / ad.impressions * 100) if ad.impressions > 0 else 0, 2)
+            } for ad in top_ads]
+            
+            # Recent activity (last 7 days)
+            from datetime import timedelta
+            week_ago = timezone.now() - timedelta(days=7)
+            recent_ads = ads.filter(created_at__gte=week_ago)
+            recent_impressions = sum(ad.impressions for ad in recent_ads)
+            recent_clicks = sum(ad.clicks for ad in recent_ads)
             
             return Response({
                 'success': True,
                 'ads': serializer.data,
-                'stats': stats
+                'stats': stats,
+                'analytics_by_type': analytics_by_type,
+                'top_performers': top_performers,
+                'recent_activity': {
+                    'new_ads': recent_ads.count(),
+                    'impressions': recent_impressions,
+                    'clicks': recent_clicks
+                }
             })
         except Exception as e:
             logger.error(f"Error fetching ads: {e}")
