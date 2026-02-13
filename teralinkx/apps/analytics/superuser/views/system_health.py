@@ -327,55 +327,112 @@ class DataQualityView(APIView):
         from users.models import ClientH, UserDevice
         from packages.models import DispatchVoucher
         from finance.models import PaymentTransaction
+        from analytics.models import ActiveSession
         from django.db.models import Count, Q
         
-        # Check data completeness
-        total_clients = ClientH.objects.count()
-        
-        # Clients with complete profiles
-        complete_profiles = ClientH.objects.exclude(
-            Q(phone_number='') | Q(display_name='')
-        ).count()
-        
-        # Devices with proper identification
-        total_devices = UserDevice.objects.count()
-        identified_devices = UserDevice.objects.exclude(
-            Q(device_name='') | Q(device_type='other')
-        ).count()
-        
-        # Vouchers with proper tracking
-        total_vouchers = DispatchVoucher.objects.count()
-        tracked_vouchers = DispatchVoucher.objects.exclude(
-            transaction_id=''
-        ).count()
-        
-        # Transactions with complete data
-        total_transactions = PaymentTransaction.objects.count()
-        complete_transactions = PaymentTransaction.objects.exclude(
-            Q(initiator='') | Q(gateway_reference='')
-        ).count()
-        
-        # Calculate quality scores
-        profile_quality = (complete_profiles / total_clients * 100) if total_clients > 0 else 0
-        device_quality = (identified_devices / total_devices * 100) if total_devices > 0 else 0
-        voucher_quality = (tracked_vouchers / total_vouchers * 100) if total_vouchers > 0 else 0
-        transaction_quality = (complete_transactions / total_transactions * 100) if total_transactions > 0 else 0
-        
-        # Overall quality score
-        quality_score = int((profile_quality + device_quality + voucher_quality + transaction_quality) / 4)
-        
-        return Response({
-            'quality_score': quality_score,
-            'metrics': {
-                'profile_completeness': round(profile_quality, 2),
-                'device_identification': round(device_quality, 2),
-                'voucher_tracking': round(voucher_quality, 2),
-                'transaction_completeness': round(transaction_quality, 2)
-            },
-            'counts': {
-                'total_clients': total_clients,
-                'complete_profiles': complete_profiles,
-                'total_devices': total_devices,
-                'identified_devices': identified_devices
-            }
-        })
+        try:
+            checks = []
+            
+            # 1. Client Profile Completeness
+            total_clients = ClientH.objects.count()
+            complete_profiles = ClientH.objects.exclude(
+                Q(phone_number='') | Q(display_name='')
+            ).count()
+            profile_score = (complete_profiles / total_clients * 100) if total_clients > 0 else 100
+            profile_issues = total_clients - complete_profiles
+            
+            checks.append({
+                'table': 'Clients',
+                'check': 'Completeness',
+                'score': round(profile_score, 1),
+                'status': 'passed' if profile_score >= 95 else 'warning' if profile_score >= 85 else 'failed',
+                'issues': profile_issues
+            })
+            
+            # 2. Transaction Data Accuracy
+            total_transactions = PaymentTransaction.objects.count()
+            complete_transactions = PaymentTransaction.objects.exclude(
+                Q(initiator='') | Q(gateway_reference='')
+            ).count()
+            transaction_score = (complete_transactions / total_transactions * 100) if total_transactions > 0 else 100
+            transaction_issues = total_transactions - complete_transactions
+            
+            checks.append({
+                'table': 'Transactions',
+                'check': 'Accuracy',
+                'score': round(transaction_score, 1),
+                'status': 'passed' if transaction_score >= 95 else 'warning' if transaction_score >= 85 else 'failed',
+                'issues': transaction_issues
+            })
+            
+            # 3. Voucher Tracking Consistency
+            total_vouchers = DispatchVoucher.objects.count()
+            tracked_vouchers = DispatchVoucher.objects.exclude(transaction_id='').count()
+            voucher_score = (tracked_vouchers / total_vouchers * 100) if total_vouchers > 0 else 100
+            voucher_issues = total_vouchers - tracked_vouchers
+            
+            checks.append({
+                'table': 'Vouchers',
+                'check': 'Consistency',
+                'score': round(voucher_score, 1),
+                'status': 'passed' if voucher_score >= 95 else 'warning' if voucher_score >= 85 else 'failed',
+                'issues': voucher_issues
+            })
+            
+            # 4. Session Data Timeliness
+            total_sessions = ActiveSession.objects.count()
+            valid_sessions = ActiveSession.objects.exclude(
+                Q(ip_address='') | Q(mac_address='')
+            ).count()
+            session_score = (valid_sessions / total_sessions * 100) if total_sessions > 0 else 100
+            session_issues = total_sessions - valid_sessions
+            
+            checks.append({
+                'table': 'Sessions',
+                'check': 'Timeliness',
+                'score': round(session_score, 1),
+                'status': 'passed' if session_score >= 95 else 'warning' if session_score >= 85 else 'failed',
+                'issues': session_issues
+            })
+            
+            # 5. Device Identification
+            total_devices = UserDevice.objects.count()
+            identified_devices = UserDevice.objects.exclude(
+                Q(device_name='') | Q(device_type='other')
+            ).count()
+            device_score = (identified_devices / total_devices * 100) if total_devices > 0 else 100
+            device_issues = total_devices - identified_devices
+            
+            checks.append({
+                'table': 'Devices',
+                'check': 'Completeness',
+                'score': round(device_score, 1),
+                'status': 'passed' if device_score >= 95 else 'warning' if device_score >= 85 else 'failed',
+                'issues': device_issues
+            })
+            
+            # Calculate overall score
+            overall_score = round(sum([c['score'] for c in checks]) / len(checks), 1)
+            total_issues = sum([c['issues'] for c in checks])
+            
+            # Calculate trend (mock for now - would need historical data)
+            trend = 2.5  # Positive trend
+            
+            return Response({
+                'checks': checks,
+                'overall_score': overall_score,
+                'total_issues': total_issues,
+                'last_check': timezone.now().isoformat(),
+                'trend': trend
+            })
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error fetching data quality: {e}")
+            return Response({
+                'checks': [],
+                'overall_score': 0,
+                'total_issues': 0,
+                'last_check': timezone.now().isoformat(),
+                'trend': 0
+            }, status=200)

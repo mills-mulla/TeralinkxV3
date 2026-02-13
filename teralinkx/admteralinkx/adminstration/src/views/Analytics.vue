@@ -76,7 +76,7 @@
     </div>
 
     <div v-if="activeTab === 'testing'">
-      <ABTesting :data="abTestData" :loading="loading" />
+      <ABTesting :data="abTestData" :loading="loading" @refresh="fetchABTesting" />
     </div>
 
     <div v-if="activeTab === 'health'">
