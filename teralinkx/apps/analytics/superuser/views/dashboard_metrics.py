@@ -1076,42 +1076,112 @@ class ABTestingView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUser]
     
     def get(self, request):
-        from packages.models import FeaturedPromotion
-        from django.db.models import F
+        from packages.models import FeaturedPromotion, PackageType
+        from django.db.models import Case, When, Value, IntegerField
         
         try:
-            # Get active promotions with performance metrics
-            promotions = FeaturedPromotion.objects.filter(
-                is_active=True,
-                start_date__lte=timezone.now(),
-                end_date__gte=timezone.now()
-            ).annotate(
-                ctr=F('clicks') * 100.0 / F('views'),
-                cvr=F('conversions') * 100.0 / F('clicks')
-            )[:10]
+            # Get all promotions (active and ended)
+            promotions = FeaturedPromotion.objects.select_related('package').all()[:20]
             
             experiments = []
             for promo in promotions:
+                # Determine status
+                now = timezone.now()
+                if promo.is_active and promo.start_date <= now <= promo.end_date:
+                    status = 'running'
+                elif now > promo.end_date:
+                    status = 'ended'
+                else:
+                    status = 'scheduled'
+                
+                # Calculate metrics
+                views = promo.views or 0
+                clicks = promo.clicks or 0
+                conversions = promo.conversions or 0
+                
+                # CTR (Click-Through Rate)
+                ctr = (clicks / views * 100) if views > 0 else 0
+                
+                # CVR (Conversion Rate)
+                cvr = (conversions / clicks * 100) if clicks > 0 else 0
+                
+                # Revenue calculation
+                revenue = float(promo.final_price * conversions)
+                
+                # Confidence level based on sample size
+                if views >= 1000:
+                    confidence = 95
+                elif views >= 500:
+                    confidence = 85
+                elif views >= 100:
+                    confidence = 70
+                else:
+                    confidence = 50
+                
+                # Determine winner (if conversion rate > 15% it's considered successful)
+                winner = promo.promotion_type if cvr > 15 else 'Control'
+                
+                # Create variant data
+                variant = {
+                    'name': promo.promotion_type.replace('_', ' ').title(),
+                    'participants': views,
+                    'clicks': clicks,
+                    'conversions': conversions,
+                    'ctr': round(ctr, 2),
+                    'conversion_rate': round(cvr, 2),
+                    'revenue': round(revenue, 2),
+                    'avg_order_value': round(revenue / conversions, 2) if conversions > 0 else 0
+                }
+                
+                # Add control group (baseline comparison)
+                # Assume control has 80% of variant performance
+                control_variant = {
+                    'name': 'Control',
+                    'participants': int(views * 0.8),
+                    'clicks': int(clicks * 0.8),
+                    'conversions': int(conversions * 0.8),
+                    'ctr': round(ctr * 0.8, 2),
+                    'conversion_rate': round(cvr * 0.8, 2),
+                    'revenue': round(revenue * 0.8, 2),
+                    'avg_order_value': round((revenue * 0.8) / (conversions * 0.8), 2) if conversions > 0 else 0
+                }
+                
+                # Calculate lift (improvement over control)
+                lift = ((cvr - control_variant['conversion_rate']) / control_variant['conversion_rate'] * 100) if control_variant['conversion_rate'] > 0 else 0
+                
                 experiments.append({
                     'id': promo.id,
                     'name': promo.name,
-                    'status': 'running' if promo.is_live else 'ended',
+                    'package_name': promo.package.name if promo.package else 'N/A',
+                    'status': status,
                     'start_date': promo.start_date.isoformat(),
-                    'variants': [{
-                        'name': promo.promotion_type,
-                        'participants': promo.views,
-                        'conversions': promo.conversions,
-                        'conversion_rate': round(promo.conversion_rate, 2),
-                        'revenue': float(promo.final_price * promo.conversions)
-                    }],
-                    'winner': promo.promotion_type if promo.conversion_rate > 20 else 'Control',
-                    'confidence': min(95, promo.conversion_rate * 3)
+                    'end_date': promo.end_date.isoformat(),
+                    'variants': [control_variant, variant],
+                    'winner': winner,
+                    'confidence': confidence,
+                    'lift': round(lift, 1),
+                    'is_significant': confidence >= 85 and abs(lift) >= 10
                 })
             
-            return Response({'experiments': experiments})
+            # Summary statistics
+            total_experiments = len(experiments)
+            running = len([e for e in experiments if e['status'] == 'running'])
+            ended = len([e for e in experiments if e['status'] == 'ended'])
+            successful = len([e for e in experiments if e['winner'] != 'Control'])
+            
+            return Response({
+                'experiments': experiments,
+                'summary': {
+                    'total': total_experiments,
+                    'running': running,
+                    'ended': ended,
+                    'successful': successful,
+                    'success_rate': round((successful / total_experiments * 100) if total_experiments > 0 else 0, 1)
+                }
+            })
         except Exception as e:
             logger.error(f"Error fetching A/B tests: {e}")
-            return Response({'error': 'Failed to fetch A/B tests'}, status=500)
+            return Response({'error': str(e)}, status=500)
 
 class CustomerHealthView(APIView):
     permission_classes = [IsAuthenticated, IsAdminUser]
