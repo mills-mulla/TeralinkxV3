@@ -239,6 +239,7 @@ import PointTransactions from './views/PointTransactions.vue'
 import Locations from './views/Locations.vue'
 import Transactions from './views/Transactions.vue'
 import Refunds from './views/Refunds.vue'
+import Finance from './views/Finance.vue'
 import Auth from './views/Auth.vue'
 
 // Axios configuration for JWT
@@ -272,6 +273,7 @@ export default {
     Locations,
     Transactions,
     Refunds,
+    Finance,
     Auth,
   },
   data() {

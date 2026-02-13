@@ -1,5 +1,5 @@
 # apps/finance/urls.py
-from django.urls import path
+from django.urls import path, include
 from finance.payment_gateway import (
     PaymentInitiateAPIView,
     PaymentCallbackAPIView
@@ -11,6 +11,10 @@ from .authentications import ConnectAPIView,ReconnectAPIView,DisconnectAPIView
 
 
 urlpatterns = [
+    # API endpoints for admin dashboard
+    path('api/', include('finance.api.urls')),
+    
+    # Payment endpoints
     path('payments/unified/', UnifiedPaymentAPIView.as_view(), name='unified_payment'),
     path('payments/initiate/', PaymentInitiateAPIView.as_view(), name='initiate-payment'),
     path('payments/callback/', PaymentCallbackAPIView.as_view(), name='payment-callback'),
