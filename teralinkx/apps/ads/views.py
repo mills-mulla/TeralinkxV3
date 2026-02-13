@@ -1,12 +1,13 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import AllowAny  # Changed from IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.decorators import api_view, permission_classes
 from django.utils import timezone
 from django.core.cache import cache
 from django.db.models import Q
 from .models import Advertisement
+from .serializers import AdvertisementSerializer
 from users.models import ClientH
 from locations.models import Location
 import logging
@@ -180,3 +181,96 @@ def track_ad_interaction(request):
             'success': False,
             'error': 'Failed to track interaction'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+class AdvertisementManagementView(APIView):
+    """Admin API for managing advertisements"""
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        """List all advertisements"""
+        try:
+            ads = Advertisement.objects.all().order_by('-created_at')
+            serializer = AdvertisementSerializer(ads, many=True, context={'request': request})
+            
+            # Summary stats
+            stats = {
+                'total': ads.count(),
+                'active': ads.filter(status='active').count(),
+                'draft': ads.filter(status='draft').count(),
+                'paused': ads.filter(status='paused').count(),
+                'total_impressions': sum(ad.impressions for ad in ads),
+                'total_clicks': sum(ad.clicks for ad in ads),
+                'total_spent': float(sum(ad.total_spent for ad in ads))
+            }
+            
+            return Response({
+                'success': True,
+                'ads': serializer.data,
+                'stats': stats
+            })
+        except Exception as e:
+            logger.error(f"Error fetching ads: {e}")
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    def post(self, request):
+        """Create new advertisement"""
+        try:
+            serializer = AdvertisementSerializer(data=request.data, context={'request': request})
+            if serializer.is_valid():
+                ad = serializer.save()
+                cache.delete('active_ads_list')
+                return Response({
+                    'success': True,
+                    'message': 'Advertisement created successfully',
+                    'ad': AdvertisementSerializer(ad, context={'request': request}).data
+                }, status=status.HTTP_201_CREATED)
+            return Response({'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"Error creating ad: {e}")
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class AdvertisementDetailView(APIView):
+    """Admin API for individual advertisement operations"""
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request, pk):
+        """Get single advertisement"""
+        try:
+            ad = Advertisement.objects.get(pk=pk)
+            serializer = AdvertisementSerializer(ad, context={'request': request})
+            return Response({'success': True, 'ad': serializer.data})
+        except Advertisement.DoesNotExist:
+            return Response({'error': 'Advertisement not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+    def put(self, request, pk):
+        """Update advertisement"""
+        try:
+            ad = Advertisement.objects.get(pk=pk)
+            serializer = AdvertisementSerializer(ad, data=request.data, partial=True, context={'request': request})
+            if serializer.is_valid():
+                serializer.save()
+                cache.delete('active_ads_list')
+                return Response({
+                    'success': True,
+                    'message': 'Advertisement updated successfully',
+                    'ad': serializer.data
+                })
+            return Response({'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+        except Advertisement.DoesNotExist:
+            return Response({'error': 'Advertisement not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+    def delete(self, request, pk):
+        """Delete advertisement"""
+        try:
+            ad = Advertisement.objects.get(pk=pk)
+            ad.delete()
+            cache.delete('active_ads_list')
+            return Response({
+                'success': True,
+                'message': 'Advertisement deleted successfully'
+            }, status=status.HTTP_204_NO_CONTENT)
+        except Advertisement.DoesNotExist:
+            return Response({'error': 'Advertisement not found'}, status=status.HTTP_404_NOT_FOUND)
