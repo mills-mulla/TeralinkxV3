@@ -747,17 +747,25 @@ class FunnelAnalysisView(APIView):
             # Stage 2: Viewed packages (users with at least one voucher)
             stage2 = DispatchVoucher.objects.values('user').distinct().count()
             
-            # Stage 3: Initiated payment (users with transactions)
-            stage3 = PaymentTransaction.objects.values('user').distinct().count()
+            # Stage 3: Initiated payment (users with transactions in queue)
+            stage3 = TransactionQueue.objects.filter(
+                method='mpesa'
+            ).values('user').distinct().count()
             
-            # Stage 4: Completed payment
-            stage4 = PaymentTransaction.objects.filter(status='completed').values('user').distinct().count()
+            # Stage 4: Completed payment (users with completed/processed transactions)
+            stage4 = TransactionQueue.objects.filter(
+                method='mpesa',
+                status__in=['completed', 'processed']
+            ).values('user').distinct().count()
             
             # Stage 5: Activated voucher
             stage5 = DispatchVoucher.objects.filter(status='active').values('user').distinct().count()
             
-            # Stage 6: Repeat purchase
-            stage6 = DispatchVoucher.objects.values('user').annotate(
+            # Stage 6: Repeat purchase (users with more than 1 completed transaction)
+            stage6 = TransactionQueue.objects.filter(
+                method='mpesa',
+                status__in=['completed', 'processed']
+            ).values('user').annotate(
                 purchases=Count('id')
             ).filter(purchases__gt=1).count()
             
