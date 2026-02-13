@@ -118,30 +118,64 @@ class ABTestingView(APIView):
         from packages.models import FeaturedPromotion
         from django.db.models import Count, Avg, F
         
-        # Get active promotions with performance metrics
-        promotions = FeaturedPromotion.objects.filter(
-            is_active=True,
-            start_date__lte=timezone.now(),
-            end_date__gte=timezone.now()
-        ).annotate(
-            ctr=F('clicks') * 100.0 / F('views'),
-            cvr=F('conversions') * 100.0 / F('clicks')
-        )[:10]
-        
-        tests = []
-        for promo in promotions:
-            tests.append({
-                'test_name': promo.name,
-                'variant': promo.promotion_type,
-                'views': promo.views,
-                'clicks': promo.clicks,
-                'conversions': promo.conversions,
-                'ctr': round(promo.click_through_rate, 2),
-                'cvr': round(promo.conversion_rate, 2),
-                'status': 'active' if promo.is_live else 'ended'
-            })
-        
-        return Response({'tests': tests})
+        try:
+            # Get active and recent promotions with performance metrics
+            promotions = FeaturedPromotion.objects.filter(
+                is_active=True
+            ).order_by('-start_date')[:10]
+            
+            experiments = []
+            for promo in promotions:
+                # Calculate metrics
+                views = promo.views or 0
+                clicks = promo.clicks or 0
+                conversions = promo.conversions or 0
+                
+                # Calculate conversion rate
+                conv_rate = (conversions / views * 100) if views > 0 else 0
+                
+                # Calculate revenue (conversions * final_price)
+                revenue = conversions * float(promo.final_price)
+                
+                # Determine status
+                now = timezone.now()
+                if promo.end_date < now:
+                    status = 'completed'
+                elif promo.start_date > now:
+                    status = 'draft'
+                elif promo.is_live:
+                    status = 'running'
+                else:
+                    status = 'paused'
+                
+                # Determine winner based on conversion rate
+                winner = promo.promotion_type if conv_rate > 15 else 'Control'
+                
+                # Calculate confidence (simple heuristic based on sample size)
+                confidence = min(95, int((views / 100) * 10)) if views > 0 else 0
+                
+                experiments.append({
+                    'id': promo.id,
+                    'name': promo.name,
+                    'status': status,
+                    'start_date': promo.start_date.strftime('%Y-%m-%d'),
+                    'variants': [{
+                        'name': promo.promotion_type,
+                        'participants': views,
+                        'conversions': conversions,
+                        'conversion_rate': round(conv_rate, 2),
+                        'revenue': revenue
+                    }],
+                    'winner': winner,
+                    'confidence': confidence
+                })
+            
+            return Response({'experiments': experiments})
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error fetching A/B tests: {e}")
+            return Response({'experiments': []}, status=200)
 
 
 class CustomerHealthView(APIView):

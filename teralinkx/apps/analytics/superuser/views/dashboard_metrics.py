@@ -586,11 +586,17 @@ class RFMSegmentationView(APIView):
             now = timezone.now()
             segments = []
             
-            # Calculate RFM for each client
+            # Calculate RFM using TransactionQueue for monetary value
             clients = ClientH.objects.annotate(
-                last_purchase=Max('user__dispatchvoucher__activated_at'),
-                purchase_count=Count('user__dispatchvoucher'),
-                total_spent=Sum('user__dispatchvoucher__price_paid')
+                last_purchase=Max('user__transactionqueue__created_at'),
+                purchase_count=Count('user__transactionqueue', filter=Q(
+                    user__transactionqueue__method='mpesa',
+                    user__transactionqueue__status__in=['completed', 'processed']
+                )),
+                total_spent=Sum('user__transactionqueue__price', filter=Q(
+                    user__transactionqueue__method='mpesa',
+                    user__transactionqueue__status__in=['completed', 'processed']
+                ))
             ).filter(purchase_count__gt=0)
             
             for client in clients:
@@ -652,18 +658,29 @@ class FinancialAnalyticsView(APIView):
             now = timezone.now()
             month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
             year_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+            prev_month_start = (month_start - timedelta(days=1)).replace(day=1)
             
-            # MRR (Monthly Recurring Revenue)
-            mrr = PaymentTransaction.objects.filter(
-                transaction_time__gte=month_start,
-                result_code=0
-            ).aggregate(total=Sum('amount'))['total'] or 0
+            # MRR (Monthly Recurring Revenue) from TransactionQueue
+            mrr = TransactionQueue.objects.filter(
+                created_at__gte=month_start,
+                method='mpesa',
+                status__in=['completed', 'processed']
+            ).aggregate(total=Sum('price'))['total'] or 0
+            
+            # Previous month MRR for growth calculation
+            prev_mrr = TransactionQueue.objects.filter(
+                created_at__gte=prev_month_start,
+                created_at__lt=month_start,
+                method='mpesa',
+                status__in=['completed', 'processed']
+            ).aggregate(total=Sum('price'))['total'] or 0
             
             # ARR (Annual Recurring Revenue)
-            arr = PaymentTransaction.objects.filter(
-                transaction_time__gte=year_start,
-                result_code=0
-            ).aggregate(total=Sum('amount'))['total'] or 0
+            arr = TransactionQueue.objects.filter(
+                created_at__gte=year_start,
+                method='mpesa',
+                status__in=['completed', 'processed']
+            ).aggregate(total=Sum('price'))['total'] or 0
             
             # ARPU (Average Revenue Per User)
             active_users = DispatchVoucher.objects.filter(
@@ -673,23 +690,24 @@ class FinancialAnalyticsView(APIView):
             
             arpu = (mrr / active_users) if active_users > 0 else 0
             
-            # Revenue by package (with margins)
-            package_revenue = DispatchVoucher.objects.values(
-                'package__name', 'package__price'
-            ).annotate(
+            # Revenue by package from TransactionQueue
+            package_revenue = TransactionQueue.objects.filter(
+                method='mpesa',
+                status__in=['completed', 'processed']
+            ).values('package_code').annotate(
                 sales=Count('id'),
-                revenue=Sum('price_paid')
+                revenue=Sum('price')
             ).order_by('-revenue')[:10]
             
             package_data = []
             for pkg in package_revenue:
                 revenue = float(pkg['revenue'] or 0)
-                cost = float(pkg['package__price'] or 0) * 0.3  # Assume 30% cost
-                profit = revenue - (cost * pkg['sales'])
+                cost = revenue * 0.3  # Assume 30% cost
+                profit = revenue - cost
                 margin = (profit / revenue * 100) if revenue > 0 else 0
                 
                 package_data.append({
-                    'name': pkg['package__name'],
+                    'name': pkg['package_code'] or 'Unknown',
                     'sales': pkg['sales'],
                     'revenue': revenue,
                     'profit': profit,
@@ -697,8 +715,11 @@ class FinancialAnalyticsView(APIView):
                 })
             
             # Customer Lifetime Value (LTV)
-            avg_customer_lifespan = 12  # months (mock)
+            avg_customer_lifespan = 12  # months
             ltv = arpu * avg_customer_lifespan
+            
+            # Growth rate calculation
+            growth_rate = ((mrr - prev_mrr) / prev_mrr * 100) if prev_mrr > 0 else 0
             
             return Response({
                 'mrr': float(mrr),
@@ -707,7 +728,7 @@ class FinancialAnalyticsView(APIView):
                 'ltv': round(float(ltv), 2),
                 'active_users': active_users,
                 'package_performance': package_data,
-                'growth_rate': 15.5  # Mock percentage
+                'growth_rate': round(growth_rate, 1)
             })
         except Exception as e:
             logger.error(f"Error fetching financial analytics: {e}")
@@ -834,17 +855,18 @@ class RevenueForecastView(APIView):
     
     def get(self, request):
         try:
-            # Get historical revenue (last 12 months)
+            # Get historical revenue from TransactionQueue (last 12 months)
             historical = []
             for i in range(12, 0, -1):
                 month_start = timezone.now().replace(day=1) - timedelta(days=30*i)
                 month_end = month_start + timedelta(days=30)
                 
-                revenue = PaymentTransaction.objects.filter(
-                    transaction_time__gte=month_start,
-                    transaction_time__lt=month_end,
-                    result_code=0
-                ).aggregate(total=Sum('amount'))['total'] or 0
+                revenue = TransactionQueue.objects.filter(
+                    created_at__gte=month_start,
+                    created_at__lt=month_end,
+                    method='mpesa',
+                    status__in=['completed', 'processed']
+                ).aggregate(total=Sum('price'))['total'] or 0
                 
                 historical.append({
                     'month': month_start.strftime('%Y-%m'),
@@ -852,6 +874,7 @@ class RevenueForecastView(APIView):
                 })
             
             # Simple linear regression forecast (next 6 months)
+            avg_growth = 0
             if len(historical) > 0:
                 avg_growth = sum([historical[i]['revenue'] - historical[i-1]['revenue'] 
                                 for i in range(1, len(historical))]) / (len(historical) - 1)
