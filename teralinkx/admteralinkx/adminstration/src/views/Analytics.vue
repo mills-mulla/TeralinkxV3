@@ -256,6 +256,9 @@ export default {
     async fetchRevenueForecast() {
       try {
         this.forecastData = await this.makeRequest('get', 'suapi/dashboard-metrics/revenue-forecast/')
+        console.log('Revenue Forecast Data:', JSON.parse(JSON.stringify(this.forecastData)))
+        console.log('Historical:', this.forecastData.historical)
+        console.log('Forecast:', this.forecastData.forecast)
       } catch (error) {
         console.error('Error fetching revenue forecast:', error)
       }
