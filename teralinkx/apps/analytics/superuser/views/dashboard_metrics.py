@@ -589,7 +589,7 @@ class RFMSegmentationView(APIView):
                     queue_items__method='mpesa',
                     queue_items__status__in=['completed', 'processed']
                 )),
-                total_spent=Sum('queue_items__price', filter=Q(
+                total_spent_calc=Sum('queue_items__price', filter=Q(
                     queue_items__method='mpesa',
                     queue_items__status__in=['completed', 'processed']
                 ))
@@ -598,7 +598,7 @@ class RFMSegmentationView(APIView):
             for client in clients:
                 recency = (now - client.last_purchase).days if client.last_purchase else 999
                 frequency = client.purchase_count
-                monetary = float(client.total_spent or 0)
+                monetary = float(client.total_spent_calc or 0)
                 
                 # Simple RFM scoring (1-5)
                 r_score = 5 if recency <= 30 else 4 if recency <= 60 else 3 if recency <= 90 else 2 if recency <= 180 else 1
@@ -787,6 +787,7 @@ class ChurnPredictionView(APIView):
     
     def get(self, request):
         try:
+            from django.db.models import Max
             now = timezone.now()
             at_risk_users = []
             

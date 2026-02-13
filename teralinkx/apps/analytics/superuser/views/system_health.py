@@ -188,10 +188,11 @@ class CustomerHealthView(APIView):
         
         total_clients = ClientH.objects.count()
         
-        # Active clients (with active vouchers)
+        # Active clients (with recent transactions)
         active_clients = ClientH.objects.filter(
-            active_voucher__status='active',
-            active_voucher__expires_at__gt=timezone.now()
+            queue_items__method='mpesa',
+            queue_items__status__in=['completed', 'processed'],
+            queue_items__created_at__gte=timezone.now() - timedelta(days=30)
         ).distinct().count()
         
         # At-risk clients (no purchase in 30 days)
