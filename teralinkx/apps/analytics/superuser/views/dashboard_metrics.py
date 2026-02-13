@@ -548,12 +548,15 @@ class CohortAnalysisView(APIView):
                 retention = []
                 for i in range(6):  # 6 months retention
                     target_month = month + timedelta(days=30 * i)
-                    active = DispatchVoucher.objects.filter(
-                        user__clienth__created_at__month=month.month,
-                        user__clienth__created_at__year=month.year,
-                        activated_at__gte=target_month,
-                        activated_at__lt=target_month + timedelta(days=30)
-                    ).values('user').distinct().count()
+                    # Use queue_items for retention calculation
+                    active = ClientH.objects.filter(
+                        created_at__month=month.month,
+                        created_at__year=month.year,
+                        queue_items__created_at__gte=target_month,
+                        queue_items__created_at__lt=target_month + timedelta(days=30),
+                        queue_items__method='mpesa',
+                        queue_items__status__in=['completed', 'processed']
+                    ).distinct().count()
                     
                     retention.append({
                         'month': i,
