@@ -325,19 +325,19 @@ class LocationPerformanceView(APIView):
             if end_date:
                 qs = qs.filter(created_at__date__lte=end_date)
             if locations:
-                qs = qs.filter(user__location_id__in=locations)
+                qs = qs.filter(user__home_location_id__in=locations)
             if packages:
                 qs = qs.filter(package_code__in=packages)
             
-            # Get location performance - user field points to ClientH directly
-            performance = qs.values('user__location__name').annotate(
+            # Get location performance
+            performance = qs.values('user__home_location__name').annotate(
                 sales=Count('id'),
                 revenue=Sum('price')
             ).order_by('-revenue')[:10]
             
             # Rename field for frontend compatibility
             data = [{
-                'location__name': p['user__location__name'],
+                'location__name': p['user__home_location__name'],
                 'sales': p['sales'],
                 'revenue': p['revenue']
             } for p in performance]
@@ -514,16 +514,12 @@ class RefundMetricsView(APIView):
     
     def get(self, request):
         try:
-            from finance.models import Refund
-            total_refunds = Refund.objects.count()
-            total_amount = Refund.objects.aggregate(total=Sum('amount'))['total'] or 0
-            pending = Refund.objects.filter(status='pending').count()
-            
+            # Return empty data since Refund model doesn't exist
             return Response({
-                'total_refunds': total_refunds,
-                'total_amount': float(total_amount),
-                'pending': pending,
-                'refund_rate': 2.3  # Mock percentage
+                'total_refunds': 0,
+                'total_amount': 0,
+                'pending': 0,
+                'refund_rate': 0
             })
         except Exception as e:
             logger.error(f"Error fetching refund metrics: {e}")
@@ -586,16 +582,16 @@ class RFMSegmentationView(APIView):
             now = timezone.now()
             segments = []
             
-            # Calculate RFM using TransactionQueue - user field points directly to ClientH
+            # Calculate RFM using queue_items (reverse relation from ClientH to TransactionQueue)
             clients = ClientH.objects.annotate(
-                last_purchase=Max('transactionqueue__created_at'),
-                purchase_count=Count('transactionqueue', filter=Q(
-                    transactionqueue__method='mpesa',
-                    transactionqueue__status__in=['completed', 'processed']
+                last_purchase=Max('queue_items__created_at'),
+                purchase_count=Count('queue_items', filter=Q(
+                    queue_items__method='mpesa',
+                    queue_items__status__in=['completed', 'processed']
                 )),
-                total_spent=Sum('transactionqueue__price', filter=Q(
-                    transactionqueue__method='mpesa',
-                    transactionqueue__status__in=['completed', 'processed']
+                total_spent=Sum('queue_items__price', filter=Q(
+                    queue_items__method='mpesa',
+                    queue_items__status__in=['completed', 'processed']
                 ))
             ).filter(purchase_count__gt=0)
             
@@ -748,11 +744,11 @@ class FunnelAnalysisView(APIView):
             # Stage 2: Viewed packages (users with at least one voucher)
             stage2 = DispatchVoucher.objects.values('user').distinct().count()
             
-            # Stage 3: Added to cart / Initiated payment
-            stage3 = PaymentTransaction.objects.values('phone_number').distinct().count()
+            # Stage 3: Initiated payment (users with transactions)
+            stage3 = PaymentTransaction.objects.values('user').distinct().count()
             
             # Stage 4: Completed payment
-            stage4 = PaymentTransaction.objects.filter(result_code=0).values('phone_number').distinct().count()
+            stage4 = PaymentTransaction.objects.filter(status='completed').values('user').distinct().count()
             
             # Stage 5: Activated voucher
             stage5 = DispatchVoucher.objects.filter(status='active').values('user').distinct().count()
@@ -794,10 +790,13 @@ class ChurnPredictionView(APIView):
             now = timezone.now()
             at_risk_users = []
             
-            # Identify users at risk of churning
+            # Identify users at risk of churning using queue_items
             clients = ClientH.objects.annotate(
-                last_activity=Max('user__dispatchvoucher__activated_at'),
-                total_purchases=Count('user__dispatchvoucher')
+                last_activity=Max('queue_items__created_at'),
+                total_purchases=Count('queue_items', filter=Q(
+                    queue_items__method='mpesa',
+                    queue_items__status__in=['completed', 'processed']
+                ))
             ).filter(total_purchases__gt=0)
             
             for client in clients:
@@ -820,8 +819,8 @@ class ChurnPredictionView(APIView):
                     continue
                 
                 at_risk_users.append({
-                    'user_id': client.user.id,
-                    'username': client.user.username,
+                    'user_id': client.id,
+                    'username': client.display_name or client.user.username,
                     'days_inactive': days_inactive,
                     'total_purchases': client.total_purchases,
                     'risk_level': risk,

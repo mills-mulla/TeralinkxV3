@@ -184,14 +184,14 @@ class CustomerHealthView(APIView):
     def get(self, request):
         from users.models import ClientH
         from packages.models import DispatchVoucher
-        from django.db.models import Count, Avg, Q, F
+        from django.db.models import Count, Avg, Q, F, Max
         
         total_clients = ClientH.objects.count()
         
         # Active clients (with active vouchers)
         active_clients = ClientH.objects.filter(
-            dispatch_vouchers__status='active',
-            dispatch_vouchers__expires_at__gt=timezone.now()
+            active_voucher__status='active',
+            active_voucher__expires_at__gt=timezone.now()
         ).distinct().count()
         
         # At-risk clients (no purchase in 30 days)
