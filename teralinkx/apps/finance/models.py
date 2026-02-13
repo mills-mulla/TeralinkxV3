@@ -6,6 +6,7 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db.models import Sum, Count, Avg
+from django.db.models.functions import ExtractHour
 from django.core.exceptions import ValidationError
 from core.models import TimeStampedModel, StatusTrackedModel
 
@@ -1383,6 +1384,7 @@ class RevenueStream(TimeStampedModel):
         ('package_sales', 'Package Sales'),
         ('usage_charges', 'Usage Charges'),
         ('premium_services', 'Premium Services'),
+        ('ads_revenue', 'Advertising Revenue'),
         ('value_added', 'Value Added Services'),
         ('other', 'Other Revenue'),
     ])
@@ -1409,12 +1411,23 @@ class RevenueStream(TimeStampedModel):
         """Calculate revenue for current month in base currency"""
         current_month = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         
-        total = PaymentTransaction.objects.filter(
-            status='completed',
+        # Get revenue from TransactionQueue (completed transactions)
+        transaction_revenue = TransactionQueue.objects.filter(
+            method='mpesa',
+            status__in=['completed', 'processed'],
             created_at__gte=current_month
-        ).aggregate(total=Sum('amount_base'))['total'] or 0
+        ).aggregate(total=Sum('price'))['total'] or 0
         
-        return total
+        # Get ads revenue if this is ads category
+        ads_revenue = 0
+        if self.category == 'ads_revenue':
+            from ads.models import Advertisement
+            ads_revenue = Advertisement.objects.filter(
+                status='active',
+                created_at__gte=current_month
+            ).aggregate(total=Sum('total_spent'))['total'] or 0
+        
+        return transaction_revenue + ads_revenue
 
     @property
     def revenue_growth(self):
@@ -1423,7 +1436,7 @@ class RevenueStream(TimeStampedModel):
         previous_month = (current_month - timedelta(days=1)).replace(day=1)
         
         current_revenue = self.get_revenue_for_period(current_month, timezone.now())
-        previous_revenue = self.get_revenue_for_period(previous_month, current_month - timedelta(days=1))
+        previous_revenue = self.get_revenue_for_period(previous_month, current_month - timedelta(seconds=1))
         
         if previous_revenue == 0:
             return 0
@@ -1438,16 +1451,18 @@ class RevenueStream(TimeStampedModel):
 
     def calculate_clv(self):
         """Calculate Customer Lifetime Value for this revenue stream"""
-        # ISP-specific CLV calculation
-        avg_transaction_value = PaymentTransaction.objects.filter(
-            status='completed'
-        ).aggregate(avg=Avg('amount_base'))['avg'] or 0
+        # ISP-specific CLV calculation using TransactionQueue
+        avg_transaction_value = TransactionQueue.objects.filter(
+            method='mpesa',
+            status__in=['completed', 'processed']
+        ).aggregate(avg=Avg('price'))['avg'] or 0
         
         from users.models import ClientH
         total_customers = ClientH.objects.count()
         
-        avg_purchase_frequency = PaymentTransaction.objects.filter(
-            status='completed',
+        avg_purchase_frequency = TransactionQueue.objects.filter(
+            method='mpesa',
+            status__in=['completed', 'processed'],
             created_at__gte=timezone.now() - timedelta(days=365)
         ).count() / max(total_customers, 1)  # Avoid division by zero
         
@@ -1462,23 +1477,57 @@ class RevenueStream(TimeStampedModel):
         end_date = timezone.now()
         start_date = end_date - timedelta(days=30*months)
         
-        monthly_revenue = PaymentTransaction.objects.filter(
-            status='completed',
+        # Get transaction revenue
+        monthly_revenue = TransactionQueue.objects.filter(
+            method='mpesa',
+            status__in=['completed', 'processed'],
             created_at__range=[start_date, end_date]
         ).annotate(
             month=TruncMonth('created_at')
         ).values('month').annotate(
-            total_revenue=Sum('amount_base')
+            total_revenue=Sum('price')
         ).order_by('month')
+        
+        # Add ads revenue if applicable
+        if self.category == 'ads_revenue':
+            from ads.models import Advertisement
+            ads_monthly = Advertisement.objects.filter(
+                status='active',
+                created_at__range=[start_date, end_date]
+            ).annotate(
+                month=TruncMonth('created_at')
+            ).values('month').annotate(
+                total_revenue=Sum('total_spent')
+            ).order_by('month')
+            
+            # Merge the two querysets
+            revenue_dict = {item['month']: item['total_revenue'] for item in monthly_revenue}
+            for item in ads_monthly:
+                revenue_dict[item['month']] = revenue_dict.get(item['month'], 0) + item['total_revenue']
+            
+            return [{'month': k, 'total_revenue': v} for k, v in sorted(revenue_dict.items())]
         
         return list(monthly_revenue)
 
     def get_revenue_for_period(self, start_date, end_date):
         """Get revenue for specific period"""
-        return PaymentTransaction.objects.filter(
-            status='completed',
+        # Get transaction revenue
+        transaction_revenue = TransactionQueue.objects.filter(
+            method='mpesa',
+            status__in=['completed', 'processed'],
             created_at__range=[start_date, end_date]
-        ).aggregate(total=Sum('amount_base'))['total'] or 0
+        ).aggregate(total=Sum('price'))['total'] or 0
+        
+        # Get ads revenue if applicable
+        ads_revenue = 0
+        if self.category == 'ads_revenue':
+            from ads.models import Advertisement
+            ads_revenue = Advertisement.objects.filter(
+                status='active',
+                created_at__range=[start_date, end_date]
+            ).aggregate(total=Sum('total_spent'))['total'] or 0
+        
+        return transaction_revenue + ads_revenue
 
     def update_kpis(self):
         """Update custom KPIs for this revenue stream"""
@@ -1498,8 +1547,9 @@ class RevenueStream(TimeStampedModel):
         # Simplified calculation for now
         marketing_expenses = Expense.objects.filter(
             category='marketing',
-            expense_date__month=timezone.now().month
-        ).aggregate(total=Sum('amount'))['total'] or 0
+            expense_date__month=timezone.now().month,
+            approval_status='paid'
+        ).aggregate(total=Sum('amount_base'))['total'] or 0
         
         from users.models import ClientH
         new_customers = ClientH.objects.filter(
@@ -1508,7 +1558,7 @@ class RevenueStream(TimeStampedModel):
         
         if new_customers == 0:
             return 0
-        return marketing_expenses / new_customers
+        return float(marketing_expenses / new_customers)
 
     def calculate_churn_rate(self):
         """Calculate customer churn rate"""
