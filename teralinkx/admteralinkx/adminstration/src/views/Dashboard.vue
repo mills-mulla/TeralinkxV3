@@ -733,8 +733,8 @@ export default {
         this.systemStats = [
           { name: 'Database', value: data.database_response, statusColor: data.database_status === 'healthy' ? 'bg-emerald-500' : data.database_status === 'warning' ? 'bg-amber-500' : 'bg-rose-500' },
           { name: 'Internet', value: data.internet_response, statusColor: data.internet_status === 'healthy' ? 'bg-emerald-500' : data.internet_status === 'warning' ? 'bg-amber-500' : 'bg-rose-500' },
-          { name: 'Sessions', value: data.active_sessions, statusColor: 'bg-blue-500' },
-          { name: 'Uptime', value: data.uptime, statusColor: data.uptime_status === 'healthy' ? 'bg-emerald-500' : 'bg-amber-500' }
+          { name: 'Cache', value: data.cache_response, statusColor: data.cache_status === 'healthy' ? 'bg-emerald-500' : data.cache_status === 'warning' ? 'bg-amber-500' : 'bg-rose-500' },
+          { name: 'Disk', value: data.disk_usage, statusColor: data.disk_status === 'healthy' ? 'bg-emerald-500' : data.disk_status === 'warning' ? 'bg-amber-500' : 'bg-rose-500' }
         ]
       } catch (error) {
         console.error('Error fetching system status:', error)

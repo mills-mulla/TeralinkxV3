@@ -36,24 +36,18 @@ class SystemHealthView(APIView):
                 health_data['internet_response'] = 'Timeout'
                 health_data['internet_status'] = 'critical'
             
-            # 3. Active Network Sessions (RADIUS/Network sessions)
-            from analytics.models import ActiveSession
-            active_sessions = ActiveSession.objects.filter(
-                is_authenticated=True,
-                terminated_at__isnull=True
-            ).count()
-            health_data['active_sessions'] = active_sessions
-            
-            # 4. Redis/Cache Health
+            # 3. Redis/Cache Health
             try:
                 from django.core.cache import cache
                 cache.set('health_check', 'ok', 10)
                 cache_status = 'healthy' if cache.get('health_check') == 'ok' else 'warning'
+                health_data['cache_response'] = 'OK'
                 health_data['cache_status'] = cache_status
             except:
-                health_data['cache_status'] = 'unavailable'
+                health_data['cache_response'] = 'Error'
+                health_data['cache_status'] = 'critical'
             
-            # 5. Disk Usage
+            # 4. Disk Usage
             try:
                 disk = psutil.disk_usage('/')
                 disk_percent = disk.percent
@@ -63,7 +57,7 @@ class SystemHealthView(APIView):
                 health_data['disk_usage'] = 'N/A'
                 health_data['disk_status'] = 'unknown'
             
-            # 6. Memory Usage
+            # 5. Memory Usage
             try:
                 memory = psutil.virtual_memory()
                 mem_percent = memory.percent
@@ -73,7 +67,7 @@ class SystemHealthView(APIView):
                 health_data['memory_usage'] = 'N/A'
                 health_data['memory_status'] = 'unknown'
             
-            # 7. Payment Gateway Health (check recent transaction success rate)
+            # 6. Payment Gateway Health (check recent transaction success rate)
             from finance.models import PaymentTransaction
             last_hour = timezone.now() - timedelta(hours=1)
             recent_txns = PaymentTransaction.objects.filter(created_at__gte=last_hour)
@@ -86,7 +80,7 @@ class SystemHealthView(APIView):
                 health_data['payment_gateway'] = 'No data'
                 health_data['payment_status'] = 'healthy'
             
-            # 8. Failed Queue Items (system processing health)
+            # 7. Failed Queue Items (system processing health)
             from finance.models import TransactionQueue
             failed_queue = TransactionQueue.objects.filter(
                 status='failed',
@@ -104,7 +98,7 @@ class SystemHealthView(APIView):
                 'database_status': 'critical',
                 'internet_response': 'Error',
                 'internet_status': 'critical',
-                'active_sessions': 0,
+                'cache_response': 'Error',
                 'cache_status': 'critical',
                 'disk_usage': 'Error',
                 'disk_status': 'critical',
