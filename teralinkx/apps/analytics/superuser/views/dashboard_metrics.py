@@ -866,8 +866,7 @@ class RevenueForecastView(APIView):
     
     def get(self, request):
         try:
-            # Get historical revenue from TransactionQueue (last 12 months or all available)
-            historical = []
+            period = request.GET.get('period', 'auto')  # auto, 7d, 30d, 90d, 1y
             
             # Get the oldest transaction date
             oldest_txn = TransactionQueue.objects.filter(
@@ -886,9 +885,26 @@ class RevenueForecastView(APIView):
             # Calculate days of history available
             days_of_history = (timezone.now() - oldest_txn.created_at).days
             
-            # Use daily data if less than 30 days of history
-            if days_of_history < 30:
-                for i in range(days_of_history, -1, -1):
+            # Auto-detect best period if not specified
+            if period == 'auto':
+                if days_of_history < 30:
+                    period = '7d'
+                elif days_of_history < 90:
+                    period = '30d'
+                elif days_of_history < 365:
+                    period = '90d'
+                else:
+                    period = '1y'
+            
+            historical = []
+            forecast = []
+            
+            # Daily view (7d, 30d)
+            if period in ['7d', '30d']:
+                days = 7 if period == '7d' else 30
+                days = min(days, days_of_history + 1)  # Don't exceed available data
+                
+                for i in range(days - 1, -1, -1):
                     date = timezone.now().date() - timedelta(days=i)
                     
                     revenue = TransactionQueue.objects.filter(
@@ -903,28 +919,35 @@ class RevenueForecastView(APIView):
                     })
                 
                 # Forecast next 7 days
-                if len(historical) > 1:
-                    avg_growth = sum([historical[i]['revenue'] - historical[i-1]['revenue'] 
-                                    for i in range(1, len(historical))]) / (len(historical) - 1)
+                forecast_days = 7
+                
+            # Weekly view (90d)
+            elif period == '90d':
+                weeks = min(13, days_of_history // 7)  # Up to 13 weeks
+                
+                for i in range(weeks - 1, -1, -1):
+                    week_end = timezone.now().date() - timedelta(days=i * 7)
+                    week_start = week_end - timedelta(days=6)
                     
-                    last_revenue = historical[-1]['revenue']
-                    forecast = []
+                    revenue = TransactionQueue.objects.filter(
+                        created_at__date__gte=week_start,
+                        created_at__date__lte=week_end,
+                        method='mpesa',
+                        status__in=['completed', 'processed']
+                    ).aggregate(total=Sum('price'))['total'] or 0
                     
-                    for i in range(1, 8):
-                        date = timezone.now().date() + timedelta(days=i)
-                        predicted = max(0, last_revenue + (avg_growth * i))
-                        
-                        forecast.append({
-                            'month': date.strftime('%Y-%m-%d'),
-                            'predicted_revenue': round(predicted, 2),
-                            'confidence': max(50, 95 - (i * 5))
-                        })
-                else:
-                    avg_growth = 0
-                    forecast = []
-            else:
-                # Use monthly data for longer history
-                for i in range(12, 0, -1):
+                    historical.append({
+                        'month': f"{week_start.strftime('%m/%d')}-{week_end.strftime('%m/%d')}",
+                        'revenue': float(revenue)
+                    })
+                
+                forecast_days = 4  # 4 weeks ahead
+                
+            # Monthly view (1y)
+            else:  # period == '1y'
+                months = min(12, days_of_history // 30)  # Up to 12 months
+                
+                for i in range(months, 0, -1):
                     month_start = timezone.now().replace(day=1) - timedelta(days=30*i)
                     month_end = month_start + timedelta(days=30)
                     
@@ -940,26 +963,36 @@ class RevenueForecastView(APIView):
                         'revenue': float(revenue)
                     })
                 
-                # Forecast next 6 months
-                if len(historical) > 0:
-                    avg_growth = sum([historical[i]['revenue'] - historical[i-1]['revenue'] 
-                                    for i in range(1, len(historical))]) / (len(historical) - 1)
-                    
-                    last_revenue = historical[-1]['revenue']
-                    forecast = []
-                    
-                    for i in range(1, 7):
+                forecast_days = 6  # 6 months ahead
+            
+            # Calculate forecast
+            if len(historical) > 1:
+                avg_growth = sum([historical[i]['revenue'] - historical[i-1]['revenue'] 
+                                for i in range(1, len(historical))]) / (len(historical) - 1)
+                
+                last_revenue = historical[-1]['revenue']
+                
+                for i in range(1, forecast_days + 1):
+                    if period in ['7d', '30d']:
+                        date = timezone.now().date() + timedelta(days=i)
+                        label = date.strftime('%Y-%m-%d')
+                    elif period == '90d':
+                        week_start = timezone.now().date() + timedelta(days=i * 7)
+                        week_end = week_start + timedelta(days=6)
+                        label = f"{week_start.strftime('%m/%d')}-{week_end.strftime('%m/%d')}"
+                    else:
                         month = timezone.now().replace(day=1) + timedelta(days=30*i)
-                        predicted = last_revenue + (avg_growth * i)
-                        
-                        forecast.append({
-                            'month': month.strftime('%Y-%m'),
-                            'predicted_revenue': round(predicted, 2),
-                            'confidence': max(50, 95 - (i * 5))
-                        })
-                else:
-                    avg_growth = 0
-                    forecast = []
+                        label = month.strftime('%Y-%m')
+                    
+                    predicted = max(0, last_revenue + (avg_growth * i))
+                    
+                    forecast.append({
+                        'month': label,
+                        'predicted_revenue': round(predicted, 2),
+                        'confidence': max(50, 95 - (i * 5))
+                    })
+            else:
+                avg_growth = 0
             
             return Response({
                 'historical': historical,
