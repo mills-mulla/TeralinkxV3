@@ -90,34 +90,50 @@ export default {
   methods: {
     async fetchRevenueStreams() {
       try {
-        const response = await fetch('/api/finance/revenue-streams/')
+        const response = await fetch('https://service.teralinkxwaves.uk/api/finance/api/revenue-streams/', {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+        })
+        if (!response.ok) throw new Error('Failed to fetch')
         this.revenueStreams = await response.json()
       } catch (error) {
         console.error('Error fetching revenue streams:', error)
+        this.revenueStreams = []
       }
     },
     async fetchExpenses() {
       try {
-        const response = await fetch('/api/finance/expenses/')
+        const response = await fetch('https://service.teralinkxwaves.uk/api/finance/api/expenses/', {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+        })
+        if (!response.ok) throw new Error('Failed to fetch')
         this.expenses = await response.json()
       } catch (error) {
         console.error('Error fetching expenses:', error)
+        this.expenses = []
       }
     },
     async fetchInvestments() {
       try {
-        const response = await fetch('/api/finance/investments/')
+        const response = await fetch('https://service.teralinkxwaves.uk/api/finance/api/investments/', {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+        })
+        if (!response.ok) throw new Error('Failed to fetch')
         this.investments = await response.json()
       } catch (error) {
         console.error('Error fetching investments:', error)
+        this.investments = []
       }
     },
     async fetchDepartments() {
       try {
-        const response = await fetch('/api/finance/departments/')
+        const response = await fetch('https://service.teralinkxwaves.uk/api/finance/api/departments/', {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+        })
+        if (!response.ok) throw new Error('Failed to fetch')
         this.departments = await response.json()
       } catch (error) {
         console.error('Error fetching departments:', error)
+        this.departments = []
       }
     },
     refreshData() {
