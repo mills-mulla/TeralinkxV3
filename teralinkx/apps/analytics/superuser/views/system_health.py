@@ -57,3 +57,43 @@ class SystemHealthView(APIView):
                 'uptime': 'Unknown',
                 'uptime_status': 'critical'
             }, status=500)
+
+
+class ABTestingView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        return Response({
+            'tests': [],
+            'message': 'A/B testing data not yet implemented'
+        })
+
+
+class CustomerHealthView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        return Response({
+            'health_score': 0,
+            'message': 'Customer health metrics not yet implemented'
+        })
+
+
+class AuditLogView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        return Response({
+            'logs': [],
+            'message': 'Audit logs not yet implemented'
+        })
+
+
+class DataQualityView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+    
+    def get(self, request):
+        return Response({
+            'quality_score': 0,
+            'message': 'Data quality metrics not yet implemented'
+        })
