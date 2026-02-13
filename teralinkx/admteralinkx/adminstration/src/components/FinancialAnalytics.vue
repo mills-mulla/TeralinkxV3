@@ -1,5 +1,111 @@
 <template>
   <div class="space-y-4">
+    <!-- User Guide Section -->
+    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200 dark:border-blue-800 p-4">
+      <button 
+        @click="showGuide = !showGuide"
+        class="flex items-center justify-between w-full text-left"
+      >
+        <div class="flex items-center gap-2">
+          <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+          </svg>
+          <span class="text-sm font-medium text-blue-900 dark:text-blue-100">Financial Metrics Guide</span>
+        </div>
+        <svg 
+          class="w-4 h-4 text-blue-600 dark:text-blue-400 transition-transform"
+          :class="showGuide ? 'rotate-180' : ''"
+          fill="none" 
+          stroke="currentColor" 
+          viewBox="0 0 24 24"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+        </svg>
+      </button>
+
+      <div v-show="showGuide" class="mt-4 space-y-3 text-xs">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="bg-white dark:bg-slate-800 rounded-lg p-3 border border-blue-100 dark:border-blue-900">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="w-2 h-2 rounded-full bg-blue-500"></div>
+              <span class="font-semibold text-blue-900 dark:text-blue-100">MRR (Monthly Recurring Revenue)</span>
+            </div>
+            <p class="text-slate-600 dark:text-slate-400 mb-2">Total revenue from completed M-Pesa transactions in the current month.</p>
+            <div class="bg-slate-50 dark:bg-slate-900 rounded p-2 font-mono text-[10px] text-slate-700 dark:text-slate-300">
+              Sum of TransactionQueue.price<br/>
+              WHERE method='mpesa'<br/>
+              AND status IN ['completed', 'processed']<br/>
+              AND created_at >= current_month_start
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-slate-800 rounded-lg p-3 border border-emerald-100 dark:border-emerald-900">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
+              <span class="font-semibold text-emerald-900 dark:text-emerald-100">ARR (Annual Recurring Revenue)</span>
+            </div>
+            <p class="text-slate-600 dark:text-slate-400 mb-2">Total revenue from completed M-Pesa transactions in the current year.</p>
+            <div class="bg-slate-50 dark:bg-slate-900 rounded p-2 font-mono text-[10px] text-slate-700 dark:text-slate-300">
+              Sum of TransactionQueue.price<br/>
+              WHERE method='mpesa'<br/>
+              AND status IN ['completed', 'processed']<br/>
+              AND created_at >= current_year_start
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-slate-800 rounded-lg p-3 border border-purple-100 dark:border-purple-900">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="w-2 h-2 rounded-full bg-purple-500"></div>
+              <span class="font-semibold text-purple-900 dark:text-purple-100">ARPU (Average Revenue Per User)</span>
+            </div>
+            <p class="text-slate-600 dark:text-slate-400 mb-2">Average monthly revenue generated per active user.</p>
+            <div class="bg-slate-50 dark:bg-slate-900 rounded p-2 font-mono text-[10px] text-slate-700 dark:text-slate-300">
+              ARPU = MRR / Active Users<br/><br/>
+              Active Users = Count of users with<br/>
+              active vouchers (status='active'<br/>
+              AND expires_at > now)
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-slate-800 rounded-lg p-3 border border-amber-100 dark:border-amber-900">
+            <div class="flex items-center gap-2 mb-2">
+              <div class="w-2 h-2 rounded-full bg-amber-500"></div>
+              <span class="font-semibold text-amber-900 dark:text-amber-100">LTV (Lifetime Value)</span>
+            </div>
+            <p class="text-slate-600 dark:text-slate-400 mb-2">Estimated total revenue from a customer over their lifetime (12 months).</p>
+            <div class="bg-slate-50 dark:bg-slate-900 rounded p-2 font-mono text-[10px] text-slate-700 dark:text-slate-300">
+              LTV = ARPU × 12 months<br/><br/>
+              Represents expected revenue<br/>
+              from a customer over one year<br/>
+              based on current monthly average
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
+          <div class="flex items-center gap-2 mb-2">
+            <svg class="w-4 h-4 text-slate-600 dark:text-slate-400" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/>
+            </svg>
+            <span class="font-semibold text-slate-900 dark:text-slate-100">Growth Rate Calculation</span>
+          </div>
+          <p class="text-slate-600 dark:text-slate-400">Growth rate compares current month MRR vs previous month MRR: <span class="font-mono bg-slate-100 dark:bg-slate-900 px-2 py-1 rounded">((Current MRR - Previous MRR) / Previous MRR) × 100</span></p>
+        </div>
+
+        <div class="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3 border border-amber-200 dark:border-amber-800">
+          <div class="flex items-start gap-2">
+            <svg class="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+            </svg>
+            <div>
+              <span class="font-semibold text-amber-900 dark:text-amber-100 text-xs">Data Source:</span>
+              <p class="text-amber-800 dark:text-amber-200 text-xs mt-1">All financial metrics are calculated from the <span class="font-mono bg-amber-100 dark:bg-amber-900 px-1 rounded">TransactionQueue</span> table, filtering only completed and processed M-Pesa transactions to ensure accuracy and prevent duplicate counting.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Key Financial Metrics -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
       <div class="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
@@ -98,6 +204,11 @@
 <script>
 export default {
   name: 'FinancialAnalytics',
+  data() {
+    return {
+      showGuide: false
+    }
+  },
   props: {
     metrics: {
       type: Object,

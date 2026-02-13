@@ -313,7 +313,7 @@ class LocationPerformanceView(APIView):
             locations = request.GET.get('locations', '').split(',') if request.GET.get('locations') else []
             packages = request.GET.get('packages', '').split(',') if request.GET.get('packages') else []
             
-            # Base queryset - Use TransactionQueue for revenue
+            # Base queryset - TransactionQueue.user points directly to ClientH
             qs = TransactionQueue.objects.filter(
                 method='mpesa',
                 status__in=['completed', 'processed']
@@ -325,19 +325,19 @@ class LocationPerformanceView(APIView):
             if end_date:
                 qs = qs.filter(created_at__date__lte=end_date)
             if locations:
-                qs = qs.filter(user__clienth__location_id__in=locations)
+                qs = qs.filter(user__location_id__in=locations)
             if packages:
                 qs = qs.filter(package_code__in=packages)
             
-            # Get location performance from queue
-            performance = qs.values('user__clienth__location__name').annotate(
+            # Get location performance - user field points to ClientH directly
+            performance = qs.values('user__location__name').annotate(
                 sales=Count('id'),
                 revenue=Sum('price')
             ).order_by('-revenue')[:10]
             
             # Rename field for frontend compatibility
             data = [{
-                'location__name': p['user__clienth__location__name'],
+                'location__name': p['user__location__name'],
                 'sales': p['sales'],
                 'revenue': p['revenue']
             } for p in performance]
@@ -586,16 +586,16 @@ class RFMSegmentationView(APIView):
             now = timezone.now()
             segments = []
             
-            # Calculate RFM using TransactionQueue for monetary value
+            # Calculate RFM using TransactionQueue - user field points directly to ClientH
             clients = ClientH.objects.annotate(
-                last_purchase=Max('user__transactionqueue__created_at'),
-                purchase_count=Count('user__transactionqueue', filter=Q(
-                    user__transactionqueue__method='mpesa',
-                    user__transactionqueue__status__in=['completed', 'processed']
+                last_purchase=Max('transactionqueue__created_at'),
+                purchase_count=Count('transactionqueue', filter=Q(
+                    transactionqueue__method='mpesa',
+                    transactionqueue__status__in=['completed', 'processed']
                 )),
-                total_spent=Sum('user__transactionqueue__price', filter=Q(
-                    user__transactionqueue__method='mpesa',
-                    user__transactionqueue__status__in=['completed', 'processed']
+                total_spent=Sum('transactionqueue__price', filter=Q(
+                    transactionqueue__method='mpesa',
+                    transactionqueue__status__in=['completed', 'processed']
                 ))
             ).filter(purchase_count__gt=0)
             
@@ -624,8 +624,8 @@ class RFMSegmentationView(APIView):
                     segment = 'Potential'
                 
                 segments.append({
-                    'user_id': client.user.id,
-                    'username': client.user.username,
+                    'user_id': client.id,
+                    'username': client.display_name or client.user.username,
                     'segment': segment,
                     'recency': recency,
                     'frequency': frequency,
