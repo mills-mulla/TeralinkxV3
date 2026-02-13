@@ -54,8 +54,14 @@
 
     <!-- Revenue Streams Table -->
     <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg overflow-hidden">
-      <div class="p-6 border-b border-slate-200 dark:border-slate-700">
+      <div class="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
         <h2 class="text-xl font-bold text-slate-900 dark:text-white">Revenue Streams</h2>
+        <button @click="openAddModal" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          Add Stream
+        </button>
       </div>
       
       <div class="overflow-x-auto">
@@ -69,6 +75,7 @@
               <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Achievement</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Growth</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
+              <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
@@ -120,9 +127,98 @@
                   Inactive
                 </span>
               </td>
+              <td class="px-6 py-4 whitespace-nowrap text-right">
+                <div class="flex items-center justify-end gap-2">
+                  <button @click="openEditModal(stream)" class="p-2 hover:bg-blue-100 dark:hover:bg-blue-600 rounded transition-colors" title="Edit">
+                    <svg class="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </button>
+                  <button @click="openDeleteModal(stream)" class="p-2 hover:bg-red-100 dark:hover:bg-red-600 rounded transition-colors" title="Delete">
+                    <svg class="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+              </td>
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Form Modal -->
+    <div v-if="showFormModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" @click.self="closeFormModal">
+      <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-2xl w-full">
+        <div class="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
+          <h2 class="text-lg font-semibold text-slate-900 dark:text-white">{{ selectedStream ? 'Edit Revenue Stream' : 'Add Revenue Stream' }}</h2>
+          <button @click="closeFormModal" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="p-6 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Name *</label>
+            <input v-model="formData.name" type="text" required class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" />
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Category *</label>
+              <select v-model="formData.category" required class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white">
+                <option value="voucher_sales">Voucher Sales</option>
+                <option value="package_sales">Package Sales</option>
+                <option value="usage_charges">Usage Charges</option>
+                <option value="premium_services">Premium Services</option>
+                <option value="ads_revenue">Ads Revenue</option>
+                <option value="value_added">Value Added</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Target Revenue (KES) *</label>
+              <input v-model="formData.target_revenue" type="number" step="0.01" required class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Description</label>
+            <textarea v-model="formData.description" rows="3" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"></textarea>
+          </div>
+          <div>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input v-model="formData.is_active" type="checkbox" class="w-4 h-4 text-blue-600 border-slate-300 dark:border-slate-600 rounded" />
+              <span class="text-sm text-slate-700 dark:text-slate-300">Active Stream</span>
+            </label>
+          </div>
+        </div>
+        <div class="flex items-center justify-end gap-3 p-6 border-t border-slate-200 dark:border-slate-700">
+          <button @click="closeFormModal" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-900 dark:text-white rounded-lg">Cancel</button>
+          <button @click="saveStream" :disabled="saveLoading" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg" :class="{ 'opacity-50': saveLoading }">{{ saveLoading ? 'Saving...' : 'Save' }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete Modal -->
+    <div v-if="showDeleteModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" @click.self="closeDeleteModal">
+      <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-md w-full">
+        <div class="p-6">
+          <div class="flex items-center gap-4">
+            <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+              <svg class="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Delete Revenue Stream</h3>
+              <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">Are you sure you want to delete "{{ streamToDelete?.name }}"?</p>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center justify-end gap-3 p-6 border-t border-slate-200 dark:border-slate-700">
+          <button @click="closeDeleteModal" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-900 dark:text-white rounded-lg">Cancel</button>
+          <button @click="confirmDelete" :disabled="deleteLoading" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg" :class="{ 'opacity-50': deleteLoading }">{{ deleteLoading ? 'Deleting...' : 'Delete' }}</button>
+        </div>
       </div>
     </div>
   </div>
@@ -135,6 +231,24 @@ export default {
     data: {
       type: Array,
       default: () => []
+    }
+  },
+  emits: ['refresh'],
+  data() {
+    return {
+      showFormModal: false,
+      showDeleteModal: false,
+      selectedStream: null,
+      streamToDelete: null,
+      saveLoading: false,
+      deleteLoading: false,
+      formData: {
+        name: '',
+        category: 'voucher_sales',
+        target_revenue: 0,
+        description: '',
+        is_active: true
+      }
     }
   },
   computed: {
@@ -176,6 +290,87 @@ export default {
       if (achievement >= 75) return 'bg-blue-500'
       if (achievement >= 50) return 'bg-amber-500'
       return 'bg-red-500'
+    },
+    openAddModal() {
+      this.selectedStream = null
+      this.formData = {
+        name: '',
+        category: 'voucher_sales',
+        target_revenue: 0,
+        description: '',
+        is_active: true
+      }
+      this.showFormModal = true
+    },
+    openEditModal(stream) {
+      this.selectedStream = stream
+      this.formData = {
+        name: stream.name,
+        category: stream.category,
+        target_revenue: stream.target_revenue,
+        description: stream.description || '',
+        is_active: stream.is_active
+      }
+      this.showFormModal = true
+    },
+    closeFormModal() {
+      this.showFormModal = false
+      this.selectedStream = null
+    },
+    async saveStream() {
+      this.saveLoading = true
+      try {
+        const url = this.selectedStream 
+          ? `https://service.teralinkxwaves.uk/api/finance/api/revenue-streams/${this.selectedStream.id}/`
+          : 'https://service.teralinkxwaves.uk/api/finance/api/revenue-streams/'
+        const method = this.selectedStream ? 'PUT' : 'POST'
+        
+        const response = await fetch(url, {
+          method,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+          },
+          body: JSON.stringify(this.formData)
+        })
+        
+        if (!response.ok) throw new Error('Failed to save')
+        this.$emit('refresh')
+        this.closeFormModal()
+      } catch (error) {
+        console.error('Error saving stream:', error)
+        alert('Failed to save revenue stream')
+      } finally {
+        this.saveLoading = false
+      }
+    },
+    openDeleteModal(stream) {
+      this.streamToDelete = stream
+      this.showDeleteModal = true
+    },
+    closeDeleteModal() {
+      this.showDeleteModal = false
+      this.streamToDelete = null
+    },
+    async confirmDelete() {
+      this.deleteLoading = true
+      try {
+        const response = await fetch(`https://service.teralinkxwaves.uk/api/finance/api/revenue-streams/${this.streamToDelete.id}/`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+          }
+        })
+        
+        if (!response.ok) throw new Error('Failed to delete')
+        this.$emit('refresh')
+        this.closeDeleteModal()
+      } catch (error) {
+        console.error('Error deleting stream:', error)
+        alert('Failed to delete revenue stream')
+      } finally {
+        this.deleteLoading = false
+      }
     }
   }
 }
