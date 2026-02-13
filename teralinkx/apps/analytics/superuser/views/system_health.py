@@ -184,44 +184,99 @@ class CustomerHealthView(APIView):
     def get(self, request):
         from users.models import ClientH
         from packages.models import DispatchVoucher
-        from django.db.models import Count, Avg, Q, F, Max
+        from django.db.models import Count, Sum, Max, Q
         
-        total_clients = ClientH.objects.count()
-        
-        # Active clients (with recent transactions)
-        active_clients = ClientH.objects.filter(
-            queue_items__method='mpesa',
-            queue_items__status__in=['completed', 'processed'],
-            queue_items__created_at__gte=timezone.now() - timedelta(days=30)
-        ).distinct().count()
-        
-        # At-risk clients (no purchase in 30 days)
-        thirty_days_ago = timezone.now() - timedelta(days=30)
-        at_risk = ClientH.objects.filter(
-            last_seen__lt=thirty_days_ago,
-            status='active'
-        ).count()
-        
-        # Healthy clients (recent activity)
-        seven_days_ago = timezone.now() - timedelta(days=7)
-        healthy = ClientH.objects.filter(
-            last_seen__gte=seven_days_ago
-        ).count()
-        
-        # Calculate health score (0-100)
-        if total_clients > 0:
-            health_score = int((healthy / total_clients) * 100)
-        else:
-            health_score = 0
-        
-        return Response({
-            'health_score': health_score,
-            'total_clients': total_clients,
-            'active_clients': active_clients,
-            'healthy_clients': healthy,
-            'at_risk_clients': at_risk,
-            'churn_rate': round((at_risk / total_clients * 100) if total_clients > 0 else 0, 2)
-        })
+        try:
+            health_scores = []
+            clients = ClientH.objects.all()[:100]  # Limit to 100 for performance
+            
+            for client in clients:
+                # Calculate health score components
+                last_activity = client.queue_items.filter(
+                    method='mpesa',
+                    status__in=['completed', 'processed']
+                ).aggregate(Max('created_at'))['created_at__max']
+                
+                total_purchases = client.queue_items.filter(
+                    method='mpesa',
+                    status__in=['completed', 'processed']
+                ).count()
+                
+                total_spent = client.queue_items.filter(
+                    method='mpesa',
+                    status__in=['completed', 'processed']
+                ).aggregate(Sum('price'))['price__sum'] or 0
+                
+                # Engagement score (0-100) based on recency
+                if last_activity:
+                    days_since_activity = (timezone.now() - last_activity).days
+                    engagement = max(0, 100 - (days_since_activity * 10))
+                else:
+                    engagement = 0
+                    days_since_activity = 999
+                
+                # Usage score (0-100) based on purchase frequency
+                usage = min(100, total_purchases * 20)
+                
+                # Payment score (0-100) based on total spent
+                payment = min(100, int(float(total_spent) / 50))
+                
+                # Overall health score
+                health_score = round((engagement + usage + payment) / 3)
+                
+                # Risk level
+                if health_score >= 75:
+                    risk = 'low'
+                elif health_score >= 50:
+                    risk = 'medium'
+                elif health_score >= 25:
+                    risk = 'high'
+                else:
+                    risk = 'critical'
+                
+                health_scores.append({
+                    'user_id': client.id,
+                    'username': client.display_name or client.user.username,
+                    'health_score': health_score,
+                    'engagement_score': round(engagement),
+                    'usage_score': round(usage),
+                    'payment_score': round(payment),
+                    'risk_level': risk,
+                    'last_activity': last_activity.isoformat() if last_activity else None,
+                    'total_purchases': total_purchases,
+                    'total_spent': float(total_spent)
+                })
+            
+            # Sort by health score descending
+            health_scores.sort(key=lambda x: x['health_score'], reverse=True)
+            
+            # Summary
+            summary = {
+                'avg_health_score': round(sum([s['health_score'] for s in health_scores]) / len(health_scores)) if health_scores else 0,
+                'low_risk': len([s for s in health_scores if s['risk_level'] == 'low']),
+                'medium_risk': len([s for s in health_scores if s['risk_level'] == 'medium']),
+                'high_risk': len([s for s in health_scores if s['risk_level'] == 'high']),
+                'critical_risk': len([s for s in health_scores if s['risk_level'] == 'critical'])
+            }
+            
+            return Response({
+                'health_scores': health_scores,
+                'summary': summary
+            })
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error fetching customer health: {e}")
+            return Response({
+                'health_scores': [],
+                'summary': {
+                    'avg_health_score': 0,
+                    'low_risk': 0,
+                    'medium_risk': 0,
+                    'high_risk': 0,
+                    'critical_risk': 0
+                }
+            }, status=200)
 
 
 class AuditLogView(APIView):
