@@ -67,13 +67,14 @@ class DashboardMetricsView(APIView):
                 status='active'
             ).values('user').distinct().count()
             
-            # Revenue metrics (ONLY completed/processed M-Pesa transactions)
+            # Revenue metrics - Use EXACT same logic as RevenueAnalyticsView
             today = timezone.now().date()
-            total_revenue = TransactionQueue.objects.filter(
+            qs = TransactionQueue.objects.filter(
+                created_at__date=today,
                 method='mpesa',
-                status__in=['completed', 'processed'],
-                created_at__date=today
-            ).aggregate(total=Sum('price'))['total'] or 0
+                status__in=['completed', 'processed']
+            )
+            total_revenue = qs.aggregate(total=Sum('price'))['total'] or 0
             
             # Packages sold
             packages_sold = vouchers_qs.filter(
