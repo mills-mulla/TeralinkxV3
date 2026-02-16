@@ -19,7 +19,6 @@ from django.contrib import admin
 from django.urls import path , include
 from django.conf import settings
 from django.conf.urls.static import static
-from packages.rewards_views import get_reward_summary, get_available_rewards, redeem_reward, get_point_history, get_user_coupons
 
 urlpatterns = [
     path('', include('django_prometheus.urls')),
@@ -31,12 +30,6 @@ urlpatterns = [
     path('api/',include('security.urls')),
     path('api/ads/',include('ads.urls')),
     path('api/notifications/',include('notifications.urls')),
-    # Direct rewards endpoints to match frontend expectations
-    path('api/rewards/summary/', get_reward_summary, name='reward-summary'),
-    path('api/rewards/available/', get_available_rewards, name='available-rewards'),
-    path('api/rewards/redeem/', redeem_reward, name='redeem-reward'),
-    path('api/rewards/coupons/', get_user_coupons, name='user-coupons'),
-    path('api/rewards/history/', get_point_history, name='point-history'),
     path('suapi/', include('analytics.superuser.urls')),
     path('__debug__/', include('debug_toolbar.urls')), 
    
