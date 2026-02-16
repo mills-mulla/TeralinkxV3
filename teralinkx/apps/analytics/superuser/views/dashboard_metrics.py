@@ -67,10 +67,12 @@ class DashboardMetricsView(APIView):
                 status='active'
             ).values('user').distinct().count()
             
-            # Revenue metrics (from completed/processed M-Pesa transactions in queue)
-            total_revenue = queue_qs.filter(
+            # Revenue metrics (ONLY completed/processed M-Pesa transactions)
+            today = timezone.now().date()
+            total_revenue = TransactionQueue.objects.filter(
                 method='mpesa',
-                status__in=['completed', 'processed']
+                status__in=['completed', 'processed'],
+                created_at__date=today
             ).aggregate(total=Sum('price'))['total'] or 0
             
             # Packages sold
@@ -100,14 +102,15 @@ class DashboardMetricsView(APIView):
             active_users_trend = 'up' if active_users > prev_week_active else 'down' if active_users < prev_week_active else 'stable'
             active_users_trend_value = f"{abs(round((active_users - prev_week_active) / prev_week_active * 100, 1)) if prev_week_active > 0 else 0}%"
             
-            # Revenue trend calculation
-            prev_week_revenue = TransactionQueue.objects.filter(
+            # Revenue trend calculation (compare today vs yesterday)
+            yesterday = today - timedelta(days=1)
+            prev_day_revenue = TransactionQueue.objects.filter(
                 method='mpesa',
                 status__in=['completed', 'processed'],
-                created_at__date__lt=week_ago
+                created_at__date=yesterday
             ).aggregate(total=Sum('price'))['total'] or 0
-            revenue_trend = 'up' if total_revenue > prev_week_revenue else 'down' if total_revenue < prev_week_revenue else 'stable'
-            revenue_trend_value = f"{abs(round((total_revenue - prev_week_revenue) / prev_week_revenue * 100, 1)) if prev_week_revenue > 0 else 0}%"
+            revenue_trend = 'up' if total_revenue > prev_day_revenue else 'down' if total_revenue < prev_day_revenue else 'stable'
+            revenue_trend_value = f"{abs(round((total_revenue - prev_day_revenue) / prev_day_revenue * 100, 1)) if prev_day_revenue > 0 else 0}%"
             
             # Active ratio (clients with active vouchers vs total clients)
             active_ratio = (active_users / total_clients * 100) if total_clients > 0 else 0

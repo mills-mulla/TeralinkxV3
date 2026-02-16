@@ -12,7 +12,7 @@ from .authentications import ConnectAPIView,ReconnectAPIView,DisconnectAPIView
 
 urlpatterns = [
     # API endpoints for admin dashboard
-    path('api/', include('finance.api.urls')),
+    path('finance/api/', include('finance.api.urls')),
     
     # Payment endpoints
     path('payments/unified/', UnifiedPaymentAPIView.as_view(), name='unified_payment'),
