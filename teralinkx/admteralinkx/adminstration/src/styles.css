@@ -1,2 +1,41 @@
 @import 'tailwindcss';
 @variant dark (&:where(.dark, .dark *));
+
+/* Performance optimizations */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Reduce repaints */
+.transition-colors,
+.transition-all {
+  will-change: auto;
+}
+
+/* Optimize animations */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Lazy load images */
+img {
+  content-visibility: auto;
+}
+
+/* Optimize scrolling */
+* {
+  scroll-behavior: smooth;
+}
+
+@supports (scrollbar-gutter: stable) {
+  html {
+    scrollbar-gutter: stable;
+  }
+}

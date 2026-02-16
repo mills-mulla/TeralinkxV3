@@ -90,35 +90,15 @@ export default {
     async fetchRealTimeData() {
       try {
         const startTime = Date.now()
+        const metrics = await this.makeRequest('get', 'suapi/dashboard-metrics/', null, true)
         
-        const queueData = await this.makeRequest('get', 'suapi/transaction-queue/')
-        const allTransactions = queueData.results || queueData || []
-        
-        // Filter for today's M-Pesa transactions
-        const today = new Date().toISOString().split('T')[0]
-        const todayMpesa = allTransactions.filter(t => {
-          const txDate = new Date(t.created_at).toISOString().split('T')[0]
-          return txDate === today && t.method === 'mpesa'
-        })
-        
-        this.todayRevenue = todayMpesa.reduce((sum, t) => sum + parseFloat(t.price || 0), 0)
-        this.todayTransactions = todayMpesa.length
-        
-        // Fetch active vouchers with active sessions
-        const vouchersData = await this.makeRequest('get', 'suapi/vouchers/')
-        const activeVouchers = (vouchersData.results || vouchersData || []).filter(v => 
-          v.status === 'active' && v.session_count > 0
-        )
-        
-        this.onlineUsers = activeVouchers.length
-        this.activeSessions = activeVouchers.reduce((sum, v) => sum + (v.session_count || 0), 0)
-        
-        // Calculate response time
-        const endTime = Date.now()
-        this.avgResponseTime = Math.round((endTime - startTime) / 2)
-        
+        this.todayRevenue = metrics.totalRevenue || 0
+        this.todayTransactions = metrics.totalPackagesSold || 0
+        this.onlineUsers = metrics.activeUsers || 0
+        this.activeSessions = metrics.activeUsers || 0
+        this.avgResponseTime = Math.round(Date.now() - startTime)
       } catch (error) {
-        console.error('Error fetching real-time data:', error)
+        // Silent fail for real-time updates
       }
     },
     

@@ -1,6 +1,6 @@
 {
   "name": "adminstration",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -10,6 +10,7 @@
     "dev": "vite",
     "dev:host": "vite --host",
     "build": "vite build",
+    "build:analyze": "vite build --mode analyze",
     "preview": "vite preview",
     "test:unit": "vitest",
     "prepare": "cypress install",
@@ -26,6 +27,7 @@
     "chart.js": "^4.5.1",
     "pinia": "^3.0.3",
     "pusher-js": "^8.4.0",
+    "vite-plugin-compression2": "^2.4.0",
     "vue": "^3.5.22",
     "vue-router": "^4.5.1",
     "vue3-apexcharts": "^1.9.0"

@@ -67,7 +67,7 @@ class DashboardMetricsView(APIView):
                 status='active'
             ).values('user').distinct().count()
             
-            # Revenue metrics - Use EXACT same logic as RevenueAnalyticsView
+            # Revenue metrics - TODAY's revenue only (completed/processed M-Pesa)
             today = timezone.now().date()
             qs = TransactionQueue.objects.filter(
                 created_at__date=today,

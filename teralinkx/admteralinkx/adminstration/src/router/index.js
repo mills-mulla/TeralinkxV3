@@ -1,18 +1,16 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Dashboard from '../views/Dashboard.vue'
-import Auth from '../views/Auth.vue'
 
 const routes = [
   {
     path: '/',
     name: 'Auth',
-    component: Auth,
-     meta: { requiresAuth: false } 
+    component: () => import('../views/Auth.vue'),
+    meta: { requiresAuth: false } 
   },
   {
     path: '/dashboard',
     name: 'Dashboard',
-    component: Dashboard,
+    component: () => import('../views/Dashboard.vue'),
     meta: { requiresAuth: true } 
   },
   {
@@ -91,22 +89,11 @@ const routes = [
 
 const router = createRouter({
   history: createWebHistory(),
-  routes
+  routes,
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) return savedPosition
+    return { top: 0, behavior: 'smooth' }
+  }
 })
 
-const checkAuth = async () => {
-  try {
-    const response = await fetch('service.teralinkxwaves.uk/suapi/auth/check/', {
-      credentials: 'include'
-    })
-    if (response.ok) {
-      const data = await response.json()
-      return data.authenticated
-    }
-    return false
-  } catch (error) {
-    console.error('Auth check failed:', error)
-    return false
-  }
-}
 export default router

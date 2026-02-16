@@ -9,12 +9,10 @@ lerna-debug.log*
 
 node_modules
 .DS_Store
-
+dist
+dist-ssr
 coverage
 *.local
-
-/cypress/videos/
-/cypress/screenshots/
 
 # Editor directories and files
 .vscode/*
@@ -26,4 +24,9 @@ coverage
 *.sln
 *.sw?
 
-*.tsbuildinfo
+# Environment
+.env.local
+.env.*.local
+
+# Build
+build
