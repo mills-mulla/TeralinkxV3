@@ -39,6 +39,7 @@ django-celery-results==2.5.1
 django-compat==1.0.15
 django-cors-headers==4.3.1
 django-debug-toolbar==4.3.0
+django-json-widget==2.1.1
 django-prometheus==2.4.1
 django-redis==6.0.0
 django-silk==5.3.2
