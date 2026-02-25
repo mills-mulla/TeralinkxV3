@@ -32,7 +32,7 @@ def get_access_token():
     }
 
     try:
-        response = requests.get(ACCESS_TOKEN_URL, headers=headers)
+        response = requests.get(ACCESS_TOKEN_URL, headers=headers, timeout=10)
         response.raise_for_status()  # Raise error for non-2xx responses
         
         result = response.json()
@@ -82,7 +82,7 @@ def query_stk_status(checkout_request_id):
     # logging.debug(f"STK Query Payload: {query_payload}")
 
     try:
-        response = requests.post(query_url, headers=query_headers, json=query_payload)
+        response = requests.post(query_url, headers=query_headers, json=query_payload, timeout=10)
         response.raise_for_status()
 
         response_data = response.json()

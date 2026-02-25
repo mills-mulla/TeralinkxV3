@@ -33,7 +33,7 @@ from core.router.ros_api.api import Api
 from core.router.ros_api.api import RouterOSTrapError 
 from core.services.notification_service import create_and_notify
 
-
+from locations.models import Location
 from .models import (
     PaymentTransaction,
     PaymentGateway,
@@ -95,6 +95,8 @@ class MpesaGatewayHelper:
     @staticmethod
     def get_access_token():
         """Retrieve access token from M-Pesa API"""
+        from django.db import connection
+        
         global _mpesa_token_cache
         
         # Check cache first
@@ -122,6 +124,9 @@ class MpesaGatewayHelper:
         
         for attempt in range(3):
             try:
+                # Close any stale DB connections before external API call
+                connection.close_if_unusable_or_obsolete()
+                
                 response = requests.get(access_token_url, headers=headers, timeout=10)
                 response.raise_for_status()
                 token_data = response.json()
@@ -142,6 +147,8 @@ class MpesaGatewayHelper:
                 
             except requests.RequestException as e:
                 logger.warning(f"Attempt {attempt + 1}: Failed to get M-Pesa token: {e}")
+                # Close DB connection on error to prevent leaks
+                connection.close_if_unusable_or_obsolete()
                 if attempt == 2:
                     logger.error("Could not retrieve M-Pesa access token after retries")
                     raise RuntimeError("Could not retrieve M-Pesa access token")
@@ -173,6 +180,8 @@ class MpesaGatewayHelper:
     @staticmethod
     def initiate_stk_push(phone, amount, account_reference, description, package_data=None):
         """Initiate STK push payment"""
+        from django.db import connection
+        
         config = MpesaGatewayHelper.get_gateway_config()
         token = MpesaGatewayHelper.get_access_token()
 
@@ -215,6 +224,9 @@ class MpesaGatewayHelper:
         
         for attempt in range(3):
             try:
+                # Close any stale DB connections before external API call
+                connection.close_if_unusable_or_obsolete()
+                
                 response = requests.post(payment_url, headers=headers, json=payload, timeout=15)
                 response.raise_for_status()
                 try:
@@ -255,6 +267,8 @@ class MpesaGatewayHelper:
                 except Exception:
                     body = None
                 logger.warning(f"STK push attempt {attempt + 1} failed: {e}, body={body}")
+                # Close DB connection on error to prevent leaks
+                connection.close_if_unusable_or_obsolete()
                 if attempt == 2:
                     return {
                         'success': False,
@@ -272,30 +286,47 @@ class TransactionQueueHelper:
                            recipient_account, package_name, price,result, used_credit=0,
                            location_id=None):
         """Create a new transaction queue record"""
+        from django.core.cache import cache
         
-        # Get KES currency
-        try:
-            currency = Currency.objects.get(code='KES')
-        except Currency.DoesNotExist:
-            # Create KES currency if not exists
-            currency = Currency.objects.create(
-                code='KES',
-                name='Kenyan Shilling',
-                symbol='KSh',
-                is_base_currency=True,
-                decimal_places=2
-            )
+        # Cache currency lookup (1 hour)
+        cache_key = 'currency:KES'
+        currency = cache.get(cache_key)
         
-        # Get package for metadata
-        try:
-            package = PackageType.objects.get(code=package_code)
-            package_type = PackageType.objects.filter(name=package_name).first()
-        except PackageType.DoesNotExist:
-            package = None
-            package_type = None
+        if not currency:
+            try:
+                currency = Currency.objects.get(code='KES')
+                cache.set(cache_key, currency, 3600)
+            except Currency.DoesNotExist:
+                currency = Currency.objects.create(
+                    code='KES',
+                    name='Kenyan Shilling',
+                    symbol='KSh',
+                    is_base_currency=True,
+                    decimal_places=2
+                )
+                cache.set(cache_key, currency, 3600)
         
-        # Get gateway
-        gateway = PaymentGateway.get_gateway_by_type('mpesa', 'KES')
+        # Cache package lookup (5 minutes)
+        cache_key_pkg = f'package:code:{package_code}'
+        package = cache.get(cache_key_pkg)
+        
+        if not package:
+            try:
+                package = PackageType.objects.get(code=package_code)
+                cache.set(cache_key_pkg, package, 300)
+            except PackageType.DoesNotExist:
+                package = None
+        
+        package_type = PackageType.objects.filter(name=package_name).first() if not package else package
+        
+        # Cache gateway lookup (1 hour)
+        cache_key_gw = 'gateway:mpesa:KES'
+        gateway = cache.get(cache_key_gw)
+        
+        if not gateway:
+            gateway = PaymentGateway.get_gateway_by_type('mpesa', 'KES')
+            if gateway:
+                cache.set(cache_key_gw, gateway, 3600)
         
         queue_item = TransactionQueue.objects.create(
             queue_type='payment_processing',
@@ -378,10 +409,14 @@ class VoucherHelper:
         try:
             # Import inside method to avoid circular imports
             from .generate import activate_voucher
-            from .views.chekout_confirmation import get_device_by_package_code
+            from packages.models import PackageType
             
-            pkginst = get_device_by_package_code(package_code)
-            devices = pkginst.devices if pkginst else 1
+            # Get device limit from package
+            try:
+                package = PackageType.objects.get(code=package_code)
+                devices = package.device_limit
+            except PackageType.DoesNotExist:
+                devices = 1
             
             # Get location if provided
             location = None
@@ -761,7 +796,9 @@ class PaymentInitiateAPIView(APIView):
     permission_classes = [IsAuthenticated]
     
     def post(self, request):
-        """Initiate STK push payment"""
+        """Initiate STK push payment - ASYNC with Celery"""
+        from .tasks import initiate_mpesa_stk_push
+        
         data = request.data
         
         # DEBUG: Inspect JWT / authenticated user
@@ -780,7 +817,6 @@ class PaymentInitiateAPIView(APIView):
                 print(f"DEBUG PaymentInitiateAPIView JWT inspection failed: {e}")
         
         # Extract data
-        # Prefer explicit values from payload; fall back to JWT where possible
         account = (data.get('account') or '').strip()
         if not account and isinstance(jwt_payload, dict):
             account = (jwt_payload.get('client_account') or '').strip()
@@ -852,14 +888,10 @@ class PaymentInitiateAPIView(APIView):
                     discount_amount = base_amount * (coupon.discount_value / 100)
                     
                     # 🔴 DYNAMIC M-PESA DISCOUNT ROUNDING SYSTEM
-                    # For expensive packages (≥50 KES): Round UP (ceiling) - more generous
-                    # For cheap packages (<50 KES): Round DOWN (floor) - conservative
                     import math
                     if base_amount >= 50:
-                        # Expensive packages: Round UP for better customer experience
                         discount_amount = Decimal(str(math.ceil(float(discount_amount))))
                     else:
-                        # Cheap packages: Round DOWN to maintain profitability
                         discount_amount = Decimal(str(math.floor(float(discount_amount))))
                     
                     coupon_discount = min(discount_amount, base_amount)
@@ -880,9 +912,7 @@ class PaymentInitiateAPIView(APIView):
         
         # Calculate final amount after coupon discount
         final_amount = base_amount - coupon_discount
-        
-        # 🔴 ENSURE FINAL AMOUNT IS WHOLE NUMBER FOR M-PESA
-        final_amount = max(Decimal('1'), Decimal(str(int(final_amount))))  # Minimum 1 KES
+        final_amount = max(Decimal('1'), Decimal(str(int(final_amount))))
         
         # Use provided amount or calculated amount
         amount = data.get('Amount', '')
@@ -930,27 +960,39 @@ class PaymentInitiateAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Initiate STK push and create queue record
+        # Send to Celery and WAIT for M-Pesa response
         try:
-            result = MpesaGatewayHelper.initiate_stk_push(
-                phone=phone,
-                amount=amount_int,
-                account_reference=f"TERALINKX_WAVES_{account}",
-                description=f"Payment for {package_name}",
-                package_data=items
+            # Call Celery task and wait for result (max 20 seconds)
+            task = initiate_mpesa_stk_push.apply_async(
+                args=[{
+                    'user_id': client.id,
+                    'package_code': package_code,
+                    'initiator_phone': phone,
+                    'recipient_account': account,
+                    'package_name': package_name,
+                    'price': float(amount_decimal),
+                    'used_credit': float(used_credit),
+                    'location_id': location_id,
+                    'amount_int': amount_int
+                }],
+                expires=30
             )
-            print(result)
+            
+            # Wait for M-Pesa response (blocks here, but in controlled way)
+            result = task.get(timeout=20)
+            
             if not result.get('success'):
                 return Response(
                     {'error': result.get('error', 'Payment initiation failed')},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
+            # Now create queue with REAL checkout ID from M-Pesa
             queue_item = TransactionQueueHelper.create_payment_queue(
                 user=client,
                 package_code=package_code,
                 initiator_phone=phone,
-                checkout_id=result.get('checkout_request_id'),
+                checkout_id=result.get('checkout_request_id'),  # REAL ID from M-Pesa
                 recipient_account=account,
                 package_name=package_name,
                 price=amount_decimal,
@@ -959,27 +1001,33 @@ class PaymentInitiateAPIView(APIView):
                 result=result
             )
             
-            # Apply coupon if provided
-            if coupon_code:
-                try:
-                    coupon = Coupon.objects.get(code=coupon_code, is_active=True)
-                    # Increment usage count
-                    coupon.total_uses += 1
-                    # If max uses reached, deactivate coupon
-                    if coupon.total_uses >= coupon.max_uses:
-                        coupon.is_active = False
-                    coupon.save()
-                    logger.info(f"Applied coupon {coupon_code} with discount {coupon_discount}")
-                except Coupon.DoesNotExist:
-                    pass  # Already validated above
         except Exception as e:
-            logger.error("Payment initiation core error: %s", e, exc_info=True)
+            logger.error("Celery task error: %s", e, exc_info=True)
             return Response(
-                {'error': 'Failed to initiate payment'},
+                {'error': 'Payment service temporarily unavailable. Please try again.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+            
+        except Exception as e:
+            logger.error("Payment queue creation error: %s", e, exc_info=True)
+            return Response(
+                {'error': 'Failed to queue payment'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         
-        # Try to send notification, but don't fail the payment if this breaks
+        # Apply coupon if provided
+        if coupon_code:
+            try:
+                coupon = Coupon.objects.get(code=coupon_code, is_active=True)
+                coupon.total_uses += 1
+                if coupon.total_uses >= coupon.max_uses:
+                    coupon.is_active = False
+                coupon.save()
+                logger.info(f"Applied coupon {coupon_code} with discount {coupon_discount}")
+            except Coupon.DoesNotExist:
+                pass
+        
+        # Try to send notification
         try:
             NotificationHelper.send_payment_notification(
                 client,
@@ -989,7 +1037,7 @@ class PaymentInitiateAPIView(APIView):
         except Exception as e:
             logger.warning("Payment initiation notification error: %s", e, exc_info=True)
         
-        #review the response structure during frontend intergartion
+        # Return real checkout ID from M-Pesa
         return Response({
             'success': True,
             'message': 'Payment initiated successfully',
@@ -1280,7 +1328,15 @@ class PaymentStatusAPIView(APIView):
         
         try:
             # Check transaction queue
-            queue_item = TransactionQueueHelper.get_pending_by_checkout_id(checkout_request_id)
+            queue_item = TransactionQueue.objects.filter(
+                checkout_request_id=checkout_request_id
+            ).first()
+            
+            if not queue_item:
+                return Response(
+                    {'error': 'Payment not found'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
             
             # Check payment transactions
             payment_transaction = PaymentTransaction.objects.filter(
@@ -1295,13 +1351,15 @@ class PaymentStatusAPIView(APIView):
                 ).first()
             
             response_data = {
-                'queue_status': queue_item.status if queue_item else 'not_found',
-                'payment_status': payment_transaction.status if payment_transaction else 'not_found',
+                'status': queue_item.status,
+                'queue_status': queue_item.status,
+                'payment_status': payment_transaction.status if payment_transaction else 'pending',
                 'transaction_id': payment_transaction.transaction_id if payment_transaction else None,
-                'amount': float(payment_transaction.amount) if payment_transaction else None,
+                'amount': float(payment_transaction.amount) if payment_transaction else float(queue_item.price),
                 'voucher_created': dispatch_voucher is not None,
                 'voucher_code': dispatch_voucher.voucher_code if dispatch_voucher else None,
-                'voucher_status': dispatch_voucher.status if dispatch_voucher else None
+                'voucher_status': dispatch_voucher.status if dispatch_voucher else None,
+                'checkout_request_id': checkout_request_id
             }
             
             return Response(response_data, status=status.HTTP_200_OK)

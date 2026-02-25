@@ -499,8 +499,50 @@ class PaymentProcessor:
         retry=retry_if_exception_type((ConnectionError, TimeoutError))
     )
     def query_mpesa_with_retry(checkout_request_id):
-        """✅ Retry mechanism with circuit breaker"""
-        return mpesa_circuit_breaker.call(query_stk_status, checkout_request_id)
+        """✅ Retry mechanism with circuit breaker and Celery"""
+        from finance.tasks import query_payment_status
+        from django.core.cache import cache
+        
+        # Check cache first (2 second cache for pending, 5 min for completed)
+        cache_key = f"mpesa_status:{checkout_request_id}"
+        cached = cache.get(cache_key)
+        
+        if cached:
+            logger.info(f"Returning cached status for {checkout_request_id}")
+            return cached
+        
+        # Use Celery to query M-Pesa (prevents worker blocking)
+        task = query_payment_status.apply_async(
+            args=[checkout_request_id]
+            # No expiry - rely on timeout only
+        )
+        
+        try:
+            # Wait max 30 seconds for result
+            celery_result = task.get(timeout=30)
+            
+            if celery_result.get('success'):
+                mpesa_result = celery_result['result']
+                
+                # Cache based on result
+                result_code = str(mpesa_result.get('ResultCode'))
+                if result_code == '0':
+                    cache.set(cache_key, mpesa_result, 300)  # Cache completed for 5 min
+                else:
+                    cache.set(cache_key, mpesa_result, 2)  # Cache pending for 2s
+                
+                return mpesa_result
+            else:
+                raise ValueError(celery_result.get('error', 'Status query failed'))
+                
+        except Exception as e:
+            logger.error(f"Celery status query timeout/error: {e}")
+            # Return pending status on timeout
+            return {
+                'ResultCode': '4999',
+                'ResultDesc': 'Transaction is still under processing',
+                'message': 'Status check in progress'
+            }
     
     @staticmethod
     def process_payment_status(checkout_request_id, user_context, hotspot_ip, idempotency_key=None):
@@ -535,6 +577,15 @@ class PaymentProcessor:
                         'status': 'completed',
                         'transaction_id': checkout_request_id,
                         'message': 'Payment already completed'
+                    }
+                elif transaction_record.status == 'processing':
+                    # Transaction is currently being processed
+                    return {
+                        'success': False,
+                        'payment_status': 'processing',
+                        'status': 'processing',
+                        'result_code': '1',
+                        'description': 'Payment is being processed. Please wait...'
                     }
             except TransactionQueue.DoesNotExist:
                 pass

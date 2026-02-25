@@ -90,6 +90,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'silk.middleware.SilkyMiddleware',
+    'core.middleware.db_connection_middleware.DatabaseConnectionMiddleware',  # Close DB connections
 ]
 
 # ========== DEVELOPMENT SECURITY SETTINGS ==========
@@ -146,10 +147,21 @@ TEMPLATES = [
 DATABASES = {
     'default': dj_database_url.config(
         default='postgres://teralinkx:justboot@192.168.88.16:5432/teralinkx',
-        conn_max_age=600,  # persistent connections
-        ssl_require=False  # set True in production if needed
+        conn_max_age=60,  # Reduced from 600 to 60 seconds - recycle connections faster
+        conn_health_checks=True,  # Enable connection health checks
+        ssl_require=False
     )
 }
+
+# Add connection timeout and statement timeout
+DATABASES['default']['OPTIONS'] = {
+    'connect_timeout': 10,  # 10 seconds to establish connection
+    'options': '-c statement_timeout=30000 -c idle_in_transaction_session_timeout=60000',  # 30s query, 60s idle
+}
+
+# Connection pool settings
+DATABASES['default'].setdefault('CONN_MAX_AGE', 60)
+DATABASES['default'].setdefault('ATOMIC_REQUESTS', False)  # Explicit control
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -283,18 +295,34 @@ CSRF_TRUSTED_ORIGINS = [
     'http://127.0.0.1:8009',
 ]
 
-# Cache - Redis for production
+# Cache - Redis for production with connection pooling
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": "redis://redis:6379/1",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        }
+            "CONNECTION_POOL_KWARGS": {
+                "max_connections": 50,
+                "retry_on_timeout": True,
+                "socket_keepalive": True,
+                "socket_keepalive_options": {
+                    1: 1,  # TCP_KEEPIDLE
+                    2: 1,  # TCP_KEEPINTVL  
+                    3: 3,  # TCP_KEEPCNT
+                },
+            },
+            "SOCKET_CONNECT_TIMEOUT": 5,
+            "SOCKET_TIMEOUT": 5,
+            "COMPRESSOR": "django_redis.compressors.zlib.ZlibCompressor",
+            "IGNORE_EXCEPTIONS": True,  # Don't crash on Redis failures
+        },
+        "KEY_PREFIX": "teralinkx",
+        "TIMEOUT": 300,  # 5 minutes default
     }
 }
 
-# Celery Configuration - Docker optimized
+# Celery Configuration - Docker optimized with connection management
 CELERY_BROKER_URL = 'redis://redis:6379/0'
 CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
 CELERY_ACCEPT_CONTENT = ['json']
@@ -303,17 +331,29 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers.DatabaseScheduler'
 
+# Redis connection pool for Celery
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_BROKER_CONNECTION_RETRY = True
+CELERY_BROKER_CONNECTION_MAX_RETRIES = 10
+CELERY_REDIS_MAX_CONNECTIONS = 50
+CELERY_BROKER_POOL_LIMIT = 50
+
 # Task timeout and cleanup settings
 CELERY_TASK_SOFT_TIME_LIMIT = 300  # 5 minutes soft limit
 CELERY_TASK_TIME_LIMIT = 600       # 10 minutes hard limit
 CELERY_TASK_ACKS_LATE = True       # Acknowledge after task completion
 CELERY_WORKER_PREFETCH_MULTIPLIER = 1  # Process one task at a time
+CELERY_TASK_REJECT_ON_WORKER_LOST = False  # Don't revoke tasks on worker loss
 
 # Result backend cleanup
 CELERY_RESULT_EXPIRES = 3600        # Results expire after 1 hour
 CELERY_TASK_RESULT_EXPIRES = 3600   # Task results expire after 1 hour
 CELERY_RESULT_BACKEND_ALWAYS_RETRY = True
 CELERY_RESULT_BACKEND_MAX_RETRIES = 10
+
+# Database connection management for Celery
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 100  # Restart worker after 100 tasks to prevent leaks
+CELERY_WORKER_DISABLE_RATE_LIMITS = False
 
 # Email - console backend for development
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

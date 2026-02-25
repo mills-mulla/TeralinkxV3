@@ -192,9 +192,9 @@ class PasswordlessService:
                     # Account has no password - passwordless signin
                     logger.info(f"Passwordless signin for phone ending in ***{phone[-4:]}")
                     
-                    # Get or update client
+                    # Get or update client with row-level locking to prevent deadlocks
                     try:
-                        client = user.client_profile
+                        client = ClientH.objects.select_for_update().get(user=user)
                         client_created = False
                         client.last_login = timezone.now()
                         

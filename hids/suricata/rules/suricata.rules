@@ -1,0 +1,2 @@
+# Suricata Rules
+alert tcp any any -> any any (msg:"Test Alert"; sid:1000001; rev:1;)
