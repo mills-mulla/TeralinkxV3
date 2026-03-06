@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>HIDS Command Center</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --neon-green: #00ff41;
+            --neon-blue: #00d9ff;
+            --neon-purple: #bd00ff;
+            --neon-red: #ff0055;
+            --bg-dark: #000000;
+            --bg-card: #0a0e27;
+            --bg-hover: #1a1f3a;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Fira Code', monospace;
+            background: var(--bg-dark);
+            color: var(--neon-green);
+            overflow-x: hidden;
+        }
+        
+        .scanline {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(transparent 50%, rgba(0, 255, 65, 0.02) 50%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 9999;
+            animation: scanline 8s linear infinite;
+        }
+        
+        @keyframes scanline {
+            0% { background-position: 0 0; }
+            100% { background-position: 0 100%; }
+        }
+        
+        .container {
+            max-width: 1920px;
+            margin: 0 auto;
+            padding: 0.5rem;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            background: var(--bg-card);
+            border: 2px solid var(--neon-green);
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+        }
+        
+        .logo {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 900;
+            color: var(--neon-green);
+            text-shadow: 0 0 10px var(--neon-green);
+        }
+        
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(0, 255, 65, 0.1);
+            border: 1px solid var(--neon-green);
+            border-radius: 4px;
+            font-size: 0.875rem;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--neon-green);
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .grid {
+            display: grid;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .grid-4 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+        .grid-2 { grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); }
+        
+        .card {
+            background: var(--bg-card);
+            padding: 0.75rem;
+            border: 2px solid rgba(0, 255, 65, 0.2);
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            border-color: var(--neon-green);
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+        }
+        
+        .stat-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--neon-green);
+            text-shadow: 0 0 10px var(--neon-green);
+        }
+        
+        .stat-label {
+            color: var(--neon-blue);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+        
+        .card-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.875rem;
+            color: var(--neon-green);
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+        
+        .btn {
+            padding: 0.5rem 1rem;
+            background: transparent;
+            color: var(--neon-green);
+            border: 1px solid var(--neon-green);
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.75rem;
+            transition: all 0.3s ease;
+        }
+        
+        .btn:hover {
+            background: var(--neon-green);
+            color: var(--bg-dark);
+            box-shadow: 0 0 10px var(--neon-green);
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .filter-bar {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .filter-btn {
+            padding: 0.4rem 0.8rem;
+            background: transparent;
+            color: var(--neon-blue);
+            border: 1px solid var(--neon-blue);
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.7rem;
+            transition: all 0.3s ease;
+        }
+        
+        .filter-btn.active {
+            background: var(--neon-blue);
+            color: var(--bg-dark);
+            box-shadow: 0 0 10px var(--neon-blue);
+        }
+        
+        .search-box {
+            padding: 0.5rem;
+            background: var(--bg-card);
+            color: var(--neon-green);
+            border: 1px solid var(--neon-green);
+            border-radius: 4px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.75rem;
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 0.5rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(0, 255, 65, 0.2);
+            font-size: 0.7rem;
+        }
+        
+        th {
+            color: var(--neon-blue);
+            text-transform: uppercase;
+        }
+        
+        tr:hover {
+            background: var(--bg-hover);
+            cursor: pointer;
+        }
+        
+        .row-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .icon-btn {
+            background: transparent;
+            border: none;
+            color: var(--neon-blue);
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            padding: 0.2rem;
+        }
+        
+        .icon-btn:hover {
+            color: var(--neon-green);
+            transform: scale(1.2);
+        }
+        
+        .detection-badge {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 3px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            margin-right: 0.3rem;
+        }
+        
+        .detection-suricata {
+            background: rgba(255, 165, 0, 0.2);
+            color: #ffa500;
+            border: 1px solid #ffa500;
+        }
+        
+        .detection-ml {
+            background: rgba(0, 217, 255, 0.2);
+            color: var(--neon-blue);
+            border: 1px solid var(--neon-blue);
+        }
+        
+        .detection-both {
+            background: rgba(189, 0, 255, 0.2);
+            color: var(--neon-purple);
+            border: 1px solid var(--neon-purple);
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .badge-critical {
+            background: rgba(255, 0, 85, 0.2);
+            color: var(--neon-red);
+            border: 1px solid var(--neon-red);
+        }
+        
+        .badge-high {
+            background: rgba(189, 0, 255, 0.2);
+            color: var(--neon-purple);
+            border: 1px solid var(--neon-purple);
+        }
+        
+        .badge-medium {
+            background: rgba(0, 217, 255, 0.2);
+            color: var(--neon-blue);
+            border: 1px solid var(--neon-blue);
+        }
+        
+        .badge-low {
+            background: rgba(0, 255, 65, 0.2);
+            color: var(--neon-green);
+            border: 1px solid var(--neon-green);
+        }
+        
+        .explanation {
+            font-size: 0.7rem;
+            color: var(--neon-blue);
+            line-height: 1.4;
+            max-width: 500px;
+            font-family: 'Fira Code', monospace;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .explanation.compact {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            white-space: normal;
+        }
+        
+        .explanation.expanded {
+            white-space: pre-wrap;
+            max-width: 100%;
+            background: rgba(0, 217, 255, 0.05);
+            padding: 0.5rem;
+            border-left: 2px solid var(--neon-blue);
+            border-radius: 4px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .explanation:hover::after {
+            content: '\f065';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            right: 5px;
+            top: 2px;
+            color: var(--neon-green);
+            font-size: 0.6rem;
+        }
+        
+        .explanation.expanded:hover::after {
+            content: '\f066';
+        }
+        
+        .ml-panel {
+            background: rgba(0, 255, 65, 0.05);
+            border: 1px solid var(--neon-green);
+            border-radius: 4px;
+            padding: 0.5rem;
+        }
+        
+        .ml-metric {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.4rem 0;
+            border-bottom: 1px solid rgba(0, 255, 65, 0.2);
+        }
+        
+        .ml-metric-label {
+            color: var(--neon-blue);
+            font-size: 0.75rem;
+        }
+        
+        .ml-metric-value {
+            color: var(--neon-green);
+            font-weight: 600;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 180px;
+        }
+        
+        @media (max-width: 768px) {
+            .grid-2, .grid-4 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="scanline"></div>
+    
+    <div class="container">
+        <div class="header">
+            <div class="logo">⬢ HIDS COMMAND CENTER</div>
+            <div class="status">
+                <span class="status-dot"></span>
+                <span>SYSTEM ACTIVE</span>
+            </div>
+        </div>
+
+        <div class="grid grid-4">
+            <div class="card">
+                <div class="stat-value" id="total-alerts">0</div>
+                <div class="stat-label">Suricata Alerts</div>
+            </div>
+            <div class="card">
+                <div class="stat-value" id="ml-predictions">0</div>
+                <div class="stat-label">ML Predictions</div>
+            </div>
+            <div class="card">
+                <div class="stat-value" id="ml-anomalies">0</div>
+                <div class="stat-label">ML Anomalies</div>
+            </div>
+            <div class="card">
+                <div class="stat-value" id="hybrid-count">0</div>
+                <div class="stat-label">Hybrid Alerts</div>
+            </div>
+        </div>
+
+        <div class="grid grid-2">
+            <div class="card">
+                <div class="card-title">⚡ Attack Timeline</div>
+                <div class="chart-container">
+                    <canvas id="timelineChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">📊 Detection Comparison</div>
+                <div class="ml-panel">
+                    <div class="ml-metric">
+                        <span class="ml-metric-label">Suricata Only</span>
+                        <span class="ml-metric-value" id="detect-suricata">-</span>
+                    </div>
+                    <div class="ml-metric">
+                        <span class="ml-metric-label">ML Only</span>
+                        <span class="ml-metric-value" id="detect-ml">-</span>
+                    </div>
+                    <div class="ml-metric">
+                        <span class="ml-metric-label">Both Agreed</span>
+                        <span class="ml-metric-value" id="detect-both">-</span>
+                    </div>
+                    <div class="ml-metric">
+                        <span class="ml-metric-label">Agreement Rate</span>
+                        <span class="ml-metric-value" id="detect-agreement">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+            <div class="card">
+                <div class="card-title">🤖 ML Analytics</div>
+                <div class="ml-panel">
+                    <div class="ml-metric">
+                        <span class="ml-metric-label">Model Type</span>
+                        <span class="ml-metric-value" id="ml-model">-</span>
+                    </div>
+                    <div class="ml-metric">
+                        <span class="ml-metric-label">Total Predictions</span>
+                        <span class="ml-metric-value" id="ml-total">-</span>
+                    </div>
+                    <div class="ml-metric">
+                        <span class="ml-metric-label">Anomaly Rate</span>
+                        <span class="ml-metric-value" id="ml-anomaly">-</span>
+                    </div>
+                    <div class="ml-metric">
+                        <span class="ml-metric-label">Avg Confidence</span>
+                        <span class="ml-metric-value" id="ml-confidence">-</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-title">🛡️ Suricata Signatures</div>
+                <div class="ml-panel">
+                    <div class="ml-metric">
+                        <span class="ml-metric-label">Total Alerts</span>
+                        <span class="ml-metric-value" id="suricata-total">-</span>
+                    </div>
+                    <div class="ml-metric">
+                        <span class="ml-metric-label">Last 24H</span>
+                        <span class="ml-metric-value" id="suricata-24h">-</span>
+                    </div>
+                    <div class="ml-metric">
+                        <span class="ml-metric-label">Critical</span>
+                        <span class="ml-metric-value" id="suricata-critical">-</span>
+                    </div>
+                    <div class="ml-metric">
+                        <span class="ml-metric-label">High</span>
+                        <span class="ml-metric-value" id="suricata-high">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <div class="card-title">🎯 Hybrid Detection Alerts</div>
+                <div class="btn-group">
+                    <button class="btn" onclick="toggleExplanations()" id="toggle-btn">
+                        <i class="fas fa-compress"></i> COLLAPSE ALL
+                    </button>
+                    <button class="btn" onclick="exportData()">
+                        <i class="fas fa-download"></i> EXPORT
+                    </button>
+                    <button class="btn" onclick="loadData()">
+                        <i class="fas fa-sync-alt"></i> REFRESH
+                    </button>
+                </div>
+            </div>
+            
+            <div class="filter-bar">
+                <button class="filter-btn active" onclick="filterBySeverity('all')">ALL</button>
+                <button class="filter-btn" onclick="filterBySeverity('critical')">CRITICAL</button>
+                <button class="filter-btn" onclick="filterBySeverity('high')">HIGH</button>
+                <button class="filter-btn" onclick="filterBySeverity('medium')">MEDIUM</button>
+                <button class="filter-btn" onclick="filterBySeverity('low')">LOW</button>
+                <input type="text" class="search-box" placeholder="Search IP, port, or explanation..." oninput="searchAlerts(this.value)">
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Detection</th>
+                        <th>Priority</th>
+                        <th>Score</th>
+                        <th>Source → Dest</th>
+                        <th>Explanation</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="hybrid-table"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let chart = null;
+        let allAlerts = [];
+        let expandedMode = false;
+        let currentFilter = 'all';
+        
+        function getDetectionBadge(alert) {
+            const method = alert.detection_method;
+            
+            if (method === 'both') {
+                return '<span class="detection-badge detection-both" title="Both Suricata and ML detected">BOTH</span>';
+            } else if (method === 'ml_only') {
+                return '<span class="detection-badge detection-ml" title="ML only - Zero-day detection">ML ONLY</span>';
+            } else if (method === 'suricata_only') {
+                return '<span class="detection-badge detection-suricata" title="Suricata signature only">SURICATA</span>';
+            }
+            return '<span class="detection-badge detection-suricata">UNKNOWN</span>';
+        }
+        
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Explanation copied to clipboard!');
+            }).catch(err => {
+                console.error('Copy failed:', err);
+            });
+        }
+
+        function getScoreClass(score) {
+            if (score >= 75) return 'badge-critical';
+            if (score >= 50) return 'badge-high';
+            if (score >= 25) return 'badge-medium';
+            return 'badge-low';
+        }
+
+        function formatTime(ts) {
+            return new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+        
+        function toggleExplanations() {
+            expandedMode = !expandedMode;
+            const btn = document.getElementById('toggle-btn');
+            btn.innerHTML = expandedMode ? '<i class="fas fa-expand"></i> EXPAND ALL' : '<i class="fas fa-compress"></i> COLLAPSE ALL';
+            
+            document.querySelectorAll('.explanation').forEach(exp => {
+                if (expandedMode) {
+                    exp.classList.remove('compact');
+                    exp.classList.add('expanded');
+                } else {
+                    exp.classList.remove('expanded');
+                    exp.classList.add('compact');
+                }
+            });
+        }
+        
+        function filterBySeverity(severity) {
+            currentFilter = severity;
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            const filtered = severity === 'all' ? allAlerts : 
+                allAlerts.filter(a => a.priority.toLowerCase() === severity);
+            renderTable(filtered);
+        }
+        
+        function searchAlerts(query) {
+            const q = query.toLowerCase();
+            const filtered = allAlerts.filter(a => 
+                a.src_ip?.includes(q) || 
+                a.dest_ip?.includes(q) || 
+                a.explanation?.toLowerCase().includes(q)
+            );
+            renderTable(filtered);
+        }
+        
+        function blockIP(ip) {
+            if (confirm(`Block IP ${ip}?`)) {
+                alert(`IP ${ip} blocked (feature pending backend)`);
+            }
+        }
+        
+        function viewDetails(alert) {
+            alert(`ALERT DETAILS\n\nTime: ${new Date(alert.timestamp).toLocaleString()}\nSource: ${alert.src_ip}\nDest: ${alert.dest_ip}\nScore: ${alert.composite_score}\nPriority: ${alert.priority}\n\nExplanation:\n${alert.explanation}`);
+        }
+        
+        function exportData() {
+            const csv = 'Time,Priority,Score,Source,Destination,Explanation\n' + 
+                allAlerts.map(a => `${new Date(a.timestamp).toISOString()},${a.priority},${a.composite_score},${a.src_ip},${a.dest_ip},"${a.explanation?.replace(/"/g, '""')}"`).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `hids-alerts-${Date.now()}.csv`;
+            a.click();
+        }
+        
+        function renderTable(alerts) {
+            const limit = expandedMode ? 15 : 50;
+            document.getElementById('hybrid-table').innerHTML = alerts.slice(0, limit).map((a, idx) => `
+                <tr>
+                    <td>${formatTime(a.timestamp)}</td>
+                    <td>${getDetectionBadge(a)}</td>
+                    <td><span class="badge badge-${a.priority.toLowerCase()}">${a.priority}</span></td>
+                    <td><span class="badge ${getScoreClass(a.composite_score)}">${a.composite_score?.toFixed(0) || 'N/A'}</span></td>
+                    <td>${a.src_ip} → ${a.dest_ip}</td>
+                    <td>
+                        <div class="explanation compact" onclick="toggleExplanation(this)" title="Click to expand/collapse">
+                            ${a.explanation || 'No explanation'}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="row-actions">
+                            <button class="icon-btn" onclick='copyToClipboard(${JSON.stringify(a.explanation).replace(/'/g, "\\'")})' title="Copy Explanation">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                            <button class="icon-btn" onclick='viewDetails(${JSON.stringify(a).replace(/'/g, "\\'")})' title="View Details">
+                                <i class="fas fa-info-circle"></i>
+                            </button>
+                            <button class="icon-btn" onclick="blockIP('${a.src_ip}')" title="Block IP">
+                                <i class="fas fa-ban"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        function toggleExplanation(element) {
+            element.classList.toggle('compact');
+            element.classList.toggle('expanded');
+        }
+
+        async function loadData() {
+            try {
+                const stats = await fetch('/stats').then(r => r.json());
+                document.getElementById('total-alerts').textContent = stats.total_alerts.toLocaleString();
+                document.getElementById('suricata-total').textContent = stats.total_alerts.toLocaleString();
+                document.getElementById('suricata-24h').textContent = stats.recent_alerts_24h.toLocaleString();
+                document.getElementById('suricata-critical').textContent = (stats.alerts_by_severity[1] || 0).toLocaleString();
+                document.getElementById('suricata-high').textContent = (stats.alerts_by_severity[2] || 0).toLocaleString();
+
+                const ml = await fetch('/ml-analytics').then(r => r.json());
+                document.getElementById('ml-predictions').textContent = ml.total_predictions.toLocaleString();
+                document.getElementById('ml-anomalies').textContent = ml.recent_anomalies.toLocaleString();
+                document.getElementById('ml-model').textContent = ml.model_type.replace(/_/g, ' ').toUpperCase();
+                document.getElementById('ml-confidence').textContent = (ml.avg_confidence * 100).toFixed(1) + '%';
+                document.getElementById('ml-anomaly').textContent = ml.anomaly_rate.toFixed(1) + '%';
+                document.getElementById('ml-total').textContent = ml.total_predictions.toLocaleString();
+
+                const hybrid = await fetch('/hybrid-alerts').then(r => r.json());
+                allAlerts = hybrid.hybrid_alerts;
+                document.getElementById('hybrid-count').textContent = hybrid.count;
+                renderTable(allAlerts);
+                
+                const comparison = await fetch('/detection-comparison').then(r => r.json());
+                document.getElementById('detect-suricata').textContent = comparison.suricata_only.toLocaleString();
+                document.getElementById('detect-ml').textContent = comparison.ml_only.toLocaleString();
+                document.getElementById('detect-both').textContent = comparison.both.toLocaleString();
+                document.getElementById('detect-agreement').textContent = comparison.agreement_rate.toFixed(1) + '%';
+
+                updateChart();
+            } catch (e) {
+                console.error('Error:', e);
+            }
+        }
+
+        async function updateChart() {
+            try {
+                const timeline = await fetch('/attack-timeline').then(r => r.json());
+                const ctx = document.getElementById('timelineChart').getContext('2d');
+                
+                if (chart) chart.destroy();
+                
+                const hours = [...new Set(timeline.timeline.map(t => t.hour))].reverse();
+                const data = hours.map(h => timeline.timeline.filter(t => t.hour === h).reduce((s, t) => s + t.count, 0));
+                
+                chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: hours.map(h => new Date(h).toLocaleTimeString('en-US', { hour: '2-digit' })),
+                        datasets: [{
+                            label: 'Threats',
+                            data: data,
+                            borderColor: '#00ff41',
+                            backgroundColor: 'rgba(0, 255, 65, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: '#00ff4133' },
+                                ticks: { color: '#00d9ff' }
+                            },
+                            x: {
+                                grid: { color: '#00ff4133' },
+                                ticks: { color: '#00d9ff' }
+                            }
+                        }
+                    }
+                });
+            } catch (e) {
+                console.log('Chart unavailable');
+            }
+        }
+
+        loadData();
+        setInterval(loadData, 10000);
+    </script>
+</body>
+</html>

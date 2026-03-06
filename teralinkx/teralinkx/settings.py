@@ -40,6 +40,8 @@ ALLOWED_HOSTS = [
     '192.168.8.8',
     '10.0.0.1',
     '0.0.0.0',
+    'teralinkx_web',
+    'prometheus',
 ]
 
 # Apps

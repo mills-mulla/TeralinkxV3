@@ -1,13 +1,37 @@
-#config.yml
 tunnel: 1fb40a2f-56df-4268-b480-fad4fc059f22
 credentials-file: /etc/cloudflared/1fb40a2f-56df-4268-b480-fad4fc059f22.json
 
-# ingress:
-#   - hostname: teralinkxwaves.uk
-#     service: http://nginx:80
-#   - service: http_status:404
-
 ingress:
-  - hostname: test.teralinkxwaves.uk
-    service: http://web:8009
+  # Main app (nginx routes everything)
+  - hostname: teralinkxwaves.uk
+    service: http://nginx:80
+  
+  - hostname: service.teralinkxwaves.uk
+    service: http://nginx:80
+  
+  # Admin panel
+  - hostname: admin.teralinkxwaves.uk
+    service: http://nginx:80
+  
+  # RADIUS API
+  - hostname: radius.teralinkxwaves.uk
+    service: http://radiusapi:8010
+  
+  # HIDS Dashboard
+  - hostname: hids.teralinkxwaves.uk
+    service: http://hids_dashboard:5002
+  
+  # Monitoring - Grafana
+  - hostname: grafana.teralinkxwaves.uk
+    service: http://grafana:3000
+  
+  # Monitoring - Prometheus (optional)
+  - hostname: prometheus.teralinkxwaves.uk
+    service: http://prometheus:9090
+  
+  # Dev - Jupyter (optional)
+  - hostname: jupyter.teralinkxwaves.uk
+    service: http://jupyter:8888
+  
+  # Catch-all
   - service: http_status:404

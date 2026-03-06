@@ -1,0 +1,69 @@
+# ============================================
+# IMPROVED SURICATA RULES - ML-AWARE
+# Designed to work with ML validation
+# ============================================
+
+# SSH Brute Force Detection (KEEP - Good rule)
+alert tcp any any -> any 22 (msg:"SSH Brute Force Attempt"; flow:to_server,established; content:"SSH"; threshold:type both, track by_src, count 5, seconds 60; classtype:attempted-admin; sid:2000001; rev:2; priority:2;)
+
+# Port Scan Detection - IMPROVED (Require 100+ connections to different ports)
+# This reduces false positives from normal browsing
+alert tcp any any -> any any (msg:"Aggressive Port Scan Detected"; flags:S; threshold:type threshold, track by_src, count 100, seconds 60; classtype:attempted-recon; sid:2000002; rev:3; priority:2;)
+
+# Port Scan to Sensitive Ports - NEW (Lower threshold for critical services)
+alert tcp any any -> any [22,23,3389,445,139,21,1433,3306] (msg:"Port Scan on Sensitive Services"; flags:S; threshold:type threshold, track by_src, count 10, seconds 60; classtype:attempted-recon; sid:2000012; rev:2; priority:1;)
+
+# SQL Injection Attempt (KEEP - Good rule)
+alert http any any -> any any (msg:"SQL Injection Attempt"; flow:established,to_server; content:"union"; nocase; content:"select"; nocase; classtype:web-application-attack; sid:2000003; rev:1; priority:1;)
+
+# Suspicious Outbound Traffic - IMPROVED (Increase threshold)
+alert tcp $HOME_NET any -> $EXTERNAL_NET any (msg:"Large Outbound Data Transfer"; flow:established,to_server; dsize:>500000; threshold:type limit, track by_src, count 1, seconds 60; classtype:policy-violation; sid:2000004; rev:2; priority:3;)
+
+# RDP Brute Force (KEEP - Good rule)
+alert tcp any any -> any 3389 (msg:"RDP Brute Force Attempt"; flow:to_server; threshold:type both, track by_src, count 5, seconds 60; classtype:attempted-admin; sid:2000005; rev:1; priority:1;)
+
+# DNS Tunneling Detection (KEEP - Good rule)
+alert dns any any -> any any (msg:"Possible DNS Tunneling"; dns_query; content:"."; pcre:"/^[a-z0-9]{50,}/i"; classtype:policy-violation; sid:2000006; rev:1; priority:2;)
+
+# SMB/Windows File Sharing Exploit (KEEP - Good rule)
+alert tcp any any -> any 445 (msg:"SMB Exploit Attempt"; flow:to_server,established; content:"|ff|SMB"; depth:5; classtype:attempted-admin; sid:2000007; rev:1; priority:1;)
+
+# ============================================
+# NEW RULES - High Confidence Attacks
+# ============================================
+
+# Telnet Access (Almost always malicious)
+alert tcp any any -> any 23 (msg:"Telnet Connection Attempt"; flow:to_server; threshold:type limit, track by_dst, count 1, seconds 60; classtype:attempted-admin; sid:2000013; rev:1; priority:1;)
+
+# FTP Brute Force
+alert tcp any any -> any 21 (msg:"FTP Brute Force Attempt"; flow:to_server; threshold:type both, track by_src, count 5, seconds 60; classtype:attempted-admin; sid:2000014; rev:1; priority:2;)
+
+# MySQL Brute Force
+alert tcp any any -> any 3306 (msg:"MySQL Brute Force Attempt"; flow:to_server; threshold:type both, track by_src, count 5, seconds 60; classtype:attempted-admin; sid:2000015; rev:1; priority:2;)
+
+# MSSQL Brute Force
+alert tcp any any -> any 1433 (msg:"MSSQL Brute Force Attempt"; flow:to_server; threshold:type both, track by_src, count 5, seconds 60; classtype:attempted-admin; sid:2000016; rev:1; priority:2;)
+
+# Suspicious Multiple Failed Connections
+alert tcp any any -> any any (msg:"Multiple Connection Failures"; flags:R; threshold:type threshold, track by_src, count 30, seconds 10; classtype:attempted-dos; sid:2000017; rev:1; priority:2;)
+
+# ============================================
+# WHITELIST RULES (Pass legitimate traffic)
+# ============================================
+
+# Allow HTTPS to known good destinations (Google, AWS, Cloudflare, etc.)
+# These won't trigger alerts
+pass tcp $HOME_NET any -> [8.8.8.8,8.8.4.4,1.1.1.1,1.0.0.1] 443 (msg:"Legitimate HTTPS - DNS Providers"; sid:3000001; rev:1;)
+pass tcp $HOME_NET any -> $EXTERNAL_NET 443 (msg:"Legitimate HTTPS Traffic"; flow:established; sid:3000002; rev:1;)
+pass tcp $HOME_NET any -> $EXTERNAL_NET 80 (msg:"Legitimate HTTP Traffic"; flow:established; sid:3000003; rev:1;)
+
+# Whitelist established connections (not SYN scans)
+pass tcp any any -> any any (msg:"Established Connection"; flow:established,to_server; flags:!S; sid:3000004; rev:1;)
+pass tcp any any -> any any (msg:"Established Connection Response"; flow:established,to_client; sid:3000005; rev:1;)
+
+# ============================================
+# NOTES FOR ML INTEGRATION:
+# - Rules with priority:1 = High confidence, trust Suricata
+# - Rules with priority:2 = Medium confidence, validate with ML
+# - Rules with priority:3 = Low confidence, ML should override
+# ============================================

@@ -5,11 +5,7 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# System dependencies
-#RUN apt-get update && apt-get install -y \
-#    build-essential \
-#    libpq-dev \
-#    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y netcat-openbsd && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --upgrade pip
 
@@ -18,6 +14,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY ./radius_api .
 
+RUN chmod +x entrypoint.sh
+
 EXPOSE 8010
 
+ENTRYPOINT ["./entrypoint.sh"]
 CMD ["gunicorn", "--config", "gunicorn_config.py", "radius_api.wsgi:application"]

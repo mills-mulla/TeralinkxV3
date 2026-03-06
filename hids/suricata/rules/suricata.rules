@@ -1,2 +1,6 @@
-# Suricata Rules
-alert tcp any any -> any any (msg:"Test Alert"; sid:1000001; rev:1;)
+# Production Rules - No More Test Alerts
+alert tcp any any -> any 22 (msg:"SSH Brute Force Attempt"; flow:to_server,established; threshold:type both, track by_src, count 5, seconds 60; classtype:attempted-admin; sid:2000001; rev:1;)
+alert tcp any any -> any any (msg:"Port Scan Detected"; flags:S; threshold:type threshold, track by_src, count 20, seconds 60; classtype:attempted-recon; sid:2000002; rev:1;)
+alert tcp any any -> any 3389 (msg:"RDP Brute Force Attempt"; flow:to_server; threshold:type both, track by_src, count 5, seconds 60; classtype:attempted-admin; sid:2000005; rev:1;)
+alert tcp any any -> any 23 (msg:"Telnet Connection Detected"; flow:to_server,established; classtype:policy-violation; sid:2000008; rev:1;)
+alert tcp any any -> any 21 (msg:"FTP Brute Force Attempt"; flow:to_server; content:"USER"; threshold:type both, track by_src, count 5, seconds 60; classtype:attempted-admin; sid:2000009; rev:1;)

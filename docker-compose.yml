@@ -1,7 +1,7 @@
 # TeralinkX V3 - Production Stack
 services:
   # ===============================
-  # DJANGO GUNICORN SERVICE
+  # TERALINKX GUNICORN SERVICE
   # ===============================
   web:
     build:
@@ -95,13 +95,17 @@ services:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
       - ./teralinkx/media:/app/media:ro
       - ./teralinkx/staticfiles:/app/staticfiles:ro
+      - ./radius_api/media:/app/radius-media:ro
+      - ./radius_api/staticfiles:/app/radius-staticfiles:ro
       - ./teralinkx/admteralinkx/adminstration/dist:/app/admin-dist:ro
+      - ./TeralinkxFR/dist:/app/frontend-dist:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
     ports:
       - "80:80"
       - "443:443"
     depends_on:
       - web
+      - radius_api
     restart: always
     networks:
       - app_network
@@ -149,6 +153,7 @@ services:
       POSTGRES_PASSWORD: justboot
     volumes:
       - pg_data:/var/lib/postgresql/data
+      - ./postgres/init-databases.sh:/docker-entrypoint-initdb.d/01-init-databases.sh
     restart: always
     cpus: 1
     mem_limit: 1.5g
@@ -175,11 +180,15 @@ services:
     volumes:
       - ./freeradius/mods-available/sql:/etc/freeradius/mods-available/sql
       - ./freeradius/clients.conf:/etc/freeradius/clients.conf
+      - ./freeradius/schema.sql:/etc/freeradius/schema.sql
       - ./freeradius/entrypoint.sh:/entrypoint.sh
       - /etc/localtime:/etc/localtime:ro
     environment:
       - TZ=Africa/Nairobi
     entrypoint: ["/entrypoint.sh"]
+    depends_on:
+      db:
+        condition: service_healthy
     restart: always
     networks:
       - app_network
@@ -210,149 +219,282 @@ services:
       - app_network
 
   # ===============================
-  # HIDS STACK (commented out - enable after V3 is stable)
+  # HIDS STACK
   # ===============================
 
-  # # Suricata - Signature IDS
-  # suricata:
-  #   image: jasonish/suricata:latest
-  #   container_name: hids_suricata
-  #   network_mode: host
-  #   cap_add:
-  #     - NET_ADMIN
-  #     - NET_RAW
-  #   volumes:
-  #     - ./hids/suricata/logs:/var/log/suricata
-  #     - ./hids/suricata/rules:/var/lib/suricata/rules
-  #     - ./hids/suricata/suricata.yaml:/etc/suricata/suricata.yaml
-  #   command: -i eth0
-  #   restart: always
-  #   cpus: 1
-  #   mem_limit: 1g
+  # Suricata - Signature IDS (requires host network)
+  suricata:
+    image: jasonish/suricata:latest
+    container_name: hids_suricata
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - ./hids/suricata/logs:/var/log/suricata
+      - ./hids/suricata/rules:/var/lib/suricata/rules
+      - ./hids/suricata/suricata.yaml:/etc/suricata/suricata.yaml
+    command: -i wlp0s20f3
+    restart: always
+    cpus: 1
+    mem_limit: 1g
 
-  # # Zeek - Flow Analysis
-  # zeek:
-  #   image: zeek/zeek:latest
-  #   container_name: hids_zeek
-  #   network_mode: host
-  #   cap_add:
-  #     - NET_ADMIN
-  #     - NET_RAW
-  #   volumes:
-  #     - ./hids/zeek/logs:/usr/local/zeek/logs
-  #     - ./hids/zeek/scripts:/usr/local/zeek/share/zeek/site
-  #   restart: always
-  #   cpus: 1
-  #   mem_limit: 1g
+  # Zeek - Flow Analysis (requires host network)
+  zeek:
+    image: zeek/zeek:latest
+    container_name: hids_zeek
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - ./hids/zeek/logs:/usr/local/zeek/logs
+      - ./hids/zeek/scripts:/usr/local/zeek/share/zeek/site
+    command: zeek -i wlp0s20f3 local
+    restart: always
+    cpus: 1
+    mem_limit: 1g
 
-  # # TCPReplay - Packet Replay (built locally)
-  # tcpreplay:
-  #   build:
-  #     context: ./hids/tcpreplay
-  #     dockerfile: Dockerfile
-  #   container_name: hids_tcpreplay
-  #   network_mode: host
-  #   cap_add:
-  #     - NET_ADMIN
-  #     - NET_RAW
-  #   volumes:
-  #     - ./hids/pcaps:/pcaps
-  #   restart: "no"
-  #   cpus: 0.5
-  #   mem_limit: 512m
+  # TCPReplay - Packet Replay
+  tcpreplay:
+    build:
+      context: ./hids/tcpreplay
+      dockerfile: Dockerfile
+    container_name: hids_tcpreplay
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - ./hids/pcaps:/pcaps
+    restart: "no"
+    cpus: 0.5
+    mem_limit: 512m
 
-  # # Jupyter - ML Training
-  # jupyter:
-  #   image: quay.io/jupyter/scipy-notebook:latest
-  #   container_name: hids_jupyter
-  #   ports:
-  #     - "8888:8888"
-  #   volumes:
-  #     - ./hids/notebooks:/home/jovyan/work
-  #     - ./hids/datasets:/home/jovyan/datasets
-  #   environment:
-  #     - JUPYTER_ENABLE_LAB=yes
-  #   restart: "no"
-  #   cpus: 2
-  #   mem_limit: 4g
-  #   networks:
-  #     - app_network
+  # Jupyter - ML Training
+  jupyter:
+    image: quay.io/jupyter/scipy-notebook:latest
+    container_name: hids_jupyter
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./hids/notebooks:/home/jovyan/work
+      - ./hids/datasets:/home/jovyan/datasets
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+    restart: "no"
+    cpus: 2
+    mem_limit: 4g
+    networks:
+      - app_network
 
-  # # ML Service - Flask + scikit-learn
-  # ml_service:
-  #   build:
-  #     context: ./hids/ml_service
-  #   container_name: hids_ml_service
-  #   ports:
-  #     - "5001:5001"
-  #   volumes:
-  #     - ./hids/ml_service:/app
-  #     - ./hids/models:/app/models
-  #   environment:
-  #     - FLASK_ENV=production
-  #   depends_on:
-  #     - redis
-  #   restart: always
-  #   cpus: 1
-  #   mem_limit: 2g
-  #   networks:
-  #     - app_network
+  # ML Service - Flask + scikit-learn
+  ml_service:
+    build:
+      context: ./hids/ml_service
+    container_name: hids_ml_service
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./hids/ml_service:/app
+      - ./hids/models:/app/models
+    environment:
+      - FLASK_ENV=production
+    depends_on:
+      - redis
+    restart: always
+    cpus: 1
+    mem_limit: 2g
+    networks:
+      - app_network
 
-  # # HIDS Engine - Python + pandas
-  # hids_engine:
-  #   build:
-  #     context: ./hids/engine
-  #   container_name: hids_engine
-  #   volumes:
-  #     - ./hids/engine:/app
-  #     - ./hids/suricata/logs:/data/suricata
-  #     - ./hids/zeek/logs:/data/zeek
-  #   environment:
-  #     - REDIS_HOST=redis
-  #     - POSTGRES_HOST=db
-  #     - POSTGRES_PORT=5432
-  #     - POSTGRES_DB=hids_alerts
-  #     - POSTGRES_USER=hids
-  #     - POSTGRES_PASSWORD=hids_secure_pass
-  #   depends_on:
-  #     db:
-  #       condition: service_healthy
-  #     redis:
-  #       condition: service_started
-  #   restart: always
-  #   cpus: 1.5
-  #   mem_limit: 2g
-  #   networks:
-  #     - app_network
+  # HIDS Engine - Python + pandas
+  hids_engine:
+    build:
+      context: ./hids/engine
+    container_name: hids_engine
+    volumes:
+      - ./hids/engine:/app
+      - ./hids/suricata/logs:/data/suricata
+      - ./hids/zeek/logs:/data/zeek
+      - ./hids/schema.sql:/app/schema.sql
+    environment:
+      - REDIS_HOST=redis
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=hids
+      - POSTGRES_USER=hids
+      - POSTGRES_PASSWORD=hidspass
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: always
+    cpus: 1.5
+    mem_limit: 2g
+    networks:
+      - app_network
 
-  # # HIDS Dashboard - Flask
-  # hids_dashboard:
-  #   build:
-  #     context: ./hids/dashboard
-  #   container_name: hids_dashboard
-  #   ports:
-  #     - "5002:5002"
-  #   volumes:
-  #     - ./hids/dashboard:/app
-  #   environment:
-  #     - FLASK_ENV=production
-  #     - POSTGRES_HOST=db
-  #     - POSTGRES_PORT=5432
-  #     - POSTGRES_DB=hids_alerts
-  #     - POSTGRES_USER=hids
-  #     - POSTGRES_PASSWORD=hids_secure_pass
-  #   depends_on:
-  #     db:
-  #       condition: service_healthy
-  #   restart: always
-  #   cpus: 0.5
-  #   mem_limit: 512m
-  #   networks:
-  #     - app_network
+  # HIDS Dashboard - Flask
+  hids_dashboard:
+    build:
+      context: ./hids/dashboard
+    container_name: hids_dashboard
+    ports:
+      - "5002:5002"
+    volumes:
+      - ./hids/dashboard:/app
+    environment:
+      - FLASK_ENV=production
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=hids
+      - POSTGRES_USER=hids
+      - POSTGRES_PASSWORD=hidspass
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: always
+    cpus: 0.5
+    mem_limit: 512m
+    networks:
+      - app_network
+
+  # ===============================
+  # MONITORING STACK
+  # ===============================
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    volumes:
+      - ./monitoring/prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    restart: always
+    networks:
+      - app_network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+      - loki
+    restart: always
+    networks:
+      - app_network
+
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    volumes:
+      - ./monitoring/loki:/etc/loki
+      - loki_data:/loki
+    command: -config.file=/etc/loki/loki-config.yml
+    ports:
+      - "3100:3100"
+    restart: always
+    networks:
+      - app_network
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    volumes:
+      - ./monitoring/promtail:/etc/promtail
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command: -config.file=/etc/promtail/promtail-config.yml
+    restart: always
+    networks:
+      - app_network
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: alertmanager
+    volumes:
+      - ./monitoring/alertmanager:/etc/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+    ports:
+      - "9093:9093"
+    restart: always
+    networks:
+      - app_network
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    command:
+      - '--path.rootfs=/host'
+    volumes:
+      - /:/host:ro,rslave
+    ports:
+      - "9100:9100"
+    restart: always
+    networks:
+      - app_network
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    ports:
+      - "8080:8080"
+    restart: always
+    networks:
+      - app_network
+
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: redis-exporter
+    environment:
+      - REDIS_ADDR=redis:6379
+    ports:
+      - "9121:9121"
+    depends_on:
+      - redis
+    restart: always
+    networks:
+      - app_network
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: postgres-exporter
+    environment:
+      - DATA_SOURCE_NAME=postgresql://teralinkx:justboot@postgres:5432/teralinkx?sslmode=disable
+    ports:
+      - "9187:9187"
+    depends_on:
+      - db
+    restart: always
+    networks:
+      - app_network
 
 volumes:
   pg_data:
   radius_api_static:
+  prometheus_data:
+  grafana_data:
+  loki_data:
 
 networks:
   app_network:

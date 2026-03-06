@@ -5,20 +5,67 @@ vars:
     HOME_NET: "[192.168.0.0/16,10.0.0.0/8,172.16.0.0/12]"
     EXTERNAL_NET: "!$HOME_NET"
 
+default-rule-path: /var/lib/suricata/rules
+rule-files:
+  - local.rules
+
+af-packet:
+  - interface: wlp0s20f3
+    cluster-id: 99
+    cluster-type: cluster_flow
+    defrag: yes
+
 outputs:
   - eve-log:
       enabled: yes
       filetype: regular
-      filename: /var/log/suricata/eve.json
+      filename: eve.json
       types:
-        - alert
-        - http
-        - dns
-        - tls
+        - alert:
+            payload: yes
+            metadata: yes
+        - http:
+            extended: yes
+        - dns:
+            query: yes
+            answer: yes
+        - tls:
+            extended: yes
+        - files:
+            force-magic: yes
+        - flow
 
-af-packet:
-  - interface: eth0
+logging:
+  default-log-level: notice
+  outputs:
+    - console:
+        enabled: yes
+    - file:
+        enabled: yes
+        level: info
+        filename: suricata.log
 
-default-rule-path: /var/lib/suricata/rules
-rule-files:
-  - suricata.rules
+app-layer:
+  protocols:
+    http:
+      enabled: yes
+    tls:
+      enabled: yes
+    dns:
+      tcp:
+        enabled: yes
+      udp:
+        enabled: yes
+    ssh:
+      enabled: yes
+    smtp:
+      enabled: yes
+
+stream:
+  memcap: 64mb
+  checksum-validation: yes
+
+host:
+  hash-size: 4096
+  prealloc: 1000
+  memcap: 32mb

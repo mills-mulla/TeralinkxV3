@@ -1,5 +1,6 @@
 import multiprocessing
 import os
+from prometheus_client import multiprocess, CollectorRegistry, generate_latest, CONTENT_TYPE_LATEST, Gauge
 
 # Calculate optimal workers based on CPU cores
 cpu_count = multiprocessing.cpu_count()
@@ -31,6 +32,21 @@ accesslog = "-"
 errorlog = "-"
 loglevel = "info"
 access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" %(D)s'
+
+# Prometheus metrics
+worker_gauge = Gauge('gunicorn_workers', 'Number of Gunicorn workers', ['state'])
+
+def child_exit(server, worker):
+    worker_gauge.labels(state='active').dec()
+
+def post_fork(server, worker):
+    worker_gauge.labels(state='active').inc()
+
+def pre_fork(server, worker):
+    pass
+
+def when_ready(server):
+    worker_gauge.labels(state='active').set(workers)
 
 print(f"Starting Gunicorn with {workers} workers on {bind}")
 print(f"Worker recycling: max_requests={max_requests}, jitter={max_requests_jitter}")
