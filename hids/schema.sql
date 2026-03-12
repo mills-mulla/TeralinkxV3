@@ -53,11 +53,13 @@ CREATE TABLE IF NOT EXISTS ml_predictions (
     event_id BIGINT,
     prediction TEXT NOT NULL,
     confidence FLOAT,
-    features JSONB
+    features JSONB,
+    ground_truth TEXT
 );
 
 CREATE INDEX idx_ml_timestamp ON ml_predictions(timestamp DESC);
 CREATE INDEX idx_ml_prediction ON ml_predictions(prediction);
+CREATE INDEX idx_ml_ground_truth ON ml_predictions(ground_truth);
 
 -- Correlated alerts
 CREATE TABLE IF NOT EXISTS correlated_alerts (

@@ -7,8 +7,13 @@ from sklearn.preprocessing import StandardScaler
 from collections import deque
 from datetime import datetime
 import json
+from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 
 app = Flask(__name__)
+
+# Prometheus metrics
+ml_predictions_total = Counter('hids_ml_predictions_total', 'Total ML predictions', ['prediction'])
+ml_prediction_time = Histogram('hids_ml_prediction_seconds', 'ML prediction time')
 
 MODEL_PATH = '/app/models/anomaly_detector.pkl'
 SCALER_PATH = '/app/models/scaler.pkl'
@@ -61,6 +66,11 @@ def load_or_create_model():
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({'status': 'healthy', 'model_loaded': model is not None}), 200
+
+@app.route('/metrics', methods=['GET'])
+def metrics():
+    """Prometheus metrics endpoint"""
+    return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -116,6 +126,9 @@ def predict():
             'confidence': result['confidence'],
             'features': features[0].tolist()
         })
+        
+        # Record metrics
+        ml_predictions_total.labels(prediction=result['prediction']).inc()
         
         # Update IP reputation if provided
         if 'src_ip' in data:

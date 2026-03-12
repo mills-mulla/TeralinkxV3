@@ -34,8 +34,8 @@ columns = ['duration', 'protocol_type', 'service', 'flag', 'src_bytes',
            'dst_host_serror_rate', 'dst_host_srv_serror_rate',
            'dst_host_rerror_rate', 'dst_host_srv_rerror_rate', 'label', 'difficulty']
 
-train_df = pd.read_csv('/home/jovyan/datasets/KDDTrain+.txt', names=columns)
-test_df = pd.read_csv('/home/jovyan/datasets/KDDTest+.txt', names=columns)
+train_df = pd.read_csv('./datasets/KDDTrain+.txt', names=columns)
+test_df = pd.read_csv('./datasets/KDDTest+.txt', names=columns)
 data = pd.concat([train_df, test_df], ignore_index=True)
 
 X_nslkdd = pd.DataFrame({
@@ -59,7 +59,7 @@ del data, train_df, test_df
 # 2. Load CICIDS2017 (small sample)
 print("\n[2/6] Loading CICIDS2017...")
 try:
-    data = pd.read_csv('/home/jovyan/datasets/cicids2017_cleaned.csv', 
+    data = pd.read_csv('./datasets/cicids2017_cleaned.csv', 
                        low_memory=False, nrows=50000)  # Only 50K rows
     data.columns = data.columns.str.strip()
     
@@ -89,7 +89,7 @@ except Exception as e:
 # 3. Load CICIDS2018 (small sample)
 print("\n[3/6] Loading CICIDS2018...")
 try:
-    data = pd.read_csv('/home/jovyan/datasets/Friday-02-03-2018_TrafficForML_CICFlowMeter.csv',
+    data = pd.read_csv('./datasets/Friday-02-03-2018_TrafficForML_CICFlowMeter.csv',
                        low_memory=False, nrows=30000)  # Only 30K rows
     
     X_cicids18 = pd.DataFrame({
@@ -195,14 +195,14 @@ print(f"   Status: {'✅ EXCELLENT' if fpr < 5 else '✅ GOOD' if fpr < 10 else 
 print("\n" + "="*70)
 print("SAVING MODEL")
 print("="*70)
-os.makedirs('/home/jovyan/work/models', exist_ok=True)
+os.makedirs('./models', exist_ok=True)
 
-joblib.dump(model, '/home/jovyan/work/models/anomaly_detector.pkl')
-joblib.dump(scaler, '/home/jovyan/work/models/scaler.pkl')
-with open('/home/jovyan/work/models/model_type.txt', 'w') as f:
+joblib.dump(model, './models/anomaly_detector.pkl')
+joblib.dump(scaler, './models/scaler.pkl')
+with open('./models/model_type.txt', 'w') as f:
     f.write('random_forest_comprehensive')
 
-print("✅ Model saved to /home/jovyan/work/models/")
+print("✅ Model saved to ./models/")
 
 print("\n" + "="*70)
 print("✅ TRAINING COMPLETE!")

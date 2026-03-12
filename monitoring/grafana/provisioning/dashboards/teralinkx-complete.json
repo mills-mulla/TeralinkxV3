@@ -1,0 +1,414 @@
+{
+  "dashboard": {
+    "title": "TeralinkX Complete Operations Dashboard",
+    "tags": ["teralinkx", "production", "monitoring"],
+    "timezone": "browser",
+    "editable": true,
+    "refresh": "5s",
+    "time": {"from": "now-1h", "to": "now"},
+    "panels": [
+      {
+        "id": 1,
+        "title": "🎯 System Health Overview",
+        "type": "row",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0},
+        "collapsed": false
+      },
+      {
+        "id": 2,
+        "title": "Services UP",
+        "type": "stat",
+        "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+        "gridPos": {"h": 5, "w": 3, "x": 0, "y": 1},
+        "targets": [{"expr": "count(up == 1)", "legendFormat": "UP"}],
+        "options": {"colorMode": "background", "graphMode": "area"},
+        "fieldConfig": {"defaults": {"thresholds": {"steps": [{"value": 0, "color": "red"}, {"value": 8, "color": "yellow"}, {"value": 10, "color": "green"}]}}}
+      },
+      {
+        "id": 3,
+        "title": "HIDS Anomaly Rate",
+        "type": "gauge",
+        "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+        "gridPos": {"h": 5, "w": 3, "x": 3, "y": 1},
+        "targets": [{"expr": "(sum(hids_ml_predictions_total{prediction=\"anomaly\"}) / sum(hids_ml_predictions_total)) * 100"}],
+        "options": {"min": 0, "max": 100, "thresholds": {"steps": [{"value": 0, "color": "green"}, {"value": 15, "color": "yellow"}, {"value": 50, "color": "red"}]}},
+        "fieldConfig": {"defaults": {"unit": "percent"}}
+      },
+      {
+        "id": 4,
+        "title": "Total Containers",
+        "type": "stat",
+        "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+        "gridPos": {"h": 5, "w": 3, "x": 6, "y": 1},
+        "targets": [{"expr": "count(container_last_seen{name!=\"\"})"}],
+        "options": {"colorMode": "value"}
+      },
+      {
+        "id": 5,
+        "title": "CPU Usage",
+        "type": "gauge",
+        "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+        "gridPos": {"h": 5, "w": 3, "x": 9, "y": 1},
+        "targets": [{"expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)"}],
+        "options": {"min": 0, "max": 100, "thresholds": {"steps": [{"value": 0, "color": "green"}, {"value": 70, "color": "yellow"}, {"value": 90, "color": "red"}]}},
+        "fieldConfig": {"defaults": {"unit": "percent"}}
+      },
+      {
+        "id": 6,
+        "title": "Memory Usage",
+        "type": "gauge",
+        "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+        "gridPos": {"h": 5, "w": 3, "x": 12, "y": 1},
+        "targets": [{"expr": "(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100"}],
+        "options": {"min": 0, "max": 100, "thresholds": {"steps": [{"value": 0, "color": "green"}, {"value": 80, "color": "yellow"}, {"value": 95, "color": "red"}]}},
+        "fieldConfig": {"defaults": {"unit": "percent"}}
+      },
+      {
+        "id": 7,
+        "title": "DB Connections",
+        "type": "stat",
+        "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+        "gridPos": {"h": 5, "w": 3, "x": 15, "y": 1},
+        "targets": [{"expr": "sum(pg_stat_database_numbackends)"}],
+        "options": {"colorMode": "value"}
+      },
+      {
+        "id": 8,
+        "title": "Redis Memory",
+        "type": "stat",
+        "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+        "gridPos": {"h": 5, "w": 3, "x": 18, "y": 1},
+        "targets": [{"expr": "redis_memory_used_bytes / 1024 / 1024"}],
+        "fieldConfig": {"defaults": {"unit": "decmbytes"}}
+      },
+      {
+        "id": 9,
+        "title": "Gunicorn Workers",
+        "type": "stat",
+        "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+        "gridPos": {"h": 5, "w": 3, "x": 21, "y": 1},
+        "targets": [{"expr": "sum(gunicorn_workers)"}],
+        "options": {"colorMode": "value"}
+      },
+      {
+        "id": 10,
+        "title": "📊 Gunicorn Analytics",
+        "type": "row",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 6},
+        "collapsed": false
+      },
+      {
+        "id": 11,
+        "title": "Gunicorn Workers - TeralinkX",
+        "type": "timeseries",
+        "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+        "gridPos": {"h": 7, "w": 8, "x": 0, "y": 7},
+        "targets": [{"expr": "gunicorn_workers{job=\"teralinkx\",state=\"active\"}", "legendFormat": "Active Workers"}],
+        "fieldConfig": {"defaults": {"custom": {"fillOpacity": 20}}}
+      },
+      {
+        "id": 12,
+        "title": "Gunicorn Workers - RadiusAPI",
+        "type": "timeseries",
+        "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+        "gridPos": {"h": 7, "w": 8, "x": 8, "y": 7},
+        "targets": [{"expr": "gunicorn_workers{job=\"radius_api\",state=\"active\"}", "legendFormat": "Active Workers"}],
+        "fieldConfig": {"defaults": {"custom": {"fillOpacity": 20}}}
+      },
+      {
+        "id": 13,
+        "title": "Container Restarts (Last Hour)",
+        "type": "stat",
+        "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+        "gridPos": {"h": 7, "w": 8, "x": 16, "y": 7},
+        "targets": [{"expr": "changes(container_last_seen{name=~\"teralinkx_web|radiusapi|hids.*\"}[1h])"}],
+        "options": {"colorMode": "background"},
+        "fieldConfig": {"defaults": {"thresholds": {"steps": [{"value": 0, "color": "green"}, {"value": 1, "color": "yellow"}, {"value": 3, "color": "red"}]}}}
+      },
+      {
+        "id": 20,
+        "title": "🔒 HIDS Security Pipeline",
+        "type": "row",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 14},
+        "collapsed": false
+      },
+      {
+        "id": 21,
+        "title": "ML Predictions Rate",
+        "type": "timeseries",
+        "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 15},
+        "targets": [
+          {"expr": "rate(hids_ml_predictions_total{prediction=\"normal\"}[1m])", "legendFormat": "Normal/sec"},
+          {"expr": "rate(hids_ml_predictions_total{prediction=\"anomaly\"}[1m])", "legendFormat": "Anomaly/sec"}
+        ],
+        "fieldConfig": {"defaults": {"custom": {"fillOpacity": 15, "lineWidth": 2}}}
+      },
+      {
+        "id": 22,
+        "title": "Anomaly Rate Trend",
+        "type": "timeseries",
+        "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 15},
+        "targets": [{"expr": "(rate(hids_ml_predictions_total{prediction=\"anomaly\"}[5m]) / rate(hids_ml_predictions_total[5m])) * 100", "legendFormat": "Anomaly %"}],
+        "fieldConfig": {"defaults": {"unit": "percent", "max": 100, "min": 0, "color": {"mode": "thresholds"}, "thresholds": {"steps": [{"value": 0, "color": "green"}, {"value": 15, "color": "yellow"}, {"value": 50, "color": "red"}]}}}
+      },
+      {
+        "id": 23,
+        "title": "ML Processing Time (p95)",
+        "type": "timeseries",
+        "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 23},
+        "targets": [{"expr": "histogram_quantile(0.95, rate(hids_ml_prediction_seconds_bucket[5m]))", "legendFormat": "p95 latency"}],
+        "fieldConfig": {"defaults": {"unit": "s"}}
+      },
+      {
+        "id": 24,
+        "title": "Total Alerts Created",
+        "type": "stat",
+        "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 23},
+        "targets": [{"expr": "sum(hids_alerts_total)"}],
+        "options": {"colorMode": "background", "graphMode": "area"}
+      },
+      {
+        "id": 25,
+        "title": "Active Alerts",
+        "type": "stat",
+        "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 23},
+        "targets": [{"expr": "hids_active_alerts"}],
+        "options": {"colorMode": "background"},
+        "fieldConfig": {"defaults": {"thresholds": {"steps": [{"value": 0, "color": "green"}, {"value": 10, "color": "yellow"}, {"value": 50, "color": "red"}]}}}
+      },
+      {
+        "id": 30,
+        "title": "📦 Container Operations",
+        "type": "row",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 31},
+        "collapsed": false
+      },
+      {
+        "id": 31,
+        "title": "Container CPU Usage %",
+        "type": "timeseries",
+        "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 32},
+        "targets": [{"expr": "rate(container_cpu_usage_seconds_total{name=~\"teralinkx_web|radiusapi|hids_engine|hids_ml_service|hids_dashboard|postgres|redis\"}[5m]) * 100", "legendFormat": "{{name}}"}],
+        "fieldConfig": {"defaults": {"unit": "percent", "custom": {"fillOpacity": 10}}}
+      },
+      {
+        "id": 32,
+        "title": "Container Memory Usage (MB)",
+        "type": "timeseries",
+        "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 32},
+        "targets": [{"expr": "container_memory_working_set_bytes{name=~\"teralinkx_web|radiusapi|hids_engine|hids_ml_service|hids_dashboard|postgres|redis\"} / 1024 / 1024", "legendFormat": "{{name}}"}],
+        "fieldConfig": {"defaults": {"unit": "decmbytes", "custom": {"fillOpacity": 10}}}
+      },
+      {
+        "id": 33,
+        "title": "Container Network RX (bytes/sec)",
+        "type": "timeseries",
+        "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 40},
+        "targets": [{"expr": "rate(container_network_receive_bytes_total{name=~\"teralinkx_web|radiusapi|hids.*\"}[5m])", "legendFormat": "{{name}}"}],
+        "fieldConfig": {"defaults": {"unit": "Bps"}}
+      },
+      {
+        "id": 34,
+        "title": "Container Network TX (bytes/sec)",
+        "type": "timeseries",
+        "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 40},
+        "targets": [{"expr": "rate(container_network_transmit_bytes_total{name=~\"teralinkx_web|radiusapi|hids.*\"}[5m])", "legendFormat": "{{name}}"}],
+        "fieldConfig": {"defaults": {"unit": "Bps"}}
+      },
+      {
+        "id": 35,
+        "title": "Container Disk Read (bytes/sec)",
+        "type": "timeseries",
+        "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 48},
+        "targets": [{"expr": "rate(container_fs_reads_bytes_total{name=~\"teralinkx_web|radiusapi|hids.*|postgres\"}[5m])", "legendFormat": "{{name}}"}],
+        "fieldConfig": {"defaults": {"unit": "Bps"}}
+      },
+      {
+        "id": 36,
+        "title": "Container Disk Write (bytes/sec)",
+        "type": "timeseries",
+        "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 48},
+        "targets": [{"expr": "rate(container_fs_writes_bytes_total{name=~\"teralinkx_web|radiusapi|hids.*|postgres\"}[5m])", "legendFormat": "{{name}}"}],
+        "fieldConfig": {"defaults": {"unit": "Bps"}}
+      },
+      {
+        "id": 40,
+        "title": "💾 Database & Cache",
+        "type": "row",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 56},
+        "collapsed": false
+      },
+      {
+        "id": 41,
+        "title": "PostgreSQL Connections by Database",
+        "type": "timeseries",
+        "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+        "gridPos": {"h": 7, "w": 8, "x": 0, "y": 57},
+        "targets": [{"expr": "pg_stat_database_numbackends", "legendFormat": "{{datname}}"}]
+      },
+      {
+        "id": 42,
+        "title": "PostgreSQL Transaction Rate",
+        "type": "timeseries",
+        "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+        "gridPos": {"h": 7, "w": 8, "x": 8, "y": 57},
+        "targets": [
+          {"expr": "rate(pg_stat_database_xact_commit[5m])", "legendFormat": "Commits {{datname}}"},
+          {"expr": "rate(pg_stat_database_xact_rollback[5m])", "legendFormat": "Rollbacks {{datname}}"}
+        ]
+      },
+      {
+        "id": 43,
+        "title": "Redis Commands/sec",
+        "type": "timeseries",
+        "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+        "gridPos": {"h": 7, "w": 8, "x": 16, "y": 57},
+        "targets": [{"expr": "rate(redis_commands_processed_total[5m])", "legendFormat": "Commands"}]
+      },
+      {
+        "id": 50,
+        "title": "📝 Live Container Logs",
+        "type": "row",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 64},
+        "collapsed": false
+      },
+      {
+        "id": 51,
+        "title": "TeralinkX Web Logs",
+        "type": "logs",
+        "datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"},
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 65},
+        "targets": [{"expr": "{container=\"teralinkx_web\"}", "refId": "A"}],
+        "options": {"showTime": true, "showLabels": false, "sortOrder": "Descending", "wrapLogMessage": true, "dedupStrategy": "none"}
+      },
+      {
+        "id": 52,
+        "title": "RadiusAPI Logs",
+        "type": "logs",
+        "datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"},
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 65},
+        "targets": [{"expr": "{container=\"radiusapi\"}", "refId": "A"}],
+        "options": {"showTime": true, "showLabels": false, "sortOrder": "Descending", "wrapLogMessage": true}
+      },
+      {
+        "id": 53,
+        "title": "HIDS Engine Logs",
+        "type": "logs",
+        "datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"},
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 73},
+        "targets": [{"expr": "{container=\"hids_engine\"}", "refId": "A"}],
+        "options": {"showTime": true, "showLabels": false, "sortOrder": "Descending", "wrapLogMessage": true}
+      },
+      {
+        "id": 54,
+        "title": "HIDS ML Service Logs",
+        "type": "logs",
+        "datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"},
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 73},
+        "targets": [{"expr": "{container=\"hids_ml_service\"}", "refId": "A"}],
+        "options": {"showTime": true, "showLabels": false, "sortOrder": "Descending", "wrapLogMessage": true}
+      },
+      {
+        "id": 55,
+        "title": "HIDS Dashboard Logs",
+        "type": "logs",
+        "datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"},
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 81},
+        "targets": [{"expr": "{container=\"hids_dashboard\"}", "refId": "A"}],
+        "options": {"showTime": true, "showLabels": false, "sortOrder": "Descending", "wrapLogMessage": true}
+      },
+      {
+        "id": 56,
+        "title": "Suricata IDS Logs",
+        "type": "logs",
+        "datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"},
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 81},
+        "targets": [{"expr": "{container=\"hids_suricata\"}", "refId": "A"}],
+        "options": {"showTime": true, "showLabels": false, "sortOrder": "Descending", "wrapLogMessage": true}
+      },
+      {
+        "id": 57,
+        "title": "PostgreSQL Logs",
+        "type": "logs",
+        "datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"},
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 89},
+        "targets": [{"expr": "{container=\"postgres\"}", "refId": "A"}],
+        "options": {"showTime": true, "showLabels": false, "sortOrder": "Descending", "wrapLogMessage": true}
+      },
+      {
+        "id": 58,
+        "title": "Redis Logs",
+        "type": "logs",
+        "datasource": {"type": "loki", "uid": "P8E80F9AEF21F6940"},
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 89},
+        "targets": [{"expr": "{container=\"redis\"}", "refId": "A"}],
+        "options": {"showTime": true, "showLabels": false, "sortOrder": "Descending", "wrapLogMessage": true}
+      },
+      {
+        "id": 60,
+        "title": "🔍 Service Health & Status",
+        "type": "row",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 97},
+        "collapsed": false
+      },
+      {
+        "id": 61,
+        "title": "All Services Status Table",
+        "type": "table",
+        "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+        "gridPos": {"h": 10, "w": 24, "x": 0, "y": 98},
+        "targets": [{"expr": "up", "format": "table", "instant": true}],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {"Time": true, "__name__": true},
+              "renameByName": {"job": "Service", "instance": "Instance", "Value": "Status"}
+            }
+          }
+        ],
+        "options": {"showHeader": true},
+        "fieldConfig": {
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "Status"},
+              "properties": [
+                {"id": "custom.displayMode", "value": "color-background"},
+                {"id": "thresholds", "value": {"mode": "absolute", "steps": [{"value": 0, "color": "red"}, {"value": 1, "color": "green"}]}}
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": 62,
+        "title": "Container Health States",
+        "type": "table",
+        "datasource": {"type": "prometheus", "uid": "PBFA97CFB590B2093"},
+        "gridPos": {"h": 10, "w": 24, "x": 0, "y": 108},
+        "targets": [{"expr": "container_last_seen{name!=\"\"}", "format": "table", "instant": true}],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {"Time": true, "__name__": true, "id": true, "image": true},
+              "renameByName": {"name": "Container", "Value": "Last Seen"}
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "overwrite": true
+}

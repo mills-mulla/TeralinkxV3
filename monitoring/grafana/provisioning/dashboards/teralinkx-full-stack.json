@@ -1,0 +1,152 @@
+{
+  "dashboard": {
+    "title": "TeralinkX Full Stack Monitoring",
+    "tags": ["teralinkx", "hids", "radius"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "TeralinkX Web - Request Rate",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "rate(django_http_requests_total_by_view_transport_method_total[5m])",
+            "legendFormat": "{{method}} {{view}}"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "TeralinkX Web - Response Time",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "django_http_requests_latency_seconds_by_view_method",
+            "legendFormat": "{{view}}"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Radius API - Request Rate",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "rate(django_http_requests_total_by_view_transport_method_total{job=\"radius_api\"}[5m])",
+            "legendFormat": "{{method}} {{view}}"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "HIDS Engine - Alerts Processed",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 6, "x": 12, "y": 8},
+        "targets": [
+          {
+            "expr": "hids_alerts_total",
+            "legendFormat": "Total Alerts"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "HIDS Engine - Anomaly Rate",
+        "type": "gauge",
+        "gridPos": {"h": 8, "w": 6, "x": 18, "y": 8},
+        "targets": [
+          {
+            "expr": "(hids_anomalies_total / hids_alerts_total) * 100",
+            "legendFormat": "Anomaly %"
+          }
+        ],
+        "options": {
+          "minValue": 0,
+          "maxValue": 100,
+          "thresholds": [
+            {"value": 0, "color": "green"},
+            {"value": 15, "color": "yellow"},
+            {"value": 30, "color": "red"}
+          ]
+        }
+      },
+      {
+        "id": 6,
+        "title": "PostgreSQL - Connections",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+        "targets": [
+          {
+            "expr": "pg_stat_database_numbackends",
+            "legendFormat": "{{datname}}"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Redis - Memory Usage",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+        "targets": [
+          {
+            "expr": "redis_memory_used_bytes",
+            "legendFormat": "Used Memory"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Container CPU Usage",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+        "targets": [
+          {
+            "expr": "rate(container_cpu_usage_seconds_total{name=~\"teralinkx_web|radiusapi|hids_engine|hids_ml_service\"}[5m]) * 100",
+            "legendFormat": "{{name}}"
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Container Memory Usage",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+        "targets": [
+          {
+            "expr": "container_memory_usage_bytes{name=~\"teralinkx_web|radiusapi|hids_engine|hids_ml_service\"} / 1024 / 1024",
+            "legendFormat": "{{name}}"
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "HIDS ML Service - Predictions",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 32},
+        "targets": [
+          {
+            "expr": "rate(hids_ml_predictions_total[5m])",
+            "legendFormat": "{{prediction}}"
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "Application Logs (Loki)",
+        "type": "logs",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 32},
+        "targets": [
+          {
+            "expr": "{container_name=~\"teralinkx_web|radiusapi|hids_engine\"}"
+          }
+        ],
+        "datasource": "Loki"
+      }
+    ],
+    "refresh": "10s",
+    "time": {"from": "now-1h", "to": "now"}
+  }
+}

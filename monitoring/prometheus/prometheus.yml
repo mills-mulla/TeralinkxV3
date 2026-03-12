@@ -17,7 +17,7 @@ scrape_configs:
   # TeralinkX Django App
   - job_name: 'teralinkx'
     static_configs:
-      - targets: ['localhost:8009']
+      - targets: ['web:8009']
     metrics_path: '/metrics'
 
   # Radius API
@@ -45,3 +45,21 @@ scrape_configs:
   - job_name: 'cadvisor'
     static_configs:
       - targets: ['cadvisor:8080']
+
+  # HIDS Engine
+  - job_name: 'hids_engine'
+    static_configs:
+      - targets: ['hids_engine:5003']
+    metrics_path: '/metrics'
+
+  # HIDS ML Service
+  - job_name: 'hids_ml_service'
+    static_configs:
+      - targets: ['hids_ml_service:5001']
+    metrics_path: '/metrics'
+
+  # HIDS Dashboard
+  - job_name: 'hids_dashboard'
+    static_configs:
+      - targets: ['hids_dashboard:5002']
+    metrics_path: '/metrics'

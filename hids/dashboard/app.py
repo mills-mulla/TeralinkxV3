@@ -1,9 +1,16 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, send_file
 import psycopg2
 import os
+import subprocess
+import json
 from datetime import datetime, timedelta
+from prometheus_client import Counter, generate_latest, CONTENT_TYPE_LATEST
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
+
+# Prometheus metrics
+dashboard_requests = Counter('hids_dashboard_requests_total', 'Total dashboard requests', ['endpoint'])
 
 POSTGRES_HOST = os.getenv('POSTGRES_HOST', 'db')
 POSTGRES_DB = os.getenv('POSTGRES_DB', 'hids')
@@ -20,7 +27,13 @@ def get_db_connection():
 
 @app.route('/')
 def index():
+    dashboard_requests.labels(endpoint='index').inc()
     return render_template('index.html')
+
+@app.route('/metrics')
+def metrics():
+    """Prometheus metrics endpoint"""
+    return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
 
 @app.route('/api')
 def api_info():
@@ -481,6 +494,408 @@ def top_attackers():
     conn.close()
     
     return jsonify({'top_attackers': attackers}), 200
+
+# ===============================
+# IDS EVALUATION & TESTING SECTION
+# ===============================
+
+PCAP_UPLOAD_DIR = '/pcaps'
+ALLOWED_EXTENSIONS = {'pcap', 'pcapng'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@app.route('/evaluation')
+def evaluation_dashboard():
+    """Evaluation dashboard page"""
+    return render_template('evaluation.html')
+
+@app.route('/api/evaluation/upload-pcap', methods=['POST'])
+def upload_pcap():
+    """Upload PCAP file for evaluation"""
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    
+    if not allowed_file(file.filename):
+        return jsonify({'error': 'Invalid file type. Only .pcap and .pcapng allowed'}), 400
+    
+    filename = secure_filename(file.filename)
+    filepath = os.path.join(PCAP_UPLOAD_DIR, filename)
+    file.save(filepath)
+    
+    return jsonify({
+        'success': True,
+        'filename': filename,
+        'filepath': filepath,
+        'size': os.path.getsize(filepath)
+    }), 200
+
+@app.route('/api/evaluation/list-pcaps')
+def list_pcaps():
+    """List available PCAP files"""
+    if not os.path.exists(PCAP_UPLOAD_DIR):
+        return jsonify({'pcaps': []}), 200
+    
+    pcaps = []
+    for filename in os.listdir(PCAP_UPLOAD_DIR):
+        if allowed_file(filename):
+            filepath = os.path.join(PCAP_UPLOAD_DIR, filename)
+            pcaps.append({
+                'filename': filename,
+                'size': os.path.getsize(filepath),
+                'modified': datetime.fromtimestamp(os.path.getmtime(filepath)).isoformat()
+            })
+    
+    return jsonify({'pcaps': sorted(pcaps, key=lambda x: x['modified'], reverse=True)}), 200
+
+@app.route('/api/evaluation/replay-pcap', methods=['POST'])
+def replay_pcap():
+    """Replay PCAP file using tcpreplay"""
+    data = request.json
+    filename = data.get('filename')
+    interface = data.get('interface', 'br-c51890515ece')
+    speed = data.get('speed', 1)  # 1x, 2x, 10x speed
+    
+    if not filename:
+        return jsonify({'error': 'Filename required'}), 400
+    
+    filepath = os.path.join(PCAP_UPLOAD_DIR, secure_filename(filename))
+    if not os.path.exists(filepath):
+        return jsonify({'error': 'File not found'}), 404
+    
+    try:
+        # Run tcpreplay in background
+        cmd = ['docker', 'exec', 'hids_tcpreplay', 'tcpreplay', 
+               '-i', interface, '-x', str(speed), filepath]
+        
+        result = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        
+        return jsonify({
+            'success': True,
+            'message': f'Replaying {filename} at {speed}x speed',
+            'pid': result.pid
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/evaluation/model-performance')
+def model_performance():
+    """Get ML model performance metrics"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    # Get predictions from last evaluation
+    cur.execute("""
+        SELECT 
+            COUNT(*) as total,
+            SUM(CASE WHEN prediction = 'anomaly' THEN 1 ELSE 0 END) as anomalies,
+            SUM(CASE WHEN prediction = 'normal' THEN 1 ELSE 0 END) as normal,
+            AVG(confidence) as avg_confidence
+        FROM ml_predictions
+        WHERE timestamp > NOW() - INTERVAL '1 hour'
+    """)
+    
+    row = cur.fetchone()
+    total = row[0] or 0
+    anomalies = row[1] or 0
+    normal = row[2] or 0
+    avg_confidence = float(row[3]) if row[3] else 0
+    
+    # Get detection method breakdown
+    cur.execute("""
+        SELECT 
+            metadata->>'detection_method' as method,
+            COUNT(*) as count
+        FROM correlated_alerts
+        WHERE timestamp > NOW() - INTERVAL '1 hour'
+        GROUP BY method
+    """)
+    
+    detection_methods = {}
+    for row in cur.fetchall():
+        if row[0]:
+            detection_methods[row[0]] = row[1]
+    
+    cur.close()
+    conn.close()
+    
+    return jsonify({
+        'total_predictions': total,
+        'anomalies_detected': anomalies,
+        'normal_traffic': normal,
+        'anomaly_rate': (anomalies / total * 100) if total > 0 else 0,
+        'avg_confidence': round(avg_confidence, 2),
+        'detection_methods': detection_methods
+    }), 200
+
+@app.route('/api/evaluation/confusion-matrix')
+def confusion_matrix():
+    """Get confusion matrix data (requires ground truth labels)"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    # This assumes you have a ground_truth column in ml_predictions
+    cur.execute("""
+        SELECT 
+            prediction,
+            ground_truth,
+            COUNT(*) as count
+        FROM ml_predictions
+        WHERE ground_truth IS NOT NULL
+        AND timestamp > NOW() - INTERVAL '1 hour'
+        GROUP BY prediction, ground_truth
+    """)
+    
+    matrix = {'TP': 0, 'TN': 0, 'FP': 0, 'FN': 0}
+    
+    for row in cur.fetchall():
+        pred = row[0]
+        truth = row[1]
+        count = row[2]
+        
+        if pred == 'anomaly' and truth == 'anomaly':
+            matrix['TP'] += count
+        elif pred == 'normal' and truth == 'normal':
+            matrix['TN'] += count
+        elif pred == 'anomaly' and truth == 'normal':
+            matrix['FP'] += count
+        elif pred == 'normal' and truth == 'anomaly':
+            matrix['FN'] += count
+    
+    total = sum(matrix.values())
+    accuracy = ((matrix['TP'] + matrix['TN']) / total * 100) if total > 0 else 0
+    precision = (matrix['TP'] / (matrix['TP'] + matrix['FP']) * 100) if (matrix['TP'] + matrix['FP']) > 0 else 0
+    recall = (matrix['TP'] / (matrix['TP'] + matrix['FN']) * 100) if (matrix['TP'] + matrix['FN']) > 0 else 0
+    f1_score = (2 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0
+    fpr = (matrix['FP'] / (matrix['FP'] + matrix['TN']) * 100) if (matrix['FP'] + matrix['TN']) > 0 else 0
+    
+    cur.close()
+    conn.close()
+    
+    return jsonify({
+        'confusion_matrix': matrix,
+        'metrics': {
+            'accuracy': round(accuracy, 2),
+            'precision': round(precision, 2),
+            'recall': round(recall, 2),
+            'f1_score': round(f1_score, 2),
+            'false_positive_rate': round(fpr, 2)
+        }
+    }), 200
+
+@app.route('/api/evaluation/detection-timeline')
+def detection_timeline():
+    """Get detection timeline for evaluation period"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    cur.execute("""
+        SELECT 
+            DATE_TRUNC('minute', timestamp) as minute,
+            COUNT(*) as total,
+            SUM(CASE WHEN metadata->>'detection_method' = 'ml_confirmed_by_suricata' THEN 1 ELSE 0 END) as ml_confirmed,
+            SUM(CASE WHEN metadata->>'detection_method' = 'ml_primary' THEN 1 ELSE 0 END) as ml_primary,
+            SUM(CASE WHEN metadata->>'detection_method' = 'suricata_override' THEN 1 ELSE 0 END) as suricata_override
+        FROM correlated_alerts
+        WHERE timestamp > NOW() - INTERVAL '1 hour'
+        GROUP BY minute
+        ORDER BY minute
+    """)
+    
+    timeline = []
+    for row in cur.fetchall():
+        timeline.append({
+            'timestamp': row[0].isoformat(),
+            'total': row[1],
+            'ml_confirmed': row[2],
+            'ml_primary': row[3],
+            'suricata_override': row[4]
+        })
+    
+    cur.close()
+    conn.close()
+    
+    return jsonify({'timeline': timeline}), 200
+
+@app.route('/api/evaluation/attack-breakdown')
+def attack_breakdown():
+    """Get breakdown of detected attack types"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    cur.execute("""
+        SELECT 
+            metadata->>'signature' as attack_type,
+            COUNT(*) as count,
+            AVG((metadata->>'composite_score')::float) as avg_score
+        FROM correlated_alerts
+        WHERE timestamp > NOW() - INTERVAL '1 hour'
+        AND metadata->>'signature' IS NOT NULL
+        GROUP BY attack_type
+        ORDER BY count DESC
+        LIMIT 20
+    """)
+    
+    attacks = []
+    for row in cur.fetchall():
+        attacks.append({
+            'type': row[0],
+            'count': row[1],
+            'avg_score': round(float(row[2]), 2) if row[2] else 0
+        })
+    
+    cur.close()
+    conn.close()
+    
+    return jsonify({'attacks': attacks}), 200
+
+@app.route('/api/evaluation/ml-confidence-distribution')
+def ml_confidence_distribution():
+    """Get ML confidence score distribution"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    cur.execute("""
+        SELECT 
+            CASE 
+                WHEN confidence >= 0.9 THEN '90-100%'
+                WHEN confidence >= 0.8 THEN '80-90%'
+                WHEN confidence >= 0.7 THEN '70-80%'
+                WHEN confidence >= 0.6 THEN '60-70%'
+                ELSE '<60%'
+            END as confidence_range,
+            COUNT(*) as count
+        FROM ml_predictions
+        WHERE timestamp > NOW() - INTERVAL '1 hour'
+        GROUP BY confidence_range
+        ORDER BY confidence_range DESC
+    """)
+    
+    distribution = {}
+    for row in cur.fetchall():
+        distribution[row[0]] = row[1]
+    
+    cur.close()
+    conn.close()
+    
+    return jsonify({'distribution': distribution}), 200
+
+@app.route('/api/evaluation/zero-day-detections')
+def zero_day_detections():
+    """Get ML-only detections (potential zero-days)"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    cur.execute("""
+        SELECT 
+            id,
+            timestamp,
+            src_ip,
+            dest_ip,
+            description,
+            metadata
+        FROM correlated_alerts
+        WHERE metadata->>'detection_method' = 'ml_primary'
+        AND timestamp > NOW() - INTERVAL '1 hour'
+        ORDER BY timestamp DESC
+        LIMIT 50
+    """)
+    
+    detections = []
+    for row in cur.fetchall():
+        metadata = row[5] if row[5] else {}
+        detections.append({
+            'id': row[0],
+            'timestamp': row[1].isoformat(),
+            'src_ip': str(row[2]),
+            'dest_ip': str(row[3]),
+            'description': row[4],
+            'ml_confidence': metadata.get('ml_confidence'),
+            'composite_score': metadata.get('composite_score')
+        })
+    
+    cur.close()
+    conn.close()
+    
+    return jsonify({'zero_day_detections': detections, 'count': len(detections)}), 200
+
+@app.route('/api/evaluation/export-results', methods=['POST'])
+def export_results():
+    """Export evaluation results as JSON"""
+    data = request.json
+    start_time = data.get('start_time')
+    end_time = data.get('end_time')
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    query = """
+        SELECT 
+            timestamp,
+            src_ip,
+            dest_ip,
+            alert_type,
+            severity,
+            description,
+            metadata
+        FROM correlated_alerts
+        WHERE 1=1
+    """
+    
+    params = []
+    if start_time:
+        query += " AND timestamp >= %s"
+        params.append(start_time)
+    if end_time:
+        query += " AND timestamp <= %s"
+        params.append(end_time)
+    
+    query += " ORDER BY timestamp"
+    
+    cur.execute(query, params)
+    
+    results = []
+    for row in cur.fetchall():
+        results.append({
+            'timestamp': row[0].isoformat(),
+            'src_ip': str(row[1]),
+            'dest_ip': str(row[2]),
+            'alert_type': row[3],
+            'severity': row[4],
+            'description': row[5],
+            'metadata': row[6]
+        })
+    
+    cur.close()
+    conn.close()
+    
+    return jsonify({'results': results, 'count': len(results)}), 200
+
+@app.route('/api/evaluation/clear-test-data', methods=['POST'])
+def clear_test_data():
+    """Clear test data from database"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        cur.execute("DELETE FROM ml_predictions WHERE timestamp > NOW() - INTERVAL '1 hour'")
+        cur.execute("DELETE FROM correlated_alerts WHERE timestamp > NOW() - INTERVAL '1 hour'")
+        cur.execute("DELETE FROM suricata_alerts WHERE timestamp > NOW() - INTERVAL '1 hour'")
+        cur.execute("DELETE FROM zeek_connections WHERE timestamp > NOW() - INTERVAL '1 hour'")
+        
+        conn.commit()
+        
+        return jsonify({'success': True, 'message': 'Test data cleared'}), 200
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        cur.close()
+        conn.close()
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5002)

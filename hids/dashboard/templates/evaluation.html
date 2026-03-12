@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HIDS Evaluation & Testing Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f0f23; color: #e0e0e0; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .header h1 { color: white; font-size: 28px; }
+        .container { max-width: 1400px; margin: 20px auto; padding: 0 20px; }
+        
+        .section { background: #1a1a2e; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+        .section h2 { color: #667eea; margin-bottom: 15px; font-size: 20px; border-bottom: 2px solid #667eea; padding-bottom: 10px; }
+        
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .card { background: #16213e; padding: 20px; border-radius: 8px; border-left: 4px solid #667eea; }
+        .card h3 { color: #a0a0ff; margin-bottom: 10px; font-size: 16px; }
+        .metric { font-size: 32px; font-weight: bold; color: #00ff88; }
+        .metric.warning { color: #ffaa00; }
+        .metric.danger { color: #ff4444; }
+        
+        .btn { background: #667eea; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 14px; margin: 5px; transition: all 0.3s; }
+        .btn:hover { background: #5568d3; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(102,126,234,0.4); }
+        .btn.danger { background: #ff4444; }
+        .btn.danger:hover { background: #cc0000; }
+        .btn.success { background: #00ff88; color: #0f0f23; }
+        .btn.success:hover { background: #00cc66; }
+        
+        .upload-area { border: 2px dashed #667eea; border-radius: 8px; padding: 40px; text-align: center; cursor: pointer; transition: all 0.3s; }
+        .upload-area:hover { background: #16213e; border-color: #a0a0ff; }
+        .upload-area.dragover { background: #667eea; border-color: #00ff88; }
+        
+        input[type="file"] { display: none; }
+        select, input[type="number"] { background: #16213e; color: #e0e0e0; border: 1px solid #667eea; padding: 10px; border-radius: 6px; font-size: 14px; }
+        
+        .pcap-list { max-height: 300px; overflow-y: auto; }
+        .pcap-item { background: #16213e; padding: 12px; margin: 8px 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+        .pcap-item:hover { background: #1e2a47; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #2a2a3e; }
+        th { background: #667eea; color: white; font-weight: 600; }
+        tr:hover { background: #1e2a47; }
+        
+        .chart-container { position: relative; height: 300px; margin-top: 20px; }
+        
+        .status { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+        .status.active { background: #00ff88; color: #0f0f23; }
+        .status.idle { background: #666; color: white; }
+        
+        .progress-bar { width: 100%; height: 8px; background: #2a2a3e; border-radius: 4px; overflow: hidden; margin-top: 10px; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #667eea, #00ff88); transition: width 0.3s; }
+        
+        .alert { padding: 15px; border-radius: 6px; margin: 10px 0; }
+        .alert.success { background: #00ff8822; border-left: 4px solid #00ff88; }
+        .alert.error { background: #ff444422; border-left: 4px solid #ff4444; }
+        .alert.info { background: #667eea22; border-left: 4px solid #667eea; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🛡️ HIDS Evaluation & Testing Dashboard</h1>
+        <p>ML-Powered Intrusion Detection System - CICIDS2017/2018 Evaluation</p>
+    </div>
+
+    <div class="container">
+        <!-- PCAP Upload & Replay Section -->
+        <div class="section">
+            <h2>📁 PCAP Upload & Replay</h2>
+            <div class="grid">
+                <div class="card">
+                    <h3>Upload PCAP File</h3>
+                    <div class="upload-area" id="uploadArea">
+                        <p>📤 Drag & Drop PCAP file here or click to browse</p>
+                        <input type="file" id="pcapFile" accept=".pcap,.pcapng">
+                    </div>
+                    <button class="btn success" onclick="uploadPCAP()">Upload</button>
+                </div>
+                
+                <div class="card">
+                    <h3>Replay Configuration</h3>
+                    <label>Interface:</label>
+                    <select id="interface">
+                        <option value="br-c51890515ece">Docker Bridge (br-c51890515ece)</option>
+                        <option value="docker0">Docker0</option>
+                    </select>
+                    <br><br>
+                    <label>Speed Multiplier:</label>
+                    <select id="speed">
+                        <option value="1">1x (Real-time)</option>
+                        <option value="2">2x</option>
+                        <option value="5">5x</option>
+                        <option value="10">10x</option>
+                    </select>
+                    <br><br>
+                    <button class="btn" onclick="replaySelected()">▶️ Replay Selected</button>
+                </div>
+            </div>
+            
+            <div class="pcap-list" id="pcapList">
+                <h3>Available PCAP Files</h3>
+                <div id="pcapItems"></div>
+            </div>
+        </div>
+
+        <!-- Model Performance Metrics -->
+        <div class="section">
+            <h2>🤖 ML Model Performance</h2>
+            <div class="grid">
+                <div class="card">
+                    <h3>Total Predictions</h3>
+                    <div class="metric" id="totalPredictions">0</div>
+                </div>
+                <div class="card">
+                    <h3>Anomalies Detected</h3>
+                    <div class="metric danger" id="anomaliesDetected">0</div>
+                </div>
+                <div class="card">
+                    <h3>Anomaly Rate</h3>
+                    <div class="metric warning" id="anomalyRate">0%</div>
+                </div>
+                <div class="card">
+                    <h3>Avg Confidence</h3>
+                    <div class="metric" id="avgConfidence">0%</div>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="confidenceChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Detection Methods Comparison -->
+        <div class="section">
+            <h2>🔍 Detection Methods Analysis</h2>
+            <div class="grid">
+                <div class="card">
+                    <h3>ML Confirmed by Suricata</h3>
+                    <div class="metric" id="mlConfirmed">0</div>
+                    <p>Both systems agree (High confidence)</p>
+                </div>
+                <div class="card">
+                    <h3>ML Primary (Zero-Day)</h3>
+                    <div class="metric warning" id="mlPrimary">0</div>
+                    <p>ML-only detections</p>
+                </div>
+                <div class="card">
+                    <h3>Suricata Override</h3>
+                    <div class="metric danger" id="suricataOverride">0</div>
+                    <p>Signature-based only</p>
+                </div>
+                <div class="card">
+                    <h3>Both Normal</h3>
+                    <div class="metric" id="bothNormal">0</div>
+                    <p>Clean traffic</p>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <canvas id="detectionMethodsChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Confusion Matrix & Metrics -->
+        <div class="section">
+            <h2>📊 Confusion Matrix & Evaluation Metrics</h2>
+            <div class="grid">
+                <div class="card">
+                    <h3>Confusion Matrix</h3>
+                    <table>
+                        <tr>
+                            <th></th>
+                            <th>Predicted Anomaly</th>
+                            <th>Predicted Normal</th>
+                        </tr>
+                        <tr>
+                            <td><strong>Actual Anomaly</strong></td>
+                            <td id="TP" style="color: #00ff88;">0</td>
+                            <td id="FN" style="color: #ff4444;">0</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Actual Normal</strong></td>
+                            <td id="FP" style="color: #ffaa00;">0</td>
+                            <td id="TN" style="color: #00ff88;">0</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <div class="card">
+                    <h3>Performance Metrics</h3>
+                    <p><strong>Accuracy:</strong> <span id="accuracy">0%</span></p>
+                    <p><strong>Precision:</strong> <span id="precision">0%</span></p>
+                    <p><strong>Recall:</strong> <span id="recall">0%</span></p>
+                    <p><strong>F1-Score:</strong> <span id="f1Score">0%</span></p>
+                    <p><strong>False Positive Rate:</strong> <span id="fpr">0%</span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Attack Breakdown -->
+        <div class="section">
+            <h2>⚔️ Attack Type Breakdown</h2>
+            <div id="attackBreakdown"></div>
+            <div class="chart-container">
+                <canvas id="attackTypesChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Zero-Day Detections -->
+        <div class="section">
+            <h2>🚨 Zero-Day Detections (ML-Only)</h2>
+            <div id="zeroDay"></div>
+        </div>
+
+        <!-- Detection Timeline -->
+        <div class="section">
+            <h2>📈 Detection Timeline</h2>
+            <div class="chart-container" style="height: 400px;">
+                <canvas id="timelineChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="section">
+            <h2>⚙️ Control Panel</h2>
+            <button class="btn" onclick="refreshData()">🔄 Refresh Data</button>
+            <button class="btn success" onclick="exportResults()">💾 Export Results</button>
+            <button class="btn danger" onclick="clearTestData()">🗑️ Clear Test Data</button>
+        </div>
+    </div>
+
+    <script>
+        let selectedPCAP = null;
+        let charts = {};
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPCAPs();
+            refreshData();
+            setInterval(refreshData, 10000); // Refresh every 10 seconds
+            
+            // Drag & drop
+            const uploadArea = document.getElementById('uploadArea');
+            uploadArea.addEventListener('click', () => document.getElementById('pcapFile').click());
+            uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+            uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                document.getElementById('pcapFile').files = e.dataTransfer.files;
+            });
+        });
+
+        async function loadPCAPs() {
+            const response = await fetch('/api/evaluation/list-pcaps');
+            const data = await response.json();
+            
+            const container = document.getElementById('pcapItems');
+            container.innerHTML = '';
+            
+            data.pcaps.forEach(pcap => {
+                const item = document.createElement('div');
+                item.className = 'pcap-item';
+                item.innerHTML = `
+                    <div>
+                        <strong>${pcap.filename}</strong><br>
+                        <small>${(pcap.size / 1024 / 1024).toFixed(2)} MB - ${new Date(pcap.modified).toLocaleString()}</small>
+                    </div>
+                    <button class="btn" onclick="selectPCAP('${pcap.filename}')">Select</button>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function selectPCAP(filename) {
+            selectedPCAP = filename;
+            alert(`Selected: ${filename}`);
+        }
+
+        async function uploadPCAP() {
+            const fileInput = document.getElementById('pcapFile');
+            if (!fileInput.files[0]) {
+                alert('Please select a file');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            
+            const response = await fetch('/api/evaluation/upload-pcap', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                alert(`Uploaded: ${data.filename}`);
+                loadPCAPs();
+            } else {
+                alert(`Error: ${data.error}`);
+            }
+        }
+
+        async function replaySelected() {
+            if (!selectedPCAP) {
+                alert('Please select a PCAP file first');
+                return;
+            }
+            
+            const interface = document.getElementById('interface').value;
+            const speed = document.getElementById('speed').value;
+            
+            const response = await fetch('/api/evaluation/replay-pcap', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({filename: selectedPCAP, interface, speed})
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+                alert(data.message);
+            } else {
+                alert(`Error: ${data.error}`);
+            }
+        }
+
+        async function refreshData() {
+            await Promise.all([
+                loadModelPerformance(),
+                loadDetectionMethods(),
+                loadConfusionMatrix(),
+                loadAttackBreakdown(),
+                loadZeroDayDetections(),
+                loadDetectionTimeline()
+            ]);
+        }
+
+        async function loadModelPerformance() {
+            const response = await fetch('/api/evaluation/model-performance');
+            const data = await response.json();
+            
+            document.getElementById('totalPredictions').textContent = data.total_predictions;
+            document.getElementById('anomaliesDetected').textContent = data.anomalies_detected;
+            document.getElementById('anomalyRate').textContent = data.anomaly_rate.toFixed(2) + '%';
+            document.getElementById('avgConfidence').textContent = data.avg_confidence + '%';
+            
+            // Confidence distribution chart
+            const confResponse = await fetch('/api/evaluation/ml-confidence-distribution');
+            const confData = await confResponse.json();
+            
+            if (charts.confidence) charts.confidence.destroy();
+            charts.confidence = new Chart(document.getElementById('confidenceChart'), {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(confData.distribution),
+                    datasets: [{
+                        label: 'Predictions',
+                        data: Object.values(confData.distribution),
+                        backgroundColor: '#667eea'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { title: { display: true, text: 'ML Confidence Distribution', color: '#e0e0e0' } },
+                    scales: { y: { ticks: { color: '#e0e0e0' } }, x: { ticks: { color: '#e0e0e0' } } }
+                }
+            });
+        }
+
+        async function loadDetectionMethods() {
+            const response = await fetch('/api/evaluation/model-performance');
+            const data = await response.json();
+            
+            const methods = data.detection_methods || {};
+            document.getElementById('mlConfirmed').textContent = methods.ml_confirmed_by_suricata || 0;
+            document.getElementById('mlPrimary').textContent = methods.ml_primary || 0;
+            document.getElementById('suricataOverride').textContent = methods.suricata_override || 0;
+            document.getElementById('bothNormal').textContent = methods.both_normal || 0;
+            
+            if (charts.methods) charts.methods.destroy();
+            charts.methods = new Chart(document.getElementById('detectionMethodsChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['ML Confirmed', 'ML Primary', 'Suricata Override', 'Both Normal'],
+                    datasets: [{
+                        data: [
+                            methods.ml_confirmed_by_suricata || 0,
+                            methods.ml_primary || 0,
+                            methods.suricata_override || 0,
+                            methods.both_normal || 0
+                        ],
+                        backgroundColor: ['#00ff88', '#ffaa00', '#ff4444', '#667eea']
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+
+        async function loadConfusionMatrix() {
+            const response = await fetch('/api/evaluation/confusion-matrix');
+            const data = await response.json();
+            
+            document.getElementById('TP').textContent = data.confusion_matrix.TP;
+            document.getElementById('TN').textContent = data.confusion_matrix.TN;
+            document.getElementById('FP').textContent = data.confusion_matrix.FP;
+            document.getElementById('FN').textContent = data.confusion_matrix.FN;
+            
+            document.getElementById('accuracy').textContent = data.metrics.accuracy + '%';
+            document.getElementById('precision').textContent = data.metrics.precision + '%';
+            document.getElementById('recall').textContent = data.metrics.recall + '%';
+            document.getElementById('f1Score').textContent = data.metrics.f1_score + '%';
+            document.getElementById('fpr').textContent = data.metrics.false_positive_rate + '%';
+        }
+
+        async function loadAttackBreakdown() {
+            const response = await fetch('/api/evaluation/attack-breakdown');
+            const data = await response.json();
+            
+            const container = document.getElementById('attackBreakdown');
+            container.innerHTML = '<table><tr><th>Attack Type</th><th>Count</th><th>Avg Score</th></tr>';
+            
+            data.attacks.forEach(attack => {
+                container.innerHTML += `<tr><td>${attack.type}</td><td>${attack.count}</td><td>${attack.avg_score}</td></tr>`;
+            });
+            container.innerHTML += '</table>';
+            
+            if (charts.attacks) charts.attacks.destroy();
+            charts.attacks = new Chart(document.getElementById('attackTypesChart'), {
+                type: 'bar',
+                data: {
+                    labels: data.attacks.map(a => a.type.substring(0, 30)),
+                    datasets: [{
+                        label: 'Detections',
+                        data: data.attacks.map(a => a.count),
+                        backgroundColor: '#ff4444'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    scales: { y: { ticks: { color: '#e0e0e0' } }, x: { ticks: { color: '#e0e0e0' } } }
+                }
+            });
+        }
+
+        async function loadZeroDayDetections() {
+            const response = await fetch('/api/evaluation/zero-day-detections');
+            const data = await response.json();
+            
+            const container = document.getElementById('zeroDay');
+            container.innerHTML = `<p><strong>${data.count} zero-day detections found</strong></p>`;
+            container.innerHTML += '<table><tr><th>Time</th><th>Source</th><th>Destination</th><th>Description</th><th>Confidence</th></tr>';
+            
+            data.zero_day_detections.slice(0, 10).forEach(det => {
+                container.innerHTML += `<tr>
+                    <td>${new Date(det.timestamp).toLocaleTimeString()}</td>
+                    <td>${det.src_ip}</td>
+                    <td>${det.dest_ip}</td>
+                    <td>${det.description}</td>
+                    <td>${(det.ml_confidence * 100).toFixed(1)}%</td>
+                </tr>`;
+            });
+            container.innerHTML += '</table>';
+        }
+
+        async function loadDetectionTimeline() {
+            const response = await fetch('/api/evaluation/detection-timeline');
+            const data = await response.json();
+            
+            if (charts.timeline) charts.timeline.destroy();
+            charts.timeline = new Chart(document.getElementById('timelineChart'), {
+                type: 'line',
+                data: {
+                    labels: data.timeline.map(t => new Date(t.timestamp).toLocaleTimeString()),
+                    datasets: [
+                        { label: 'ML Confirmed', data: data.timeline.map(t => t.ml_confirmed), borderColor: '#00ff88', fill: false },
+                        { label: 'ML Primary', data: data.timeline.map(t => t.ml_primary), borderColor: '#ffaa00', fill: false },
+                        { label: 'Suricata Override', data: data.timeline.map(t => t.suricata_override), borderColor: '#ff4444', fill: false }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { ticks: { color: '#e0e0e0' } }, x: { ticks: { color: '#e0e0e0' } } }
+                }
+            });
+        }
+
+        async function exportResults() {
+            const response = await fetch('/api/evaluation/export-results', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({})
+            });
+            
+            const data = await response.json();
+            const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `hids_evaluation_${Date.now()}.json`;
+            a.click();
+        }
+
+        async function clearTestData() {
+            if (!confirm('Clear all test data from last hour?')) return;
+            
+            const response = await fetch('/api/evaluation/clear-test-data', {method: 'POST'});
+            const data = await response.json();
+            
+            if (data.success) {
+                alert('Test data cleared');
+                refreshData();
+            } else {
+                alert(`Error: ${data.error}`);
+            }
+        }
+    </script>
+</body>
+</html>

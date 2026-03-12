@@ -10,8 +10,12 @@ rule-files:
   - local.rules
 
 af-packet:
-  - interface: wlp0s20f3
+  - interface: br-c51890515ece
     cluster-id: 99
+    cluster-type: cluster_flow
+    defrag: yes
+  - interface: docker0
+    cluster-id: 98
     cluster-type: cluster_flow
     defrag: yes
 

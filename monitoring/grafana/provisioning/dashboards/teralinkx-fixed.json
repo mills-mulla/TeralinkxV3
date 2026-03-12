@@ -1,0 +1,525 @@
+{
+  "dashboard": {
+    "title": "TeralinkX Complete Monitoring Dashboard",
+    "tags": ["teralinkx", "hids", "radius", "infrastructure"],
+    "timezone": "browser",
+    "editable": true,
+    "refresh": "10s",
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "System Overview",
+        "type": "row",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0},
+        "collapsed": false
+      },
+      {
+        "id": 2,
+        "title": "Total Containers Running",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 4, "x": 0, "y": 1},
+        "targets": [
+          {
+            "expr": "count(up{job=~\"teralinkx|radius_api|hids.*\"} == 1)",
+            "legendFormat": "Services"
+          }
+        ],
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area"
+        }
+      },
+      {
+        "id": 3,
+        "title": "HIDS Anomaly Rate",
+        "type": "gauge",
+        "gridPos": {"h": 4, "w": 4, "x": 4, "y": 1},
+        "targets": [
+          {
+            "expr": "(sum(hids_ml_predictions_total{prediction=\"anomaly\"}) / sum(hids_ml_predictions_total)) * 100",
+            "legendFormat": "Anomaly %"
+          }
+        ],
+        "options": {
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"value": 0, "color": "green"},
+              {"value": 15, "color": "yellow"},
+              {"value": 30, "color": "red"}
+            ]
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent"
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Total Containers",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 4, "x": 8, "y": 1},
+        "targets": [
+          {
+            "expr": "count(container_last_seen{name!=\"\"})",
+            "legendFormat": "Containers"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Database Connections",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 4, "x": 12, "y": 1},
+        "targets": [
+          {
+            "expr": "sum(pg_stat_database_numbackends)",
+            "legendFormat": "Connections"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Redis Memory (MB)",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 4, "x": 16, "y": 1},
+        "targets": [
+          {
+            "expr": "redis_memory_used_bytes / 1024 / 1024",
+            "legendFormat": "MB"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "decmbytes"
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "System CPU Usage",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 4, "x": 20, "y": 1},
+        "targets": [
+          {
+            "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+            "legendFormat": "CPU %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent"
+          }
+        }
+      },
+      {
+        "id": 10,
+        "title": "HIDS Security Monitoring",
+        "type": "row",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 5},
+        "collapsed": false
+      },
+      {
+        "id": 11,
+        "title": "ML Predictions (Normal vs Anomaly)",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 6},
+        "targets": [
+          {
+            "expr": "rate(hids_ml_predictions_total{prediction=\"normal\"}[5m])",
+            "legendFormat": "Normal"
+          },
+          {
+            "expr": "rate(hids_ml_predictions_total{prediction=\"anomaly\"}[5m])",
+            "legendFormat": "Anomaly"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "fillOpacity": 10,
+              "lineWidth": 2
+            }
+          }
+        }
+      },
+      {
+        "id": 12,
+        "title": "HIDS Anomaly Rate Over Time",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 6},
+        "targets": [
+          {
+            "expr": "(rate(hids_ml_predictions_total{prediction=\"anomaly\"}[5m]) / rate(hids_ml_predictions_total[5m])) * 100",
+            "legendFormat": "Anomaly Rate %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 15, "color": "yellow"},
+                {"value": 30, "color": "red"}
+              ]
+            },
+            "max": 100,
+            "min": 0,
+            "unit": "percent"
+          }
+        }
+      },
+      {
+        "id": 13,
+        "title": "Total ML Predictions",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 14},
+        "targets": [
+          {
+            "expr": "sum(hids_ml_predictions_total)",
+            "legendFormat": "Total"
+          }
+        ],
+        "options": {
+          "colorMode": "background",
+          "graphMode": "area"
+        }
+      },
+      {
+        "id": 14,
+        "title": "Anomalies Detected",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 6, "y": 14},
+        "targets": [
+          {
+            "expr": "sum(hids_ml_predictions_total{prediction=\"anomaly\"})",
+            "legendFormat": "Anomalies"
+          }
+        ],
+        "options": {
+          "colorMode": "background",
+          "graphMode": "area"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 100, "color": "yellow"},
+                {"value": 1000, "color": "red"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 15,
+        "title": "Dashboard Requests",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 14},
+        "targets": [
+          {
+            "expr": "sum(hids_dashboard_requests_total)",
+            "legendFormat": "Requests"
+          }
+        ]
+      },
+      {
+        "id": 16,
+        "title": "All Services Health",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 14},
+        "targets": [
+          {
+            "expr": "sum(up{job=~\"hids.*|teralinkx|radius_api\"})",
+            "legendFormat": "UP"
+          }
+        ],
+        "options": {
+          "colorMode": "background"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 3, "color": "yellow"},
+                {"value": 5, "color": "green"}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 20,
+        "title": "Application Metrics",
+        "type": "row",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 18},
+        "collapsed": false
+      },
+      {
+        "id": 21,
+        "title": "Django Model Operations (TeralinkX)",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 19},
+        "targets": [
+          {
+            "expr": "rate(django_model_inserts_total{job=\"teralinkx\"}[5m])",
+            "legendFormat": "Inserts {{model}}"
+          },
+          {
+            "expr": "rate(django_model_updates_total{job=\"teralinkx\"}[5m])",
+            "legendFormat": "Updates {{model}}"
+          }
+        ]
+      },
+      {
+        "id": 22,
+        "title": "Gunicorn Workers",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 19},
+        "targets": [
+          {
+            "expr": "gunicorn_workers{job=\"teralinkx\"}",
+            "legendFormat": "TeralinkX Workers"
+          },
+          {
+            "expr": "gunicorn_workers{job=\"radius_api\"}",
+            "legendFormat": "Radius Workers"
+          }
+        ]
+      },
+      {
+        "id": 30,
+        "title": "Infrastructure Monitoring",
+        "type": "row",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 27},
+        "collapsed": false
+      },
+      {
+        "id": 31,
+        "title": "Container CPU Usage",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 28},
+        "targets": [
+          {
+            "expr": "rate(container_cpu_usage_seconds_total{name=~\"teralinkx_web|radiusapi|hids_engine|hids_ml_service|hids_dashboard\"}[5m]) * 100",
+            "legendFormat": "{{name}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent"
+          }
+        }
+      },
+      {
+        "id": 32,
+        "title": "Container Memory Usage",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 28},
+        "targets": [
+          {
+            "expr": "container_memory_usage_bytes{name=~\"teralinkx_web|radiusapi|hids_engine|hids_ml_service|hids_dashboard\"} / 1024 / 1024",
+            "legendFormat": "{{name}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "decmbytes"
+          }
+        }
+      },
+      {
+        "id": 33,
+        "title": "PostgreSQL - Active Connections",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 36},
+        "targets": [
+          {
+            "expr": "pg_stat_database_numbackends",
+            "legendFormat": "{{datname}}"
+          }
+        ]
+      },
+      {
+        "id": 34,
+        "title": "PostgreSQL - Transactions",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 36},
+        "targets": [
+          {
+            "expr": "rate(pg_stat_database_xact_commit[5m])",
+            "legendFormat": "Commits {{datname}}"
+          },
+          {
+            "expr": "rate(pg_stat_database_xact_rollback[5m])",
+            "legendFormat": "Rollbacks {{datname}}"
+          }
+        ]
+      },
+      {
+        "id": 35,
+        "title": "Redis - Operations/sec",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 36},
+        "targets": [
+          {
+            "expr": "rate(redis_commands_processed_total[5m])",
+            "legendFormat": "Commands"
+          }
+        ]
+      },
+      {
+        "id": 36,
+        "title": "Node - CPU Usage by Core",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 44},
+        "targets": [
+          {
+            "expr": "100 - (rate(node_cpu_seconds_total{mode=\"idle\"}[5m]) * 100)",
+            "legendFormat": "CPU {{cpu}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent"
+          }
+        }
+      },
+      {
+        "id": 37,
+        "title": "Node - Memory Usage",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 44},
+        "targets": [
+          {
+            "expr": "(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100",
+            "legendFormat": "Memory Used %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "max": 100,
+            "min": 0
+          }
+        }
+      },
+      {
+        "id": 38,
+        "title": "Node - Disk I/O",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 52},
+        "targets": [
+          {
+            "expr": "rate(node_disk_read_bytes_total[5m])",
+            "legendFormat": "Read {{device}}"
+          },
+          {
+            "expr": "rate(node_disk_written_bytes_total[5m])",
+            "legendFormat": "Write {{device}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "Bps"
+          }
+        }
+      },
+      {
+        "id": 39,
+        "title": "Node - Network Traffic",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 52},
+        "targets": [
+          {
+            "expr": "rate(node_network_receive_bytes_total{device!=\"lo\"}[5m])",
+            "legendFormat": "RX {{device}}"
+          },
+          {
+            "expr": "rate(node_network_transmit_bytes_total{device!=\"lo\"}[5m])",
+            "legendFormat": "TX {{device}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "Bps"
+          }
+        }
+      },
+      {
+        "id": 40,
+        "title": "Logs & Service Status",
+        "type": "row",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 60},
+        "collapsed": false
+      },
+      {
+        "id": 41,
+        "title": "Application Logs (Loki)",
+        "type": "logs",
+        "gridPos": {"h": 10, "w": 24, "x": 0, "y": 61},
+        "targets": [
+          {
+            "expr": "{container=~\"teralinkx.*|radiusapi|hids.*\"}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "showTime": true,
+          "showLabels": true,
+          "sortOrder": "Descending",
+          "wrapLogMessage": true
+        }
+      },
+      {
+        "id": 42,
+        "title": "Service Health Status",
+        "type": "table",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 71},
+        "targets": [
+          {
+            "expr": "up",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Time": true,
+                "__name__": true
+              },
+              "renameByName": {
+                "job": "Service",
+                "instance": "Instance",
+                "Value": "Status"
+              }
+            }
+          }
+        ],
+        "options": {
+          "showHeader": true
+        }
+      }
+    ]
+  },
+  "overwrite": true
+}
