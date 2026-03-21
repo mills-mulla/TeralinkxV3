@@ -41,11 +41,6 @@ class RouterOSManager:
         self.connection = None
         self.api = None
         
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type(Exception)  # Changed to generic Exception
-    )
     def connect(self) -> bool:
         """
         Connect to RouterOS API
@@ -101,11 +96,6 @@ class RouterOSManager:
         """Context manager exit"""
         self.disconnect()
     
-    @retry(
-        stop=stop_after_attempt(2),
-        wait=wait_exponential(multiplier=1, min=1, max=5),
-        retry=retry_if_exception_type(Exception)  # Changed to generic Exception
-    )
     def execute_command(self, path: str, command: str = None, **kwargs) -> List[Dict]:
         """
         Execute RouterOS API command
@@ -215,14 +205,6 @@ def parse_devices(devices_input) -> int:
     except (ValueError, AttributeError, TypeError):
         logger.warning(f"Failed to parse devices from input: {devices_input}, defaulting to 1")
         return 1
-
-
-@retry(
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=2, max=10),
-    retry=retry_if_exception_type((ConnectionError, TimeoutError, RouterOSAPIError))
-)
-
 
 
 def activate_voucher(prefix: str, profile: str, devices, 

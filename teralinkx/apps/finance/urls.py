@@ -2,7 +2,8 @@
 from django.urls import path, include
 from finance.payment_gateway import (
     PaymentInitiateAPIView,
-    PaymentCallbackAPIView
+    PaymentCallbackAPIView,
+    ReconciliationAPIView
 )
 from .querycheckout import payment_status, payment_health_check
 from .credit_balance import BalancePurchaseAPIView, balance_health_check
@@ -22,6 +23,10 @@ urlpatterns = [
     path('payment-health/', payment_health_check, name='payment_health'),
     path('balance-purchase/', BalancePurchaseAPIView.as_view(), name='balance_purchase_v3'),
     path('balance-health/', balance_health_check, name='balance_health'),
+
+    # Reconciliation endpoints
+    path('payments/reconcile/', ReconciliationAPIView.as_view(), name='reconcile_payments'),
+    path('payments/pull-register/', ReconciliationAPIView.as_view(), {'action': 'register'}, name='pull_register'),
 
     #hotspot authentication
     path('connect/', ConnectAPIView.as_view(), name='connect'),

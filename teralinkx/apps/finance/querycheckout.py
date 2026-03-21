@@ -22,7 +22,6 @@ from rest_framework.response import Response
 from rest_framework import status, serializers
 from rest_framework.throttling import UserRateThrottle
 
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 from core.services.notification_service import create_and_notify
 from .models import TransactionQueue
@@ -58,21 +57,13 @@ class PaymentStatusRequestSerializer(serializers.Serializer):
 # ============================================================================
 
 class PaymentStatusThrottle(UserRateThrottle):
-    """✅ Rate limiting - 10 requests/minute"""
+    """Rate limiting - 10 requests/minute"""
     rate = '10/m'
-    
-    def __init__(self):
-        print(f"PaymentStatusThrottle rate: {self.rate}")  # Debug
-        super().__init__()
 
 
 class BurstPaymentStatusThrottle(UserRateThrottle):
-    """✅ Burst protection - 3 requests/10 seconds"""
+    """Burst protection - 2 requests/second"""
     rate = '2/s'
-    
-    def __init__(self):
-        print(f"BurstPaymentStatusThrottle rate: {self.rate}")  # Debug
-        super().__init__()
 
 # ============================================================================
 # IDEMPOTENCY
@@ -391,13 +382,8 @@ class VoucherManager:
         return dispatch_voucher
     
     @staticmethod
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type(Exception)
-    )
     def activate_voucher_with_retry(prefix, profile, devices):
-        """✅ Retry mechanisms for external APIs"""
+        """Single attempt — retries removed to prevent 35s blocking in HTTP worker."""
         return activate_voucher(prefix=prefix, profile=profile, devices=devices)
     
     @staticmethod
@@ -493,51 +479,31 @@ class PaymentProcessor:
         return True
     
     @staticmethod
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type((ConnectionError, TimeoutError))
-    )
     def query_mpesa_with_retry(checkout_request_id):
-        """✅ Retry mechanism with circuit breaker and Celery"""
-        from finance.tasks import query_payment_status
-        from django.core.cache import cache
-        
-        # Check cache first (2 second cache for pending, 5 min for completed)
+        """Direct Daraja query — no Celery, timeout releases worker immediately."""
         cache_key = f"mpesa_status:{checkout_request_id}"
         cached = cache.get(cache_key)
-        
         if cached:
-            logger.info(f"Returning cached status for {checkout_request_id}")
             return cached
-        
-        # Use Celery to query M-Pesa (prevents worker blocking)
-        task = query_payment_status.apply_async(
-            args=[checkout_request_id]
-            # No expiry - rely on timeout only
-        )
-        
+
         try:
-            # Wait max 30 seconds for result
-            celery_result = task.get(timeout=30)
-            
-            if celery_result.get('success'):
-                mpesa_result = celery_result['result']
-                
-                # Cache based on result
-                result_code = str(mpesa_result.get('ResultCode'))
-                if result_code == '0':
-                    cache.set(cache_key, mpesa_result, 300)  # Cache completed for 5 min
-                else:
-                    cache.set(cache_key, mpesa_result, 2)  # Cache pending for 2s
-                
-                return mpesa_result
-            else:
-                raise ValueError(celery_result.get('error', 'Status query failed'))
-                
+            result = query_stk_status(checkout_request_id)
+
+            # query_stk_status may return a JsonResponse on error
+            if hasattr(result, 'content'):
+                import json as _json
+                result = _json.loads(result.content.decode())
+
+            result_code = str(result.get('ResultCode', ''))
+            if result_code == '0':
+                cache.set(cache_key, result, 300)   # confirmed — cache 5 min
+            elif result_code not in ('', '4999'):
+                cache.set(cache_key, result, 30)    # definitive failure — cache 30s
+
+            return result
+
         except Exception as e:
-            logger.error(f"Celery status query timeout/error: {e}")
-            # Return pending status on timeout
+            logger.error(f"query_mpesa_with_retry error: {e}")
             return {
                 'ResultCode': '4999',
                 'ResultDesc': 'Transaction is still under processing',
@@ -562,7 +528,7 @@ class PaymentProcessor:
                 logger.info(f"Returning cached response for: {idempotency_key}")
                 return cached_response
         
-        # Get transaction (pending or completed)
+        # Get transaction (pending, processing, or failed with successful payment)
         transaction_record = TransactionQueue.get_pending_by_checkout_id(checkout_request_id)
         
         if not transaction_record:
@@ -570,28 +536,60 @@ class PaymentProcessor:
             try:
                 transaction_record = TransactionQueue.objects.get(checkout_request_id=checkout_request_id)
                 if transaction_record.status == 'processed':
-                    # Return success for already completed transaction
                     return {
                         'success': True,
                         'payment_status': 'completed',
                         'status': 'completed',
+                        'terminal': True,
                         'transaction_id': checkout_request_id,
                         'message': 'Payment already completed'
                     }
                 elif transaction_record.status == 'processing':
-                    # Transaction is currently being processed
                     return {
                         'success': False,
                         'payment_status': 'processing',
                         'status': 'processing',
+                        'terminal': False,
                         'result_code': '1',
                         'description': 'Payment is being processed. Please wait...'
+                    }
+                elif transaction_record.status == 'failed':
+                    if (transaction_record.failure_category == 'system_error' and
+                        'VOUCHER_PROCESSING_ERROR' in (transaction_record.error_code or '')):
+                        logger.info(f"Retrying voucher activation for failed transaction: {checkout_request_id}")
+                    else:
+                        return {
+                            'success': False,
+                            'payment_status': 'failed',
+                            'status': 'failed',
+                            'terminal': True,
+                            'result_code': '1',
+                            'description': transaction_record.failure_reason or 'Payment failed'
+                        }
+                elif transaction_record.status == 'refunded':
+                    try:
+                        fresh_client = ClientH.objects.get(pk=transaction_record.user.pk)
+                        fresh_balance = float(fresh_client.balance)
+                    except Exception:
+                        fresh_balance = None
+                    return {
+                        'success': False,
+                        'payment_status': 'refunded',
+                        'status': 'refunded',
+                        'terminal': True,
+                        'fresh_balance': fresh_balance,
+                        'description': (
+                            'Your payment was received successfully, but we were unable to activate '
+                            'your internet package at this time. The full amount has been credited to '
+                            'your account balance. You can use it to purchase a package anytime.'
+                        )
                     }
             except TransactionQueue.DoesNotExist:
                 pass
             
-            PaymentMetrics.record_payment_failure('transaction_not_found')
-            raise ValueError(f"Transaction not found: {checkout_request_id}")
+            if not transaction_record:
+                PaymentMetrics.record_payment_failure('transaction_not_found')
+                raise ValueError(f"Transaction not found: {checkout_request_id}")
         
         # ✅ Verify ownership
         PaymentProcessor.verify_transaction_ownership(transaction_record, user)
@@ -652,11 +650,24 @@ class PaymentProcessor:
     @staticmethod
     def handle_successful_payment(user_context, transaction_record, package_type, package_code, mpesa_response, hotspot_ip):
         user = user_context['user']
-        
+        checkout_id = transaction_record.checkout_request_id
+
+        if not transaction_record.mark_processing():
+            logger.info(
+                f"[{checkout_id}] Queue {transaction_record.id} already claimed — backing off"
+            )
+            return {
+                'success': False,
+                'payment_status': 'processing',
+                'status': 'processing',
+                'terminal': False,
+                'description': 'Payment is being processed. Please wait.'
+            }
+
+        transaction_record.gateway_result_data = mpesa_response
+        transaction_record.save(update_fields=['gateway_result_data'])
+
         try:
-            transaction_record.gateway_result_data = mpesa_response
-            transaction_record.mark_processing()
-            
             dispatch_voucher = VoucherManager.activate_and_create_voucher(
                 user_context=user_context,
                 package_type=package_type,
@@ -664,91 +675,114 @@ class PaymentProcessor:
                 transaction_record=transaction_record,
                 hotspot_ip=hotspot_ip
             )
-            
-            # 🎁 AWARD REWARD POINTS FOR M-PESA PURCHASE
-            # Only M-Pesa and M-Pesa + balance purchases earn points
-            try:
-                from core.services.rewards_service import RewardsService
-                
-                payment_method = getattr(transaction_record, 'method', 'mpesa')
-                
-                # Only award points for M-Pesa payments (pure or mixed)
-                if payment_method in ['mpesa', 'mixed']:
-                    # For mixed payments, award points based on M-Pesa amount only
-                    if payment_method == 'mixed' and transaction_record.used_credit:
-                        # Award points only for the M-Pesa portion
-                        mpesa_amount = transaction_record.price - Decimal(transaction_record.used_credit)
-                        points_awarded = RewardsService.award_purchase_points(
-                            user=user_context['client'],
-                            amount_spent=mpesa_amount,
-                            voucher=dispatch_voucher
-                        )
-                        logger.info(f"Awarded {points_awarded} reward points for M-Pesa portion ({mpesa_amount}) to {user_context['account']}")
-                    else:
-                        # Pure M-Pesa payment - award points for full amount
-                        points_awarded = RewardsService.award_purchase_points(
-                            user=user_context['client'],
-                            amount_spent=transaction_record.price,
-                            voucher=dispatch_voucher
-                        )
-                        logger.info(f"Awarded {points_awarded} reward points for M-Pesa payment to {user_context['account']}")
-                else:
-                    logger.info(f"No reward points awarded for {payment_method} payment (policy)")
-            except Exception as e:
-                logger.error(f"Failed to award reward points: {e}")
-                # Don't fail the purchase if rewards fail
-            
-            transaction_record.mark_processed()
-            
-            AuditLogger.log_payment_success(
-                user=user,
-                transaction_record=transaction_record,
-                voucher_code=dispatch_voucher.voucher_code,
-                amount=transaction_record.price
-            )
-            
-            PaymentNotifier.notify_payment_success(
-                user_context=user_context,
-                transaction_record=transaction_record,
-                dispatch_voucher=dispatch_voucher
-            )
-            
-            logger.info(f"Payment completed: {transaction_record.checkout_request_id}")
-            
-            return {
-                'success': True,
-                'payment_status': 'completed',
-                'status': 'completed',
-                'transaction_id': transaction_record.checkout_request_id,
-                'voucher_code': dispatch_voucher.voucher_code,
-                'package': package_type.name,
-                'amount': float(transaction_record.price),
-                'expires_at': dispatch_voucher.expires_at.isoformat()
-            }
-            
         except Exception as e:
-            transaction_record.mark_failed(
-                reason=str(e),
-                error_code="VOUCHER_PROCESSING_ERROR",
-                failure_category="system_error"
+            # M-Pesa succeeded but voucher/service failed — refund and mark refunded
+            logger.error(
+                f"[{checkout_id}] Voucher activation failed for queue {transaction_record.id}: {e}",
+                exc_info=True
             )
-            
-            AuditLogger.log_payment_failure(
-                user=user,
-                checkout_request_id=transaction_record.checkout_request_id,
-                reason=str(e),
-                error_category='system_error'
-            )
-            
-            PaymentProcessor.refund_user_balance(user_context, transaction_record.price)
-            
-            PaymentNotifier.notify_payment_failure(
-                user_context=user_context,
-                transaction_record=transaction_record,
-                error=str(e)
-            )
-            
-            raise
+            # Wrap failure handling — must never raise, always return refunded response
+            try:
+                transaction_record.mark_failed(
+                    reason=str(e),
+                    error_code='VOUCHER_PROCESSING_ERROR',
+                    failure_category='system_error'
+                )
+            except Exception as mark_err:
+                logger.error(f"[{checkout_id}] mark_failed error: {mark_err}")
+
+            try:
+                PaymentProcessor.refund_user_balance(user_context, transaction_record)
+            except Exception as refund_err:
+                logger.error(f"[{checkout_id}] refund_user_balance error: {refund_err}")
+
+            try:
+                transaction_record.status = 'refunded'
+                transaction_record.save(update_fields=['status'])
+            except Exception as save_err:
+                logger.error(f"[{checkout_id}] status save error: {save_err}")
+
+            # Fetch fresh balance after refund
+            try:
+                fresh_client = ClientH.objects.get(pk=user_context['client'].pk)
+                fresh_balance = float(fresh_client.balance)
+            except Exception:
+                fresh_balance = None
+
+            try:
+                AuditLogger.log_payment_failure(
+                    user=user,
+                    checkout_request_id=checkout_id,
+                    reason=str(e),
+                    error_category='voucher_activation_failed'
+                )
+                PaymentNotifier.notify_payment_failure(
+                    user_context=user_context,
+                    transaction_record=transaction_record,
+                    error='Service activation failed. Your balance has been refunded.'
+                )
+            except Exception as notify_err:
+                logger.error(f"[{checkout_id}] notify error: {notify_err}")
+
+            return {
+                'success': False,
+                'payment_status': 'refunded',
+                'status': 'refunded',
+                'terminal': True,
+                'fresh_balance': fresh_balance,
+                'description': (
+                    'Your payment was received successfully, but we were unable to activate '
+                    'your internet package at this time. The full amount has been credited to '
+                    'your account balance. You can use it to purchase a package anytime.'
+                )
+            }
+
+        # Voucher activated — award reward points (non-fatal)
+        try:
+            from core.services.rewards_service import RewardsService
+            payment_method = getattr(transaction_record, 'method', 'mpesa')
+            if payment_method in ('mpesa', 'mixed'):
+                if payment_method == 'mixed' and transaction_record.used_credit:
+                    mpesa_amount = transaction_record.price - Decimal(str(transaction_record.used_credit))
+                else:
+                    mpesa_amount = transaction_record.price
+                points = RewardsService.award_purchase_points(
+                    user=user_context['client'],
+                    amount_spent=mpesa_amount,
+                    voucher=dispatch_voucher
+                )
+                logger.info(f"[{checkout_id}] Awarded {points} reward points to {user_context['account']}")
+        except Exception as e:
+            logger.warning(f"[{checkout_id}] Reward points failed (non-fatal): {e}")
+
+        transaction_record.mark_processed()
+
+        AuditLogger.log_payment_success(
+            user=user,
+            transaction_record=transaction_record,
+            voucher_code=dispatch_voucher.voucher_code,
+            amount=transaction_record.price
+        )
+        PaymentNotifier.notify_payment_success(
+            user_context=user_context,
+            transaction_record=transaction_record,
+            dispatch_voucher=dispatch_voucher
+        )
+        logger.info(
+            f"[{checkout_id}] Payment completed — voucher={dispatch_voucher.voucher_code} "
+            f"amount={transaction_record.price} user={user_context['account']}"
+        )
+        return {
+            'success': True,
+            'payment_status': 'completed',
+            'status': 'completed',
+            'terminal': True,
+            'transaction_id': checkout_id,
+            'voucher_code': dispatch_voucher.voucher_code,
+            'package': package_type.name,
+            'amount': float(transaction_record.price),
+            'expires_at': dispatch_voucher.expires_at.isoformat()
+        }
     
     @staticmethod
     def handle_pending_payment(user_context, transaction_record, mpesa_response):
@@ -769,29 +803,35 @@ class PaymentProcessor:
             'success': False,
             'payment_status': 'pending',
             'status': 'pending',
+            'terminal': False,
             'result_code': response_data.get('ResultCode'),
             'description': response_data.get('ResultDesc', 'Payment is being processed')
         }
     
     @staticmethod
-    def refund_user_balance(user_context, amount):
+    def refund_user_balance(user_context, transaction_record):
+        """Refund the M-Pesa portion actually charged (price - used_credit)."""
         try:
-            client = user_context['client']
-            amount_decimal = Decimal(str(amount))
-            
-            if amount_decimal > 0:
-                with transaction.atomic():
-                    client.balance += amount_decimal
-                    client.save()
-                
-                AuditLogger.log_refund(
-                    user=user_context['user'],
-                    amount=amount_decimal,
-                    reason='Voucher processing failed'
-                )
-                    
-                logger.info(f"Refunded {amount_decimal} to {client.account}")
-                
+            # price = total package cost
+            # used_credit = balance portion (never charged to M-Pesa)
+            # price - used_credit = what M-Pesa actually took from the user
+            refund_amount = Decimal(str(transaction_record.price)) - Decimal(str(transaction_record.used_credit or 0))
+
+            if refund_amount <= 0:
+                return
+
+            with transaction.atomic():
+                client = ClientH.objects.select_for_update().get(pk=user_context['client'].pk)
+                client.balance += refund_amount
+                client.save(update_fields=['balance'])
+
+            AuditLogger.log_refund(
+                user=user_context['user'],
+                amount=refund_amount,
+                reason='Voucher activation failed — M-Pesa portion credited to balance'
+            )
+            logger.info(f"Refunded {refund_amount} to {client.account} (price={transaction_record.price}, used_credit={transaction_record.used_credit})")
+
         except Exception as e:
             logger.error(f"Refund failed for {user_context['account']}: {e}")
             raise
@@ -876,14 +916,14 @@ def payment_status(request, checkout_request_id):
     try:
         user_context = JWTUserDataExtractor.extract_user_data(request)
         hotspot_ip = user_context['jwt_payload'].get('last_login_ip', '192.168.1.100')
-        
+
         result = PaymentProcessor.process_payment_status(
             checkout_request_id=checkout_request_id,
             user_context=user_context,
             hotspot_ip=hotspot_ip,
-            idempotency_key=None  # Disable caching for real-time updates
+            idempotency_key=None
         )
-        
+
         response_data = {
             'success': result.get('success', False),
             'timestamp': timezone.now().isoformat(),
@@ -896,42 +936,26 @@ def payment_status(request, checkout_request_id):
             'metadata': {
                 'location_id': user_context['current_location_id'],
                 'hotspot_ip': hotspot_ip,
-                'idempotency_key': idempotency_key
             }
         }
-        
+
         if result.get('success') and 'voucher_code' in result:
             response_data['voucher'] = {
                 'code': result['voucher_code'],
                 'expires_at': result['expires_at'],
                 'package': result['package']
             }
-        
+
         http_status = status.HTTP_200_OK if result.get('success') else status.HTTP_202_ACCEPTED
         return Response(response_data, status=http_status)
-        
-    except ValueError as e:
-        logger.error(f"JWT extraction error: {e}")
-        return Response({
-            'success': False,
-            'error': 'Authentication data invalid',
-            'code': 'AUTH_ERROR'
-        }, status=status.HTTP_400_BAD_REQUEST)
-        
-    except PermissionError as e:
+
+    except PermissionError:
         return Response({
             'success': False,
             'error': 'You do not have permission to access this transaction',
             'code': 'PERMISSION_DENIED'
         }, status=status.HTTP_403_FORBIDDEN)
-        
-    except ValueError as e:
-        return Response({
-            'success': False,
-            'error': str(e),
-            'code': 'PROCESSING_ERROR'
-        }, status=status.HTTP_400_BAD_REQUEST)
-        
+
     except CircuitBreakerOpenError:
         return Response({
             'success': False,
@@ -939,9 +963,17 @@ def payment_status(request, checkout_request_id):
             'code': 'SERVICE_UNAVAILABLE',
             'retry_after': 60
         }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-        
+
+    except ValueError as e:
+        logger.warning(f"[{checkout_request_id}] Payment status error: {e}")
+        return Response({
+            'success': False,
+            'error': str(e),
+            'code': 'PROCESSING_ERROR'
+        }, status=status.HTTP_202_ACCEPTED)
+
     except Exception as e:
-        logger.error(f"Payment system error: {e}", exc_info=True)
+        logger.error(f"[{checkout_request_id}] Unexpected payment error: {e}", exc_info=True)
         return Response({
             'success': False,
             'error': 'An unexpected error occurred',

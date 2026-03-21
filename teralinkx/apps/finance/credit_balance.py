@@ -892,38 +892,24 @@ class BalancePurchaseProcessor:
             return result
             
         except Exception as e:
-            # Mark as failed
             transaction_record.mark_failed(
                 reason=str(e),
                 error_code="BALANCE_PURCHASE_ERROR",
                 failure_category="system_error"
             )
-            
-            # Refund balance since it was already deducted
-            try:
-                with transaction.atomic():
-                    client = ClientH.objects.select_for_update().get(id=client.id)
-                    client.balance += final_price
-                    client.save()
-                    logger.info(f"Refunded {final_price} to {client.account} due to purchase failure")
-            except Exception as refund_error:
-                logger.error(f"Failed to refund balance to {client.account}: {refund_error}")
-            
-            # Audit log
+            # NOTE: balance is deducted INSIDE create_dispatch_voucher AFTER voucher activates.
+            # If we never reached that point, balance was never taken — nothing to refund.
             BalanceAuditLogger.log_purchase_failure(
                 user=user,
                 package_id=package.id,
                 reason=str(e),
                 error_category='system_error'
             )
-            
-            # Notify failure
             BalanceNotifier.notify_purchase_failure(
                 user_context=user_context,
                 package=package,
                 error=str(e)
             )
-            
             raise
     
     @staticmethod

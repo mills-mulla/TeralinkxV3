@@ -476,10 +476,10 @@ class PaymentTransaction(TimeStampedModel):
     initiator = models.CharField(max_length=20)
     balance = models.DecimalField(max_digits=1000, decimal_places=2, null=True, blank=True)
     date = models.CharField(max_length=255, null=True, blank=True)
-    result_code = models.IntegerField()
-    result_desc = models.CharField(max_length=255)
-    merchant_request_id = models.CharField(max_length=255)
-    checkout_request_id = models.CharField(max_length=255)
+    result_code = models.IntegerField(default=0)
+    result_desc = models.CharField(max_length=255, blank=True, default='')
+    merchant_request_id = models.CharField(max_length=255, blank=True, default='')
+    checkout_request_id = models.CharField(max_length=255, blank=True, default='')
     transaction_time = models.DateTimeField(auto_now_add=True)
     
     # Gateway References
@@ -824,9 +824,16 @@ class TransactionQueue(TimeStampedModel):
         self.save()
 
     def mark_processing(self):
-        """Mark as processing"""
-        self.status = 'processing'
-        self.save()
+        """
+        Atomic compare-and-swap: only transitions pending → processing.
+        Returns True if this caller won the claim, False if already claimed.
+        """
+        claimed = TransactionQueue.objects.filter(
+            pk=self.pk, status='pending'
+        ).update(status='processing')
+        if claimed:
+            self.status = 'processing'
+        return bool(claimed)
 
     def mark_failed(self, reason, error_code='', failure_category='unknown', increment_retry=True):
         """Mark as failed with analytics - ONLY RECORDS, NO RETRY LOGIC"""
@@ -870,10 +877,22 @@ class TransactionQueue(TimeStampedModel):
 
     @classmethod
     def get_pending_by_checkout_id(cls, checkout_id):
-        """Get pending record by checkout_request_id - V2 compatible"""
+        """Get actionable record by checkout_request_id - includes failed voucher activations for retry"""
+        # First try pending/processing
+        record = cls.objects.filter(
+            checkout_request_id=checkout_id,
+            status__in=['pending', 'processing', 'Pending...']  # Handle both V2 and V3
+        ).first()
+        
+        if record:
+            return record
+            
+        # If not found, check for failed voucher activations that can be retried
         return cls.objects.filter(
             checkout_request_id=checkout_id,
-            status__in=['pending', 'Pending...']  # Handle both V2 and V3
+            status='failed',
+            failure_category='system_error',
+            error_code='VOUCHER_PROCESSING_ERROR'
         ).first()
 
     @classmethod

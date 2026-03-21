@@ -79,17 +79,18 @@ class MpesaGatewayHelper:
                 'is_test_mode': gateway.test_mode
             }
         except PaymentGateway.DoesNotExist:
-            # Fallback to environment variables if no gateway configured
             logger.warning("No M-Pesa gateway found in database, using environment variables")
             return {
                 'gateway': None,
                 'consumer_key': os.getenv('CONSUMER_KEY', ''),
                 'consumer_secret': os.getenv('CONSUMER_SECRET', ''),
-                'shortcode': '4989904',
+                'shortcode': os.getenv('SHORTCODE', ''),
                 'lipa_na_mpesa_passkey': os.getenv('LIPA_NA_MPESA_PASSKEY', ''),
-                'api_base_url': 'https://api.safaricom.co.ke',
-                'callback_url': 'https://teralinkxwaves.uk/api/payment/callback/',
-                'is_test_mode': False
+                'api_base_url': os.getenv('MPESA_API_BASE_URL', 'https://api.safaricom.co.ke'),
+                'callback_url': 'https://teralinkxwaves.uk/api/payments/callback/',
+                'is_test_mode': os.getenv('MPESA_TEST_MODE', 'False').lower() == 'true',
+                'pull_consumer_key': os.getenv('PULL_CONSUMER_KEY', os.getenv('CONSUMER_KEY', '')),
+                'pull_consumer_secret': os.getenv('PULL_CONSUMER_SECRET', os.getenv('CONSUMER_SECRET', '')),
             }
     
     @staticmethod
@@ -365,31 +366,29 @@ class TransactionQueueHelper:
     
     @staticmethod
     def get_pending_by_checkout_id(checkout_id):
-        """Get pending queue record by checkout_request_id"""
-        try:
-            return TransactionQueue.objects.get(
-                checkout_request_id=checkout_id,
-                status__in=['pending', 'processing']
-            )
-        except TransactionQueue.DoesNotExist:
-            return None
+        """Get actionable queue record — delegates to model method for retry logic."""
+        return TransactionQueue.get_pending_by_checkout_id(checkout_id)
     
     @staticmethod
     def process_successful_queue(queue_item, mpesa_data):
-        """Process successful payment queue item"""
-        queue_item.mark_processing()
-        
+        """Process successful payment queue item — atomic claim via mark_processing."""
+        if queue_item.status in ('completed', 'processed'):
+            logger.info(f"Queue item {queue_item.id} already completed, skipping")
+            return True
+
+        if not queue_item.mark_processing():
+            logger.warning(f"Queue item {queue_item.id} already claimed by another process, skipping")
+            return False
+
         try:
-            # Update queue with payment result
             queue_item.gateway_request_data = {
                 'mpesa_response': mpesa_data,
                 'processed_at': timezone.now().isoformat()
             }
             queue_item.mark_completed()
-            
             logger.info(f"Queue item {queue_item.id} marked as completed")
             return True
-            
+
         except Exception as e:
             logger.error(f"Error processing queue item {queue_item.id}: {e}")
             queue_item.mark_failed(
@@ -1053,37 +1052,192 @@ class PaymentCallbackAPIView(APIView):
     permission_classes = [AllowAny]
     
     def post(self, request):
-        """Process M-Pesa callback"""
+        """Process M-Pesa callback — handles both STK push and C2B confirmation."""
         callback_data = request.data
         logger.info(f"Received M-Pesa callback: {callback_data}")
-        
+
+        # ── STK Push callback ────────────────────────────────────────────────
         stk_callback = callback_data.get('Body', {}).get('stkCallback', {})
-        if not stk_callback:
-            logger.error("No stkCallback in request")
-            return Response(
-                {'error': 'Invalid callback format'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
+        if stk_callback:
+            return self._handle_stk_callback(callback_data, stk_callback)
+
+        # ── C2B confirmation callback ────────────────────────────────────────
+        # C2B payload has TransID at the top level (no Body/stkCallback wrapper)
+        if 'TransID' in callback_data or 'TransactionType' in callback_data:
+            return self._handle_c2b_callback(callback_data)
+
+        logger.error("Unrecognised callback format")
+        return Response({'error': 'Invalid callback format'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # ── STK Push ─────────────────────────────────────────────────────────────
+
+    def _handle_stk_callback(self, callback_data, stk_callback):
         merchant_id = stk_callback.get('MerchantRequestID')
         checkout_id = stk_callback.get('CheckoutRequestID')
         result_code = stk_callback.get('ResultCode')
         result_desc = stk_callback.get('ResultDesc')
-        
-        logger.info(f"Callback: MID={merchant_id}, CID={checkout_id}, Code={result_code}")
-        
-        # Handle based on result code
+
+        logger.info(f"STK Callback: MID={merchant_id}, CID={checkout_id}, Code={result_code}")
+
         if result_code == 0:
             return self.handle_successful_payment(callback_data, checkout_id)
         elif result_code in [1, 1032, 1037, 2001]:
             return self.handle_failed_payment(checkout_id, result_code, result_desc)
         else:
-            logger.warning(f"Unknown result code: {result_code} - {result_desc}")
+            logger.warning(f"Unknown STK result code: {result_code} - {result_desc}")
+            return Response({'message': 'Callback received'}, status=status.HTTP_200_OK)
+
+    # ── C2B Confirmation ──────────────────────────────────────────────────────
+
+    def _handle_c2b_callback(self, callback_data):
+        """
+        C2B confirmation payload fields used for matching:
+          BillRefNumber  → 'TERALINKX_WAVES_{account}' → queue.recipient
+          TransAmount    → queue.price
+          TransID        → mpesa receipt (transaction_id)
+          TransTime      → used for time-window matching
+          MSISDN         → masked, cannot use for phone match
+        """
+        trans_id   = callback_data.get('TransID', '')
+        amount_raw = callback_data.get('TransAmount', '0')
+        bill_ref   = callback_data.get('BillRefNumber', '')
+        trans_time = callback_data.get('TransTime', '')
+
+        logger.info(f"C2B Callback: TransID={trans_id}, Amount={amount_raw}, BillRef={bill_ref}")
+
+        # Skip if already processed
+        if PaymentTransaction.objects.filter(transaction_id=trans_id).exists():
+            logger.info(f"C2B: duplicate callback for {trans_id}, ignoring")
+            return Response({'message': 'Already processed'}, status=status.HTTP_200_OK)
+
+        try:
+            amount = Decimal(str(amount_raw))
+        except Exception:
+            logger.error(f"C2B: invalid amount '{amount_raw}'")
+            return Response({'error': 'Invalid amount'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Extract account from BillRefNumber
+        account = None
+        if 'TERALINKX_WAVES_' in bill_ref:
+            account = bill_ref.replace('TERALINKX_WAVES_', '').strip()
+
+        # Parse TransTime (YYYYMMDDHHMMSS) for time-window matching
+        trx_dt = None
+        try:
+            trx_dt = datetime.strptime(trans_time, '%Y%m%d%H%M%S')
+            trx_dt = timezone.make_aware(trx_dt)
+        except (ValueError, TypeError):
+            pass
+
+        queue_item = self._find_c2b_queue_match(account, amount, trx_dt)
+
+        # Build a normalised callback dict that create_payment_transaction_from_callback understands
+        normalised = self._normalise_c2b_payload(callback_data, queue_item)
+
+        try:
+            payment_txn = PaymentTransactionHelper.create_payment_transaction_from_callback(
+                normalised, queue_item
+            )
+            if not payment_txn:
+                logger.error(f"C2B: failed to create PaymentTransaction for {trans_id}")
+                return Response({'error': 'Failed to process payment'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            if queue_item:
+                claimed = TransactionQueueHelper.process_successful_queue(
+                    queue_item,
+                    {'source': 'c2b_callback', 'TransID': trans_id}
+                )
+                if claimed:
+                    dispatch_voucher = self.process_voucher_activation(queue_item, payment_txn)
+                    if dispatch_voucher:
+                        user = queue_item.user
+                        NotificationHelper.send_voucher_details(user, dispatch_voucher)
+                else:
+                    logger.info(f"C2B: queue {queue_item.id} already claimed, skipping voucher")
+            else:
+                logger.warning(
+                    f"C2B: orphan transaction {trans_id} — "
+                    f"no queue match for account={account} amount={amount}"
+                )
+
             return Response(
-                {'message': 'Callback received'},
+                {'message': 'C2B payment processed', 'transaction_id': trans_id},
                 status=status.HTTP_200_OK
             )
-    
+        except Exception as e:
+            logger.error(f"C2B: error processing {trans_id}: {e}", exc_info=True)
+            return Response({'error': 'Internal server error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def _find_c2b_queue_match(self, account, amount, trx_dt):
+        """
+        Match a C2B callback to a TransactionQueue item.
+        Primary:  recipient == account AND price == amount
+        Fallback: price == amount within a 30-min time window around TransTime
+        """
+        base_qs = TransactionQueue.objects.filter(
+            price=amount,
+            status__in=['pending', 'processing'],
+            method='mpesa'
+        )
+
+        if account:
+            match = base_qs.filter(recipient=account).order_by('created_at').first()
+            if match:
+                return match
+
+        # Fallback: amount + time window
+        if trx_dt:
+            return base_qs.filter(
+                created_at__gte=trx_dt - timezone.timedelta(minutes=30),
+                created_at__lte=trx_dt + timezone.timedelta(minutes=5)
+            ).order_by('created_at').first()
+
+        return base_qs.order_by('created_at').first()
+
+    def _normalise_c2b_payload(self, c2b_data, queue_item):
+        """
+        Convert C2B confirmation payload into the same shape that
+        create_payment_transaction_from_callback expects (STK push shape).
+        Phone is taken from queue_item.initiator since MSISDN is masked in C2B v2.
+        """
+        phone = ''
+        if queue_item:
+            phone = queue_item.initiator
+        # Fallback: try to use MSISDN even though it's masked (stored as-is)
+        if not phone:
+            phone = c2b_data.get('MSISDN', '')
+
+        amount = c2b_data.get('TransAmount', '0')
+        receipt = c2b_data.get('TransID', '')
+        trans_time = c2b_data.get('TransTime', '')
+        checkout_id = queue_item.checkout_request_id if queue_item else ''
+        merchant_id = ''
+        if queue_item and queue_item.gateway_result_data:
+            merchant_id = queue_item.gateway_result_data.get('merchant_request_id', '')
+
+        return {
+            'Body': {
+                'stkCallback': {
+                    'MerchantRequestID': merchant_id,
+                    'CheckoutRequestID': checkout_id,
+                    'ResultCode': 0,
+                    'ResultDesc': 'C2B payment confirmed',
+                    'CallbackMetadata': {
+                        'Item': [
+                            {'Name': 'Amount',             'Value': amount},
+                            {'Name': 'MpesaReceiptNumber', 'Value': receipt},
+                            {'Name': 'Balance',            'Value': c2b_data.get('OrgAccountBalance', 0)},
+                            {'Name': 'TransactionDate',    'Value': trans_time},
+                            {'Name': 'PhoneNumber',        'Value': phone},
+                        ]
+                    }
+                }
+            },
+            '_c2b_raw': c2b_data  # preserve original for raw_callback_data
+        }
+
+    # ── STK success / failure (unchanged logic, just renamed entry point) ────
+
     def handle_successful_payment(self, callback_data, checkout_id):
         """Handle successful payment callback"""
         try:
@@ -1111,23 +1265,25 @@ class PaymentCallbackAPIView(APIView):
             else:
                 logger.info(f"CALLBACK DEBUG - Pure M-Pesa payment - no credit deduction needed")
             
-            # Process queue item if exists
+            # Process queue item if exists — atomic claim guard
             if queue_item:
-                success = TransactionQueueHelper.process_successful_queue(queue_item, callback_data)
-                if not success:
-                    logger.error(f"Failed to process queue item for checkout: {checkout_id}")
-            
-            # Try to activate voucher
-            dispatch_voucher = self.process_voucher_activation(queue_item, transaction)
-            
-            if dispatch_voucher:
-                # Send detailed voucher notification
-                user = queue_item.user if queue_item else transaction.user
-                NotificationHelper.send_voucher_details(user, dispatch_voucher)
-            
-            # Perform auto-login if needed
-            if queue_item and queue_item.recipient:
-                self.perform_auto_login(queue_item.recipient)
+                claimed = TransactionQueueHelper.process_successful_queue(queue_item, callback_data)
+                if not claimed:
+                    logger.warning(f"STK callback: queue {queue_item.id} already claimed, skipping voucher")
+                    return Response(
+                        {'message': 'Payment already processed'},
+                        status=status.HTTP_200_OK
+                    )
+
+                # Try to activate voucher (only if we claimed the queue item)
+                dispatch_voucher = self.process_voucher_activation(queue_item, transaction)
+
+                if dispatch_voucher:
+                    NotificationHelper.send_voucher_details(queue_item.user, dispatch_voucher)
+
+                # Perform auto-login if needed
+                if queue_item.recipient:
+                    self.perform_auto_login(queue_item.recipient)
             
             logger.info(f"Successfully processed payment: {transaction.transaction_id}")
             
@@ -1311,6 +1467,493 @@ class PaymentCallbackAPIView(APIView):
             
         except Exception as e:
             logger.error(f"Auto-login failed for {account}: {e}")
+
+
+class MpesaPullReconciliation:
+    """Handles M-Pesa Pull Transactions API for missed callback reconciliation"""
+
+    @staticmethod
+    def get_api_base_url():
+        config = MpesaGatewayHelper.get_gateway_config()
+        if config['is_test_mode']:
+            return 'https://sandbox.safaricom.co.ke'
+        return config.get('api_base_url', 'https://api.safaricom.co.ke')
+
+    @staticmethod
+    def register_pull(nominated_number, callback_url=None):
+        """
+        One-time registration of shortcode for Pull API.
+        Must be called before querying transactions.
+        """
+        config = MpesaGatewayHelper.get_gateway_config()
+        try:
+            token = MpesaPullReconciliation._get_pull_access_token()
+        except Exception as e:
+            logger.error(f"Pull API register: failed to get token: {e}")
+            raise
+        base_url = MpesaPullReconciliation.get_api_base_url()
+
+        payload = {
+            'ShortCode': config['shortcode'],
+            'RequestType': 'Pull',
+            'NominatedNumber': nominated_number,
+            'CallBackURL': callback_url or config['callback_url']
+        }
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f'Bearer {token}'
+        }
+        try:
+            response = requests.post(
+                f'{base_url}/pulltransactions/v1/register',
+                headers=headers, json=payload, timeout=15
+            )
+            result = response.json()
+            logger.info(f"Pull API register response: {result}")
+            return result
+        except Exception as e:
+            logger.error(f"Pull API register error: {e}")
+            raise
+
+    @staticmethod
+    def _get_pull_access_token():
+        """
+        Get access token for Pull API.
+        Uses pull_consumer_key / pull_consumer_secret from gateway config if set,
+        otherwise falls back to the standard M-Pesa consumer credentials.
+        The Pull API product must be enabled on your Daraja app.
+        """
+        config = MpesaGatewayHelper.get_gateway_config()
+        base_url = MpesaPullReconciliation.get_api_base_url()
+
+        # Use dedicated Pull API credentials if configured, else fall back
+        consumer_key = config.get('pull_consumer_key') or config['consumer_key']
+        consumer_secret = config.get('pull_consumer_secret') or config['consumer_secret']
+
+        auth_string = f"{consumer_key}:{consumer_secret}"
+        encoded_auth = base64.b64encode(auth_string.encode()).decode()
+
+        response = requests.get(
+            f'{base_url}/oauth/v1/generate?grant_type=client_credentials',
+            headers={'Authorization': f'Basic {encoded_auth}'},
+            timeout=10
+        )
+        response.raise_for_status()
+        token = response.json().get('access_token')
+        if not token:
+            raise RuntimeError(f"Pull API token response missing access_token: {response.json()}")
+        logger.info("Pull API access token retrieved successfully")
+        return token
+
+    @staticmethod
+    def query_transactions(start_date, end_date, offset=0):
+        """
+        Query M-Pesa Pull API for all C2B transactions in the given period.
+        Handles pagination automatically — keeps fetching until no more results.
+        Returns a flat list of all transaction dicts.
+        """
+        config = MpesaGatewayHelper.get_gateway_config()
+        base_url = MpesaPullReconciliation.get_api_base_url()
+
+        if isinstance(start_date, datetime):
+            start_date = start_date.strftime('%Y-%m-%d %H:%M:%S')
+        if isinstance(end_date, datetime):
+            end_date = end_date.strftime('%Y-%m-%d %H:%M:%S')
+
+        all_transactions = []
+        current_offset = offset
+
+        while True:
+            try:
+                token = MpesaPullReconciliation._get_pull_access_token()
+            except Exception as e:
+                logger.error(f"Pull API: failed to get access token: {e}")
+                break
+            payload = {
+                'ShortCode': config['shortcode'],
+                'StartDate': start_date,
+                'EndDate': end_date,
+                'OffSetValue': str(current_offset)
+            }
+            headers = {
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {token}'
+            }
+            try:
+                response = requests.get(
+                    f'{base_url}/pulltransactions/v1/query',
+                    headers=headers, json=payload, timeout=15
+                )
+                result = response.json()
+                logger.info(f"Pull API offset={current_offset} ResponseCode={result.get('ResponseCode')}")
+
+                if result.get('ResponseCode') != '1000':
+                    logger.warning(f"Pull API non-1000 response: {result}")
+                    break
+
+                raw = result.get('Response', {}).get('Transaction', [[]])
+                # Safaricom returns [[]] when no more transactions
+                if not raw or raw == [[]] or not isinstance(raw[0], dict):
+                    break
+
+                all_transactions.extend(raw)
+
+                # If fewer than 100 returned, we've reached the last page
+                if len(raw) < 100:
+                    break
+
+                current_offset += len(raw)
+
+            except Exception as e:
+                logger.error(f"Pull API query error at offset {current_offset}: {e}")
+                break
+
+        logger.info(f"Pull API total transactions fetched: {len(all_transactions)}")
+        return all_transactions
+
+    @staticmethod
+    def pull_and_populate(start_date, end_date):
+        """
+        STEP 1 — Pull all transactions from Safaricom for the given window.
+        STEP 2 — For each pulled transaction:
+            a. Skip if PaymentTransaction already exists (idempotent).
+            b. Try to find a matching TransactionQueue by checkout_request_id
+               OR by phone + amount + time proximity.
+            c. Create PaymentTransaction from the pull data.
+            d. If queue match found: mark queue completed + activate voucher.
+            e. If no queue match: still create PaymentTransaction as a clean
+               financial record (orphan pull — money received, no queue entry).
+        Returns a summary dict.
+        """
+        from django.db import transaction as db_transaction
+
+        pulled_txns = MpesaPullReconciliation.query_transactions(start_date, end_date)
+
+        if not pulled_txns:
+            logger.info("pull_and_populate: No transactions returned from Pull API")
+            return {'pulled': 0, 'created': 0, 'skipped': 0, 'errors': 0, 'orphans': 0}
+
+        created = skipped = errors = orphans = 0
+
+        for pull_txn in pulled_txns:
+            mpesa_receipt = pull_txn.get('transactionId', '')
+
+            # --- STEP 2a: Skip duplicates ---
+            if PaymentTransaction.objects.filter(
+                transaction_id=mpesa_receipt
+            ).exists():
+                logger.debug(f"pull_and_populate: Skipping existing txn {mpesa_receipt}")
+                skipped += 1
+                continue
+
+            try:
+                with db_transaction.atomic():
+                    # --- STEP 2b: Find matching queue item ---
+                    queue_item = MpesaPullReconciliation._find_queue_match(pull_txn)
+
+                    # --- STEP 2c: Create PaymentTransaction ---
+                    payment_txn = MpesaPullReconciliation._create_payment_transaction(
+                        pull_txn, queue_item
+                    )
+
+                    if not payment_txn:
+                        errors += 1
+                        continue
+
+                    if queue_item:
+                        # --- STEP 2d: Queue match — complete the queue + activate voucher ---
+                        claimed = TransactionQueueHelper.process_successful_queue(
+                            queue_item,
+                            {'source': 'pull_reconciliation', 'transactionId': mpesa_receipt}
+                        )
+                        if claimed:
+                            MpesaPullReconciliation._activate_voucher_for_queue(
+                                queue_item, payment_txn
+                            )
+                        else:
+                            logger.info(
+                                f"pull_and_populate: Queue {queue_item.id} already claimed, "
+                                f"skipping voucher activation for {mpesa_receipt}"
+                            )
+                        logger.info(
+                            f"pull_and_populate: Recovered queue {queue_item.id} "
+                            f"-> {mpesa_receipt}"
+                        )
+                    else:
+                        # --- STEP 2e: Orphan pull — no queue entry found ---
+                        orphans += 1
+                        logger.warning(
+                            f"pull_and_populate: Orphan transaction {mpesa_receipt} "
+                            f"phone={pull_txn.get('msisdn')} amount={pull_txn.get('amount')} "
+                            f"— PaymentTransaction created, no queue match"
+                        )
+
+                    created += 1
+
+            except Exception as e:
+                logger.error(f"pull_and_populate: Error processing {mpesa_receipt}: {e}", exc_info=True)
+                errors += 1
+
+        summary = {
+            'pulled': len(pulled_txns),
+            'created': created,
+            'skipped': skipped,
+            'errors': errors,
+            'orphans': orphans,
+            'period_start': start_date if isinstance(start_date, str) else start_date.isoformat(),
+            'period_end': end_date if isinstance(end_date, str) else end_date.isoformat(),
+        }
+        logger.info(f"pull_and_populate summary: {summary}")
+        return summary
+
+    @staticmethod
+    def _find_queue_match(pull_txn):
+        """
+        Match a Pull API transaction to a TransactionQueue item.
+
+        Primary match (most reliable):
+          initiator (phone) == msisdn  AND
+          recipient (account) == extracted from billreference  AND
+          price == amount
+
+        Fallback (if billreference doesn't contain account):
+          initiator (phone) == msisdn  AND
+          price == amount
+          + narrow by time window to avoid wrong match when same
+            phone pays same amount twice.
+
+        Returns the oldest pending/processing TransactionQueue or None.
+        """
+        phone = MpesaGatewayHelper.normalize_phone(str(pull_txn.get('msisdn', '')))
+        amount = Decimal(str(pull_txn.get('amount', 0)))
+        bill_ref = str(pull_txn.get('billreference', ''))
+
+        # Extract account from billreference: 'TERALINKX_WAVES_{account}'
+        account = None
+        if 'TERALINKX_WAVES_' in bill_ref:
+            account = bill_ref.replace('TERALINKX_WAVES_', '').strip()
+
+        base_qs = TransactionQueue.objects.filter(
+            initiator=phone,
+            price=amount,
+            status__in=['pending', 'processing'],
+            method='mpesa'
+        )
+
+        # Primary: phone + account + amount — strongest possible match
+        if account:
+            match = base_qs.filter(recipient=account).order_by('created_at').first()
+            if match:
+                return match
+
+        # Fallback: phone + amount + 30-minute time window around trxDate
+        trx_date_raw = pull_txn.get('trxDate', '')
+        try:
+            trx_dt = datetime.fromisoformat(str(trx_date_raw).replace('Z', '+00:00'))
+            return base_qs.filter(
+                created_at__gte=trx_dt - timezone.timedelta(minutes=30),
+                created_at__lte=trx_dt + timezone.timedelta(minutes=5)
+            ).order_by('created_at').first()
+        except (ValueError, TypeError):
+            return base_qs.order_by('created_at').first()
+
+    @staticmethod
+    def _create_payment_transaction(pull_txn, queue_item=None):
+        """
+        Create a PaymentTransaction directly from a Pull API transaction dict.
+        Uses queue_item for user/package context when available.
+        Falls back to phone lookup when no queue item.
+        """
+        mpesa_receipt = pull_txn.get('transactionId', '')
+        phone = str(pull_txn.get('msisdn', ''))
+        amount = Decimal(str(pull_txn.get('amount', 0)))
+        trx_date = str(pull_txn.get('trxDate', ''))
+
+        # Resolve user: queue item first, then phone lookup
+        user = None
+        if queue_item and queue_item.user:
+            user = queue_item.user
+        else:
+            clean_phone = PaymentTransactionHelper.clean_phone_number(phone)
+            try:
+                user = ClientH.objects.get(phone_number=clean_phone)
+            except ClientH.DoesNotExist:
+                logger.warning(f"_create_payment_transaction: No user for phone {phone}")
+
+        if not user:
+            logger.error(f"_create_payment_transaction: Cannot create txn {mpesa_receipt} — no user resolved")
+            return None
+
+        try:
+            currency = Currency.objects.get(code='KES')
+        except Currency.DoesNotExist:
+            currency = Currency.objects.create(
+                code='KES', name='Kenyan Shilling', symbol='KSh',
+                is_base_currency=True, decimal_places=2
+            )
+
+        gateway = PaymentGateway.get_gateway_by_type('mpesa', 'KES')
+
+        checkout_id = queue_item.checkout_request_id if queue_item else ''
+        merchant_id = ''
+        if queue_item and queue_item.gateway_result_data:
+            merchant_id = queue_item.gateway_result_data.get('merchant_request_id', '')
+
+        try:
+            payment_txn = PaymentTransaction.objects.create(
+                transaction_id=mpesa_receipt,
+                user=user,
+                payment_method='mpesa',
+                payment_gateway=gateway,
+                amount=amount,
+                currency=currency,
+                amount_base=amount,
+                exchange_rate=Decimal('1.0'),
+                initiator=phone,
+                balance=Decimal('0'),
+                date=trx_date,
+                result_code=0,
+                result_desc='Pull API reconciliation',
+                merchant_request_id=merchant_id,
+                checkout_request_id=checkout_id,
+                gateway_reference=mpesa_receipt,
+                raw_callback_data={
+                    'source': 'pull_reconciliation',
+                    'pull_data': pull_txn,
+                    'queue_id': queue_item.id if queue_item else None
+                },
+                status='completed',
+                description=(
+                    f"Reconciled via Pull API — "
+                    f"{pull_txn.get('transactiontype', 'c2b')} "
+                    f"ref:{pull_txn.get('billreference', '')}"
+                )
+            )
+            logger.info(f"_create_payment_transaction: Created {mpesa_receipt} for {user}")
+            return payment_txn
+        except IntegrityError:
+            logger.warning(f"_create_payment_transaction: Duplicate {mpesa_receipt} — skipping")
+            return PaymentTransaction.objects.filter(transaction_id=mpesa_receipt).first()
+
+    @staticmethod
+    def _credit_balance_for_queue(queue_item, payment_txn):
+        """
+        Credit-only flow for background recovery (Paths 3 & 4).
+        Credits the M-Pesa portion only (price - used_credit) since
+        used_credit was never deducted at initiation.
+        Creates a BalanceTransaction topup as audit trail.
+        """
+        from django.db import transaction as db_txn
+        try:
+            mpesa_portion = Decimal(str(queue_item.price)) - Decimal(str(queue_item.used_credit or 0))
+            if mpesa_portion <= 0:
+                logger.info(f"_credit_balance_for_queue: nothing to credit for queue {queue_item.id}")
+                return
+
+            with db_txn.atomic():
+                client = ClientH.objects.select_for_update().get(id=queue_item.user_id)
+                balance_before = client.balance
+                client.balance += mpesa_portion
+                client.save(update_fields=['balance'])
+
+                BalanceTransaction.objects.create(
+                    user=client,
+                    transaction_type='topup',
+                    credit=mpesa_portion,
+                    debit=Decimal('0'),
+                    balance_before=balance_before,
+                    balance_after=client.balance,
+                    payment_transaction=payment_txn,
+                    description=(
+                        f"Background recovery credit for {queue_item.package} "
+                        f"(M-Pesa portion of KES {mpesa_portion})"
+                    ),
+                    reference=payment_txn.transaction_id
+                )
+            logger.info(
+                f"_credit_balance_for_queue: credited {mpesa_portion} to "
+                f"{queue_item.user} for queue {queue_item.id}"
+            )
+        except Exception as e:
+            logger.error(f"_credit_balance_for_queue: failed for queue {queue_item.id}: {e}")
+
+    @staticmethod
+    def _activate_voucher_for_queue(queue_item, payment_txn):
+        """Activate voucher after successful pull reconciliation — Path 4 credit-only."""
+        MpesaPullReconciliation._credit_balance_for_queue(queue_item, payment_txn)
+        NotificationHelper.send_payment_notification(
+            queue_item.user,
+            f"✅ Payment recovered! KES {queue_item.price} credited to your balance. "
+            f"Use it next time you connect.",
+            'success'
+        )
+
+    # Keep reconcile_missed_callbacks as a thin wrapper that uses pull_and_populate
+    @staticmethod
+    def reconcile_missed_callbacks(hours_back=2):
+        """
+        Convenience wrapper used by the Celery periodic task.
+        Pulls the last `hours_back` hours and populates PaymentTransaction.
+        """
+        now = timezone.now()
+        start_date = now - timezone.timedelta(hours=hours_back)
+        end_date = now - timezone.timedelta(minutes=5)  # give callbacks 5 min to arrive
+        return MpesaPullReconciliation.pull_and_populate(start_date, end_date)
+
+
+class ReconciliationAPIView(APIView):
+    """Manual trigger for Pull API reconciliation (admin/internal use)"""
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, action=None):
+        """
+        Pull transactions and populate PaymentTransaction.
+        Query params:
+          - start_date: 'YYYY-MM-DD HH:MM:SS'  (default: 2 hours ago)
+          - end_date:   'YYYY-MM-DD HH:MM:SS'  (default: now)
+        """
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
+
+        if not start_date:
+            start_date = timezone.now() - timezone.timedelta(hours=2)
+        if not end_date:
+            end_date = timezone.now()
+
+        try:
+            result = MpesaPullReconciliation.pull_and_populate(start_date, end_date)
+            return Response(result, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error(f"ReconciliationAPIView GET error: {e}")
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def post(self, request, action=None):
+        """Register shortcode with Pull API (one-time setup)"""
+        if action == 'register':
+            nominated_number = request.data.get('nominated_number')
+            callback_url = request.data.get('callback_url')
+            if not nominated_number:
+                return Response({'error': 'nominated_number required'}, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                result = MpesaPullReconciliation.register_pull(nominated_number, callback_url)
+                return Response(result, status=status.HTTP_200_OK)
+            except Exception as e:
+                return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Default POST: pull and populate with body-supplied date range
+        start_date = request.data.get('start_date')
+        end_date = request.data.get('end_date')
+        if not start_date:
+            start_date = timezone.now() - timezone.timedelta(hours=2)
+        if not end_date:
+            end_date = timezone.now()
+        try:
+            result = MpesaPullReconciliation.pull_and_populate(start_date, end_date)
+            return Response(result, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error(f"ReconciliationAPIView POST error: {e}")
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class PaymentStatusAPIView(APIView):

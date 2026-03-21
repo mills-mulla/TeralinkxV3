@@ -201,20 +201,28 @@
         </div>
       </div>
 
-      <!-- Action Buttons (show when timed out or failed) -->
-      <div v-if="showActionButtons" class="p-4 border-t border-gray-200 dark:border-gray-700 flex space-x-3">
-        <button
-          @click="retryPayment"
-          class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors"
-        >
-          Retry Payment
-        </button>
-        <button
-          @click="cancelPayment"
-          class="flex-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 py-2 px-4 rounded-lg text-sm font-medium transition-colors"
-        >
-          Close
-        </button>
+      <!-- Action Buttons (show when timed out, failed, or refunded) -->
+      <div v-if="showActionButtons" class="p-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
+        <!-- Refunded state: different CTA -->
+        <div v-if="isRefunded" class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 mb-3">
+          <p class="text-xs text-amber-800 dark:text-amber-200 leading-relaxed">
+            💰 Your account balance has been credited. You can use it to purchase any package.
+          </p>
+        </div>
+        <div class="flex space-x-3">
+          <button
+            @click="isRefunded ? buyWithBalance() : retryPayment()"
+            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors"
+          >
+            {{ isRefunded ? 'Buy with Balance' : 'Retry Payment' }}
+          </button>
+          <button
+            @click="cancelPayment"
+            class="flex-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 py-2 px-4 rounded-lg text-sm font-medium transition-colors"
+          >
+            Close
+          </button>
+        </div>
       </div>
       
       <!-- Cancel Button (show during processing) -->
@@ -242,7 +250,7 @@ const props = defineProps({
   phoneNumber: String
 })
 
-const emit = defineEmits(['success', 'error', 'cancel', 'retry'])
+const emit = defineEmits(['success', 'error', 'cancel', 'retry', 'buyWithBalance'])
 
 const authStore = useAuthStore()
 const dashboardStore = useDashboardStore()
@@ -263,6 +271,7 @@ const adViewTime = ref(0)
 const totalRevenue = ref(0)
 const showActionButtons = ref(false)
 const successShown = ref(false)
+const isRefunded = ref(false)
 
 // Status
 const statusTitle = ref('Processing Payment')
@@ -447,7 +456,9 @@ const trackAdInteraction = async (ad, type) => {
 
 const startPolling = () => {
   if (!props.checkoutId) {
-    emit('error', { error: 'No checkout ID provided' })
+    statusTitle.value = 'Payment Error'
+    statusMessage.value = 'No checkout ID provided'
+    showActionButtons.value = true
     return
   }
 
@@ -455,7 +466,6 @@ const startPolling = () => {
   const timeout = 60000 // 1 minute
 
   polling.value = setInterval(async () => {
-    // Check for timeout
     if (Date.now() - startTime >= timeout) {
       stopAllTimers()
       statusTitle.value = 'Payment Timed Out'
@@ -466,63 +476,66 @@ const startPolling = () => {
     }
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/payment-status/${props.checkoutId}/`, {
-        headers: authStore.authHeaders
-      })
+      const response = await fetch(
+        `${import.meta.env.VITE_API_BASE_URL}/api/payment-status/${props.checkoutId}/`,
+        { headers: authStore.authHeaders }
+      )
 
       const data = await response.json()
-      console.log('Payment status response:', {
-        status: response.status,
-        ok: response.ok,
-        data: data,
-        payment_status: data.payment_status,
-        status_field: data.status
-      })
+      const paymentStatus = data.payment?.payment_status || data.payment?.status
+      const isTerminal = data.payment?.terminal === true
 
-      if (response.ok) {
-        // Check multiple possible success indicators
-        const isCompleted = 
-          data.payment?.payment_status === 'completed' || 
-          data.payment?.status === 'completed' ||
-          data.success === true && data.payment?.message?.includes('completed')
-        
-        if (isCompleted) {
-          console.log('Payment detected as completed!', data)
-          
-          // Immediately stop polling to prevent multiple calls
-          clearInterval(polling.value)
-          
-          if (!successShown.value) {
-            successShown.value = true
-            stopAllTimers()
-            statusTitle.value = 'Payment Successful!'
-            statusMessage.value = 'Voucher activated successfully'
-            
-            toast.success('🎉 Payment completed! Your voucher is now active.')
-            
-            setTimeout(() => {
-              emit('success', data)
-              // Also refresh dashboard and navigate to connected page
-              dashboardStore.fetchDashboardData()
-            }, 2000)
-          }
-          return // Exit the polling function
-          
-        } else if (data.payment?.payment_status === 'failed' || data.payment?.status === 'failed') {
-          stopAllTimers()
-          statusTitle.value = 'Payment Failed'
-          statusMessage.value = 'Please try again'
-          showActionButtons.value = true
-          
-          toast.error('Payment failed. Please try again.')
-          emit('error', data)
-          return // Exit the polling function
-        }
+      // ── Completed ────────────────────────────────────────────────────────
+      if (paymentStatus === 'completed' && !successShown.value) {
+        successShown.value = true
+        stopAllTimers()
+        statusTitle.value = 'Payment Successful!'
+        statusMessage.value = 'Your internet package is now active'
+        toast.success('🎉 Payment completed! Your voucher is now active.')
+        setTimeout(() => {
+          emit('success', data)
+          dashboardStore.fetchDashboardData()
+        }, 2000)
+        return
       }
+
+      // ── Refunded (M-Pesa OK, voucher activation failed) ──────────────────
+      if (paymentStatus === 'refunded') {
+        stopAllTimers()
+        isRefunded.value = true
+        statusTitle.value = 'Activation Unsuccessful'
+        statusMessage.value = 'Your balance has been credited'
+        showActionButtons.value = true
+        // Update store balance immediately from fresh server value
+        const freshBalance = data.payment?.fresh_balance
+        if (freshBalance !== null && freshBalance !== undefined) {
+          dashboardStore.balance = freshBalance
+        }
+        toast.info(
+          'Payment received but activation failed. Amount credited to your balance.',
+          null,
+          8000
+        )
+        return
+      }
+
+      // ── Hard payment failure (user cancelled, insufficient funds, etc.) ──
+      if (paymentStatus === 'failed' || isTerminal) {
+        stopAllTimers()
+        statusTitle.value = 'Payment Failed'
+        statusMessage.value = data.payment?.description || 'Please try again'
+        showActionButtons.value = true
+        toast.error(data.payment?.description || 'Payment failed. Please try again.')
+        return
+      }
+
+      // ── Still in progress — keep polling ─────────────────────────────────
+      // (pending / processing / no terminal flag)
+
     } catch (error) {
       console.error('Payment status check failed:', error)
     }
-  }, 3000) // Check every 3 seconds
+  }, 3000)
 }
 
 const startTimers = () => {
@@ -566,18 +579,20 @@ const stopAllTimers = () => {
 }
 
 const retryPayment = () => {
-  // Reset state
   showActionButtons.value = false
   successShown.value = false
+  isRefunded.value = false
   statusTitle.value = 'Processing Payment'
   statusMessage.value = 'Please complete payment on your phone...'
   elapsedTime.value = 0
-  
-  // Restart polling and timers
   startPolling()
   startTimers()
-  
   toast.info('Retrying payment...')
+}
+
+const buyWithBalance = () => {
+  stopAllTimers()
+  emit('buyWithBalance')
 }
 
 const cancelPayment = () => {

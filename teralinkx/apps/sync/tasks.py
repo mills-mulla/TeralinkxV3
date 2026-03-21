@@ -10,87 +10,9 @@ logger = logging.getLogger(__name__)
 
 @shared_task(bind=True, soft_time_limit=300, time_limit=600)
 def task_query_pending_transactions(self):
-    """Query M-Pesa for pending transactions older than 1 minute"""
-    try:
-        from django.utils import timezone
-        from datetime import timedelta
-        from finance.models import TransactionQueue, BalanceTransaction
-        from finance.queryDaraja import query_stk_status
-        from decimal import Decimal
-        
-        # Get pending transactions older than 1 minute
-        one_minute_ago = timezone.now() - timedelta(minutes=1)
-        pending_transactions = TransactionQueue.objects.filter(
-            status='pending',
-            created_at__lte=one_minute_ago,
-            checkout_request_id__isnull=False
-        ).exclude(checkout_request_id='')[:50]  # Limit to 50 per run
-        
-        if not pending_transactions.exists():
-            logger.info("No pending transactions to query")
-            return {'queried': 0, 'completed': 0, 'failed': 0}
-        
-        queried = 0
-        completed = 0
-        failed = 0
-        
-        for transaction in pending_transactions:
-            try:
-                # Use existing queryDaraja function
-                result = query_stk_status(transaction.checkout_request_id)
-                queried += 1
-                
-                # Check result
-                result_code = str(result.get('ResultCode', ''))
-                
-                if result_code == '0':  # Success
-                    client = transaction.user
-                    amount = Decimal(str(transaction.price))
-                    balance_before = client.balance
-                    
-                    # Credit account
-                    client.balance += amount
-                    client.save()
-                    
-                    # Create balance transaction record
-                    BalanceTransaction.objects.create(
-                        user=client,
-                        transaction_type='topup',
-                        credit=amount,
-                        debit=0,
-                        balance_before=balance_before,
-                        balance_after=client.balance,
-                        description=f'M-Pesa payment - {transaction.checkout_request_id}',
-                        reference=transaction.checkout_request_id
-                    )
-                    
-                    transaction.mark_completed()
-                    completed += 1
-                    logger.info(f"✓ Transaction {transaction.checkout_request_id} completed - Credited {amount} to {client.account}")
-                    
-                elif result_code in ['1032', '1037', '1']:  # Cancelled, timeout, or insufficient funds
-                    transaction.mark_failed(
-                        reason=result.get('ResultDesc', 'Transaction failed'),
-                        error_code=result_code,
-                        failure_category='user_error'
-                    )
-                    failed += 1
-                    logger.warning(f"✗ Transaction {transaction.checkout_request_id} failed: {result.get('ResultDesc')}")
-                    
-            except Exception as e:
-                logger.error(f"Error querying transaction {transaction.checkout_request_id}: {e}")
-                continue
-        
-        result = {'queried': queried, 'completed': completed, 'failed': failed}
-        logger.info(f"Pending transaction query complete: {result}")
-        return result
-        
-    except Exception as e:
-        logger.error(f"Error in task_query_pending_transactions: {e}")
-        return {'error': str(e)}
-    finally:
-        import gc
-        gc.collect()
+    """Shim — delegates to the canonical finance.tasks.check_pending_transactions."""
+    from finance.tasks import check_pending_transactions
+    return check_pending_transactions.apply().get()
 
 @shared_task(bind=True, soft_time_limit=300, time_limit=600)
 def task_check_voucher_expiry(self):

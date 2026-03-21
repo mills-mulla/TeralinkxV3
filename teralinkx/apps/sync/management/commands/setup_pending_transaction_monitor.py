@@ -9,7 +9,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         # Create interval: every 1 minute
         schedule, created = IntervalSchedule.objects.get_or_create(
-            every=1,
+            every=2,
             period=IntervalSchedule.MINUTES,
         )
 
@@ -18,15 +18,11 @@ class Command(BaseCommand):
             name='Query Pending Transactions',
             defaults={
                 'interval': schedule,
-                'task': 'sync.tasks.task_query_pending_transactions',
+                'task': 'finance.tasks.check_pending_transactions',
                 'enabled': True,
             }
         )
-
         if created:
-            self.stdout.write(self.style.SUCCESS('✓ Created periodic task: Query Pending Transactions (every 1 minute)'))
+            self.stdout.write(self.style.SUCCESS('✓ Created periodic task: check_pending_transactions (every 2 minutes)'))
         else:
-            task.interval = schedule
-            task.enabled = True
-            task.save()
-            self.stdout.write(self.style.SUCCESS('✓ Updated periodic task: Query Pending Transactions'))
+            self.stdout.write(self.style.SUCCESS('✓ Updated periodic task: check_pending_transactions'))

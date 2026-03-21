@@ -229,6 +229,7 @@
       @success="handlePaymentSuccess" 
       @error="handlePaymentFailure"
       @cancel="handlePaymentCancel"
+      @buyWithBalance="handleBuyWithBalance"
     />
   </div>
 </template>
@@ -492,6 +493,7 @@ async function handleUnifiedPayment() {
       payment_method: paymentMethod,
       phone_number: formattedPhoneNumber,
       use_credit: useCredit.value,
+      credit_amount: creditToUse.value,
       auto_login: true
     }
     
@@ -573,6 +575,14 @@ function handlePaymentCancel() {
   toast.info('Payment cancelled by user')
 }
 
+function handleBuyWithBalance() {
+  // Close loader, force credit-only mode, refresh balance first
+  isLoading.value = false
+  useCredit.value = true
+  dashboardStore.fetchDashboardData()
+  toast.info('Balance credited. You can now pay with your account balance.')
+}
+
 function handlePaymentSuccess(data) {
   isLoading.value = false
   toast.success('🎉 Payment successful! Your voucher has been activated.')
@@ -585,8 +595,10 @@ function handlePaymentSuccess(data) {
 }
 
 function handlePaymentFailure(data) {
+  // Only fires for pre-polling errors (e.g. network failure before checkout starts)
+  // Terminal states (failed/refunded) are handled inside PaymentLoader itself
+  if (data?.refunded) return
   isLoading.value = false
-  toast.error('Payment failed. Please try again.')
 }
 
 const formatCouponDate = (dateString) => {
