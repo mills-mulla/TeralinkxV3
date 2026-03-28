@@ -290,12 +290,12 @@ class PaymentGateway(TimeStampedModel, StatusTrackedModel):
     config = models.JSONField(default=dict)
     callback_url = models.URLField(
         blank=True,
-        default='https://teralinkxwaves.uk/api/payments/callback/',
+        default='https://srv.teralinkxwaves.uk/api/payments/callback/',
         help_text="System's callback URL for payment notifications. This is where payment gateways will send transaction updates."
     )
     webhook_url = models.URLField(
         blank=True,
-        default='https://teralinkxwaves.uk/api/webhooks/payment/',
+        default='https://srv.teralinkxwaves.uk/api/webhooks/payment/',
         help_text="Webhook URL for real-time payment events (for supported gateways like Stripe)"
     )
     
@@ -330,10 +330,10 @@ class PaymentGateway(TimeStampedModel, StatusTrackedModel):
         
         # Set appropriate default URLs based on gateway type
         if not self.callback_url:
-            self.callback_url = 'https://teralinkxwaves.uk/api/payments/callback/'
+            self.callback_url = 'https://srv.teralinkxwaves.uk/api/payments/callback/'
         
         if not self.webhook_url and self.gateway_type in ['stripe', 'paypal']:
-            self.webhook_url = 'https://teralinkxwaves.uk/api/webhooks/payment/'
+            self.webhook_url = 'https://srv.teralinkxwaves.uk/api/webhooks/payment/'
         
         # Validate configuration based on gateway type
         self._validate_gateway_config()
@@ -439,17 +439,22 @@ class PaymentTransaction(TimeStampedModel):
     """
     PAYMENT_METHODS = [
         ('mpesa', 'M-Pesa'),
+        ('mpesa+balance', 'M-Pesa + Balance'),
+        ('balance', 'Account Balance'),
         ('stripe', 'Stripe'),
-        ('paypal', 'PayPal'),
+        ('stripe+balance', 'Stripe + Balance'),
         ('card_visa', 'Visa Card'),
+        ('card_visa+balance', 'Visa Card + Balance'),
         ('card_mastercard', 'MasterCard'),
+        ('card_mastercard+balance', 'MasterCard + Balance'),
         ('bank_transfer', 'Bank Transfer'),
         ('cash', 'Cash'),
-        ('balance', 'Account Balance'),
+        ('paypal', 'PayPal'),
     ]
     
     STATUS_CHOICES = [
-        ('completed', 'Completed'),  # Only successful transactions
+        ('pending', 'Pending'),
+        ('completed', 'Completed'),
         ('refunded', 'Refunded'),
         ('partially_refunded', 'Partially Refunded'),
     ]
@@ -459,7 +464,7 @@ class PaymentTransaction(TimeStampedModel):
     user = models.ForeignKey('users.ClientH', on_delete=models.PROTECT)
     
     # Universal Payment Details
-    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHODS, default='mpesa')
+    payment_method = models.CharField(max_length=30, choices=PAYMENT_METHODS, default='mpesa')
     payment_gateway = models.ForeignKey(PaymentGateway, on_delete=models.PROTECT, null=True, blank=True)
     
     # Universal Multi-Currency Support
@@ -484,6 +489,12 @@ class PaymentTransaction(TimeStampedModel):
     
     # Gateway References
     gateway_reference = models.CharField(max_length=255, blank=True)
+    account_reference = models.CharField(
+        max_length=100,
+        blank=True,
+        db_index=True,
+        help_text="Client account ID from BillRefNumber (e.g. CLI000003)."
+    )
     
     # Raw Callback Storage
     raw_callback_data = models.JSONField(default=dict)
@@ -756,7 +767,12 @@ class TransactionQueue(TimeStampedModel):
     package = models.CharField(max_length=255)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    recipient = models.CharField(max_length=25)
+    account_reference = models.CharField(
+        max_length=100,
+        blank=True,
+        db_index=True,
+        help_text="Client account ID (e.g. CLI000003). Maps to BillRefNumber in M-Pesa callbacks."
+    )
     used_credit = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     
     # Enhanced Status Tracking

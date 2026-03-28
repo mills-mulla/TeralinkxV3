@@ -1,3 +1,4 @@
+import { api } from '../services/api'
 // src/composables/useRewards.js
 import { ref, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
@@ -27,8 +28,8 @@ export function useRewards() {
         headers: authStore.authHeaders
       })
       
-      if (response.ok) {
-        rewardSummary.value = await response.json()
+      if (response.status === 200) {
+        rewardSummary.value = response.data
       } else {
         throw new Error('Failed to fetch reward summary')
       }
@@ -45,8 +46,8 @@ export function useRewards() {
         headers: authStore.authHeaders
       })
       
-      if (response.ok) {
-        const data = await response.json()
+      if (response.status === 200) {
+        const data = response.data
         availableRewards.value = data.rewards
       }
     } catch (error) {
@@ -60,8 +61,8 @@ export function useRewards() {
         headers: authStore.authHeaders
       })
       
-      if (response.ok) {
-        const data = await response.json()
+      if (response.status === 200) {
+        const data = response.data
         pointHistory.value = data.transactions
       }
     } catch (error) {
@@ -84,9 +85,9 @@ export function useRewards() {
         })
       })
       
-      const data = await response.json()
+      const data = response.data
       
-      if (response.ok) {
+      if (response.status === 200) {
         showSuccess(`Redeemed ${discountPercentage}% discount! Code: ${data.coupon_code}`)
         await fetchRewardSummary() // Refresh data
         await fetchAvailableRewards()

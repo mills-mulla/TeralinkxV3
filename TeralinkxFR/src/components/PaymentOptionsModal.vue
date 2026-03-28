@@ -85,6 +85,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { api } from '@/services/api'
 import { useRouter } from 'vue-router'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useAuthStore } from '@/stores/auth'
@@ -159,9 +160,9 @@ async function payWithCredit() {
       })
     })
     
-    const data = await response.json()
+    const data = response.data
     
-    if (response.ok && data.success) {
+    if (response.status === 200 && data.success) {
       toast.success('Package purchased successfully with account credit!')
       await dashboardStore.fetchDashboardData()
       emit('close')
@@ -212,7 +213,7 @@ async function pollPaymentStatus(checkoutRequestId) {
         headers: authStore.authHeaders
       })
       
-      const data = await response.json()
+      const data = response.data
       
       if (data.payment_status === 'completed' && data.voucher_created) {
         toast.success('🎉 Payment successful! Your voucher has been activated.')

@@ -209,6 +209,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { api } from '@/services/api'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useAuthStore } from '@/stores/auth'
 import { useNetworkStore } from '@/stores/network'
@@ -275,11 +276,11 @@ const disconnectCurrentDevice = async (voucher) => {
       })
     })
 
-    if (response.ok) {
+    if (response.status === 200) {
       showSuccess('Disconnected successfully!')
       await dashboardStore.fetchDashboardData()
     } else {
-      const data = await response.json()
+      const data = response.data
       showError(data.error || 'Failed to disconnect')
     }
   } catch (error) {
@@ -309,9 +310,9 @@ const reconnect = async (voucher) => {
       })
     })
 
-    const data = await response.json()
+    const data = response.data
 
-    if (response.ok) {
+    if (response.status === 200) {
       showSuccess('Reconnected successfully!')
       // Fetch dashboard data in background (don't block redirect)
       dashboardStore.fetchDashboardData()

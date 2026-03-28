@@ -1,1 +1,1 @@
-# Commands package
+# Finance management commands

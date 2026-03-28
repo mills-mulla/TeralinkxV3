@@ -26,18 +26,15 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { api } from '@/services/api'
 
 const backendConnected = ref(false)
 
 const checkBackendHealth = async () => {
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/health/`, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-      signal: AbortSignal.timeout(5000)
-    })
+    const response = await api.get('/api/health/', { timeout: 5000 })
     
-    if (response.ok) {
+    if (response.status === 200) {
       backendConnected.value = true
     } else {
       backendConnected.value = false

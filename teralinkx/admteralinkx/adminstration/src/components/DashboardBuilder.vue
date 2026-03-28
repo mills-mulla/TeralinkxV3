@@ -185,9 +185,9 @@ export default {
         const headers = { 'Authorization': `Bearer ${token}` }
         
         const [metrics, packages, locations] = await Promise.all([
-          fetch('https://service.teralinkxwaves.uk/suapi/dashboard-metrics/', { headers }).then(r => r.json()),
-          fetch('https://service.teralinkxwaves.uk/suapi/dashboard-metrics/package-sales/', { headers }).then(r => r.json()),
-          fetch('https://service.teralinkxwaves.uk/suapi/dashboard-metrics/location-performance/', { headers }).then(r => r.json())
+          fetch('https://srv.teralinkxwaves.uk/suapi/dashboard-metrics/', { headers }).then(r => r.json()),
+          fetch('https://srv.teralinkxwaves.uk/suapi/dashboard-metrics/package-sales/', { headers }).then(r => r.json()),
+          fetch('https://srv.teralinkxwaves.uk/suapi/dashboard-metrics/location-performance/', { headers }).then(r => r.json())
         ])
         
         this.widgetData = {

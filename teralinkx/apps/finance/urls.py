@@ -3,7 +3,9 @@ from django.urls import path, include
 from finance.payment_gateway import (
     PaymentInitiateAPIView,
     PaymentCallbackAPIView,
-    ReconciliationAPIView
+    ReconciliationAPIView,
+    C2BValidationAPIView,
+    C2BRegisterURLAPIView,
 )
 from .querycheckout import payment_status, payment_health_check
 from .credit_balance import BalancePurchaseAPIView, balance_health_check
@@ -19,6 +21,8 @@ urlpatterns = [
     path('payments/unified/', UnifiedPaymentAPIView.as_view(), name='unified_payment'),
     path('payments/initiate/', PaymentInitiateAPIView.as_view(), name='initiate-payment'),
     path('payments/callback/', PaymentCallbackAPIView.as_view(), name='payment-callback'),
+    path('payments/c2b/validate/', C2BValidationAPIView.as_view(), name='c2b-validation'),
+    path('payments/c2b/register/', C2BRegisterURLAPIView.as_view(), name='c2b-register'),
     path('payment-status/<str:checkout_request_id>/', payment_status, name='payment_status'),
     path('payment-health/', payment_health_check, name='payment_health'),
     path('balance-purchase/', BalancePurchaseAPIView.as_view(), name='balance_purchase_v3'),

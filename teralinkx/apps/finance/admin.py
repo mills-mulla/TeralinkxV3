@@ -5,7 +5,10 @@ from django.utils.html import format_html
 from django.urls import reverse
 from django.http import HttpResponseRedirect
 from django.contrib import messages
-from django_json_widget.widgets import JSONEditorWidget
+try:
+    from django_json_widget.widgets import JSONEditorWidget
+except ImportError:
+    JSONEditorWidget = None
 from django.db import models
 from django.db.models.functions import ExtractHour
 import json
@@ -18,11 +21,26 @@ from .models import (
 
 @admin.register(Currency)
 class CurrencyAdmin(admin.ModelAdmin):
-    list_display = ['code', 'name', 'symbol', 'is_active', 'is_base_currency', 'decimal_places']
+    list_display = ['code', 'name', 'symbol', 'unicode_symbol', 'is_active', 'is_base_currency', 'decimal_places', 'is_crypto']
     list_filter = ['is_active', 'is_base_currency', 'is_crypto']
     search_fields = ['code', 'name']
     list_editable = ['is_active', 'is_base_currency']
     actions = ['set_as_base_currency', 'deactivate_currencies']
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('code', 'name', 'symbol', 'unicode_symbol')
+        }),
+        ('Configuration', {
+            'fields': ('decimal_places', 'is_crypto', 'is_active', 'is_base_currency')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    readonly_fields = ['created_at', 'updated_at']
     
     class Media:
         js = ('finance/js/currency_autofill.js',)
@@ -74,12 +92,28 @@ class CurrencyAdmin(admin.ModelAdmin):
 
 @admin.register(ExchangeRate)
 class ExchangeRateAdmin(admin.ModelAdmin):
-    list_display = ['base_currency', 'target_currency', 'rate', 'source', 'is_active', 'last_updated']
-    list_filter = ['source', 'is_active', 'base_currency', 'target_currency']
+    list_display = ['base_currency', 'target_currency', 'rate', 'source', 'is_active', 'last_updated', 'next_update']
+    list_filter = ['source', 'is_active', 'base_currency', 'target_currency', 'last_updated']
     search_fields = ['base_currency__code', 'target_currency__code']
-    readonly_fields = ['last_updated']
+    readonly_fields = ['last_updated', 'created_at', 'updated_at']
     list_editable = ['rate', 'is_active']
     actions = ['update_rates', 'deactivate_rates']
+    
+    fieldsets = (
+        ('Currency Pair', {
+            'fields': ('base_currency', 'target_currency')
+        }),
+        ('Rate Information', {
+            'fields': ('rate', 'source', 'is_active')
+        }),
+        ('Update Schedule', {
+            'fields': ('update_frequency', 'next_update')
+        }),
+        ('Timestamps', {
+            'fields': ('last_updated', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
     
     def update_rates(self, request, queryset):
         # This would call your external API to update rates
@@ -99,22 +133,32 @@ class ExchangeRateAdmin(admin.ModelAdmin):
 
 @admin.register(PaymentGateway)
 class PaymentGatewayAdmin(admin.ModelAdmin):
-    list_display = ['name', 'gateway_type', 'is_default', 'test_mode', 'status', 'created_at']
-    list_filter = ['gateway_type', 'is_default', 'test_mode', 'status']
+    list_display = ['name', 'gateway_type', 'is_default', 'test_mode', 'status', 'default_currency', 'created_at']
+    list_filter = ['gateway_type', 'is_default', 'test_mode', 'status', 'default_currency']
     search_fields = ['name', 'description']
     list_editable = ['is_default', 'test_mode', 'status']
     filter_horizontal = ['supported_currencies']
     actions = ['set_as_default', 'activate_gateways', 'deactivate_gateways', 'enable_test_mode', 'disable_test_mode']
+    readonly_fields = ['created_at', 'updated_at']
+
+    def save_model(self, request, obj, form, change):
+        """Invalidate gateway config cache when saved via admin."""
+        super().save_model(request, obj, form, change)
+        from django.core.cache import cache
+        cache.delete('mpesa_gateway_config')
+        cache.delete('mpesa_daraja_access_token')  # force token refresh too
+        self.message_user(request, 'Gateway config cache cleared.')
     
     # Add JSON editor widget for better config editing
-    formfield_overrides = {
-        models.JSONField: {'widget': JSONEditorWidget},
-    }
+    if JSONEditorWidget:
+        formfield_overrides = {
+            models.JSONField: {'widget': JSONEditorWidget},
+        }
     
     # Fieldsets for better organization
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'gateway_type', 'is_default', 'status')
+            'fields': ('name', 'gateway_type', 'is_default', 'status', 'description')
         }),
         ('Currency Support', {
             'fields': ('default_currency', 'supported_currencies')
@@ -129,6 +173,10 @@ class PaymentGatewayAdmin(admin.ModelAdmin):
         }),
         ('Testing & Environment', {
             'fields': ('test_mode',),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
     )
@@ -236,15 +284,15 @@ class BalanceTransactionInline(admin.TabularInline):
 class PaymentTransactionAdmin(admin.ModelAdmin):
     list_display = [
         'transaction_id', 'user_link', 'amount_display', 'currency', 
-        'payment_method', 'status', 'initiator', 'created_at'
+        'payment_method', 'payment_gateway', 'status', 'initiator', 'created_at'
     ]
-    list_filter = ['status', 'payment_method', 'currency', 'created_at']
-    search_fields = ['transaction_id', 'initiator', 'user__account', 'gateway_reference']
+    list_filter = ['status', 'payment_method', 'currency', 'payment_gateway', 'created_at']
+    search_fields = ['transaction_id', 'initiator', 'user__account', 'gateway_reference', 'account_reference']
     readonly_fields = [
         'transaction_id', 'user', 'amount', 'currency', 'amount_base', 
         'exchange_rate', 'initiator', 'result_code', 'result_desc',
         'merchant_request_id', 'checkout_request_id', 'gateway_reference',
-        'raw_callback_data_preview', 'created_at', 'transaction_time'
+        'raw_callback_data_preview', 'created_at', 'transaction_time', 'updated_at'
     ]
     fieldsets = (
         ('Transaction Details', {
@@ -257,10 +305,15 @@ class PaymentTransactionAdmin(admin.ModelAdmin):
                 'amount', 'currency', 'exchange_rate', 'amount_base'
             )
         }),
+        ('Gateway References', {
+            'fields': (
+                'gateway_reference', 'account_reference'
+            )
+        }),
         ('M-Pesa Callback Data', {
             'fields': (
                 'initiator', 'result_code', 'result_desc', 'balance',
-                'merchant_request_id', 'checkout_request_id', 'gateway_reference',
+                'merchant_request_id', 'checkout_request_id',
                 'date', 'transaction_time'
             )
         }),
@@ -269,7 +322,7 @@ class PaymentTransactionAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
         ('Metadata', {
-            'fields': ('description', 'created_at'),
+            'fields': ('description', 'created_at', 'updated_at'),
             'classes': ('collapse',)
         })
     )
@@ -379,14 +432,14 @@ class BalanceTransactionAdmin(admin.ModelAdmin):
 @admin.register(TransactionQueue)
 class TransactionQueueAdmin(admin.ModelAdmin):
     list_display = [
-        'queue_type', 'initiator', 'recipient', 'package', 'price', 
+        'queue_type', 'initiator', 'account_reference', 'package', 'price', 
         'status', 'retry_count', 'created_at', 'pending_duration_safe'
     ]
     list_filter = ['queue_type', 'status', 'failure_category', 'priority', 'created_at']
-    search_fields = ['initiator', 'recipient', 'checkout_request_id', 'package_code']
+    search_fields = ['initiator', 'account_reference', 'checkout_request_id', 'package_code']
     readonly_fields = [
         'queue_type', 'user', 'method', 'initiator', 'checkout_request_id',
-        'package_code', 'package', 'price', 'recipient', 'used_credit',
+        'package_code', 'package', 'price', 'account_reference', 'used_credit',
         'failure_reason', 'error_code', 'failure_category', 'retry_count',
         'gateway_result_data_preview', 'metadata_preview', 'created_at',
         'pending_duration_safe', 'is_expired_safe'
@@ -399,7 +452,7 @@ class TransactionQueueAdmin(admin.ModelAdmin):
         }),
         ('Payment Details', {
             'fields': (
-                'method', 'initiator', 'checkout_request_id', 'recipient'
+                'method', 'initiator', 'checkout_request_id', 'account_reference'
             )
         }),
         ('Package Details', {

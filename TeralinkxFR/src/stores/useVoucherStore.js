@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import axios from 'axios'
+import { api } from '../services/api'
 
 export const useVoucherStore = defineStore('voucherStore', {
   state: () => ({
@@ -19,15 +19,7 @@ export const useVoucherStore = defineStore('voucherStore', {
 
         const phone = phoneLocal.startsWith('254') ? phoneLocal : '254' + phoneLocal.slice(1)
 
-        const csrfToken = await this.getCSRFToken()
-
-        const response = await axios.post(`${import.meta.env.VITE_API_PROD_URL}/api/getactive/`, { account: phone }, {
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': csrfToken,
-            Authorization: `Token ${localStorage.getItem('authToken')}`,
-          },
-        })
+        const response = await api.post('/api/getactive/', { account: phone })
 
         if (response.status === 200) {
           this.vouchers = response.data
@@ -35,19 +27,9 @@ export const useVoucherStore = defineStore('voucherStore', {
           throw new Error('Unexpected response status')
         }
       } catch (error) {
-        // console.error('Error fetching vouchers:', error)
         this.error = error.response?.data?.message || error.message
       } finally {
         this.loading = false
-      }
-    },
-
-    async getCSRFToken() {
-      try {
-        const response = await axios.get(`${import.meta.env.VITE_API_PROD_URL}/api/get-csrf-token/`)
-        return response.data.csrfToken
-      } catch (error) {
-        throw new Error('Failed to retrieve CSRF token')
       }
     }
   }

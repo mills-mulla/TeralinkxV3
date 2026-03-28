@@ -1,6 +1,7 @@
 // src/stores/usePackageStore.js
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { api } from '../services/api'
 
 export const usePackageStore = defineStore('packageStore', () => {
   const packages = ref([])
@@ -10,15 +11,8 @@ export const usePackageStore = defineStore('packageStore', () => {
   const fetchPackages = async () => {
     loading.value = true
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_PROD_URL}/api/packages/`, {
-        headers: {
-          Authorization: `Token ${localStorage.getItem('authToken')}`,
-        },
-      })
-      if (!res.ok) throw new Error('Failed to fetch packages')
-      const data = await res.json()
-      
-      packages.value = data.sort((a, b) => a.price - b.price)
+      const response = await api.get('/api/packages/')
+      packages.value = response.data.sort((a, b) => a.price - b.price)
     } catch (err) {
       error.value = err.message
     } finally {

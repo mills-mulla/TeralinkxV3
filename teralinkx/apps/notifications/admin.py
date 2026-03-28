@@ -14,6 +14,9 @@ class NotificationAdmin(admin.ModelAdmin):
         'scope_badge',
         'priority_badge',
         'recipient_info',
+        'channels_info',
+        'is_persistent',
+        'is_broadcast',
         'status_badges',
         'expires_info',
         'created_at'
@@ -24,9 +27,14 @@ class NotificationAdmin(admin.ModelAdmin):
         'scope',
         'priority',
         'is_persistent',
+        'is_broadcast',
         'is_sent',
         'is_read',
         'is_archived',
+        'pusher_sent',
+        'email_sent',
+        'sms_sent',
+        'push_sent',
         ('expires_at', admin.DateFieldListFilter),
         'created_at'
     ]
@@ -43,7 +51,10 @@ class NotificationAdmin(admin.ModelAdmin):
         'created_at',
         'updated_at',
         'pusher_channel',
-        'pusher_event'
+        'pusher_event',
+        'sent_at',
+        'read_at',
+        'archived_at'
     ]
     
     filter_horizontal = ['target_locations', 'target_packages']
@@ -143,6 +154,32 @@ class NotificationAdmin(admin.ModelAdmin):
                 return format_html('<span style="color: #f59e0b;">⏰ {}</span>', obj.expires_at.strftime('%m/%d %H:%M'))
         return '♾️ Never'
     expires_info.short_description = 'Expires'
+    
+    def channels_info(self, obj):
+        """Display notification channels"""
+        if obj.channels:
+            return ', '.join(obj.channels)
+        return 'No channels'
+    channels_info.short_description = 'Channels'
+    
+    def delivery_status_display(self, obj):
+        """Display delivery status across all channels"""
+        status = obj.get_delivery_status()
+        badges = []
+        
+        if status['email']:
+            badges.append('<span style="background: #10b981; color: white; padding: 1px 3px; border-radius: 3px; font-size: 9px;">EMAIL</span>')
+        if status['sms']:
+            badges.append('<span style="background: #3b82f6; color: white; padding: 1px 3px; border-radius: 3px; font-size: 9px;">SMS</span>')
+        if status['push']:
+            badges.append('<span style="background: #8b5cf6; color: white; padding: 1px 3px; border-radius: 3px; font-size: 9px;">PUSH</span>')
+        if status['pusher']:
+            badges.append('<span style="background: #f59e0b; color: white; padding: 1px 3px; border-radius: 3px; font-size: 9px;">PUSHER</span>')
+        if status['in_app']:
+            badges.append('<span style="background: #ec4899; color: white; padding: 1px 3px; border-radius: 3px; font-size: 9px;">IN-APP</span>')
+        
+        return format_html(' '.join(badges)) if badges else 'Not delivered'
+    delivery_status_display.short_description = 'Delivery Status'
     
     def mark_as_sent(self, request, queryset):
         updated = queryset.update(is_sent=True, sent_at=timezone.now())

@@ -1,0 +1,37 @@
+{
+  "dashboard": {
+    "title": "TeralinkX Auth Resilience",
+    "panels": [
+      {
+        "title": "Token Health Checks",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(auth_health_check_total[5m])",
+            "legendFormat": "Health Checks/sec"
+          }
+        ]
+      },
+      {
+        "title": "Token Recovery Events",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "auth_token_recovery_total",
+            "legendFormat": "Recovery Attempts"
+          }
+        ]
+      },
+      {
+        "title": "Backend Restart Detection",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "auth_backend_restart_detected_total",
+            "legendFormat": "Restarts Detected"
+          }
+        ]
+      }
+    ]
+  }
+}

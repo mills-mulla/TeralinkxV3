@@ -281,13 +281,22 @@ def check_pending_transactions(self):
                         f"checkout={queue_item.checkout_request_id}"
                     )
 
-                elif result_code in ('1', '1032', '1037', '2001'):
+                elif result_code in ('1', '2', '3', '4', '8', '17', '1019', '1025', '1032', '1037', '2001', '2028', '8006'):
                     # ── Definitive failure ────────────────────────────────────
                     failure_map = {
-                        '1': 'Insufficient funds',
+                        '1':    'Insufficient funds',
+                        '2':    'Amount below minimum',
+                        '3':    'Amount exceeds maximum',
+                        '4':    'Daily limit exceeded',
+                        '8':    'Maximum balance exceeded',
+                        '17':   'Duplicate transaction — wait 2 minutes',
+                        '1019': 'Transaction expired',
+                        '1025': 'Payment request error',
                         '1032': 'Cancelled by user',
                         '1037': 'Timeout — user did not respond',
-                        '2001': 'Invalid phone number',
+                        '2001': 'Incorrect M-Pesa PIN',
+                        '2028': 'Invalid payment configuration',
+                        '8006': 'M-Pesa account locked',
                     }
                     reason = failure_map.get(result_code, result.get('ResultDesc', 'Payment failed'))
 
@@ -377,3 +386,85 @@ def register_mpesa_pull(self, nominated_number, callback_url=None):
         connection.close_if_unusable_or_obsolete()
 
 
+
+@shared_task(bind=True)
+def maintain_voucher_pool(self, min_count=5):
+    """
+    Periodic task: runs every 6 hours via Celery Beat.
+    Tops up the AvailableVoucher fallback pool when it drops below min_count
+    per package per location.
+    """
+    import uuid
+    from django.utils import timezone as tz
+    from packages.models import PackageType, AvailableVoucher
+    from locations.models import Location
+
+    try:
+        connection.close_if_unusable_or_obsolete()
+
+        packages  = PackageType.objects.filter(is_active=True)
+        locations = Location.objects.filter(is_active=True)
+        batch_id  = f"auto_{tz.now().strftime('%Y%m%d_%H%M%S')}"
+        created   = 0
+
+        for package in packages:
+            for location in locations:
+                existing = AvailableVoucher.objects.filter(
+                    package=package, location=location, is_used=False
+                ).count()
+                needed = max(0, min_count - existing)
+                if needed:
+                    vouchers = [
+                        AvailableVoucher(
+                            voucher_code=f'FB-{uuid.uuid4().hex[:10].upper()}',
+                            voucher_type='pre_generated',
+                            package=package,
+                            location=location,
+                            batch_id=batch_id,
+                            valid_until=tz.now() + tz.timedelta(days=30),
+                        )
+                        for _ in range(needed)
+                    ]
+                    AvailableVoucher.objects.bulk_create(vouchers, ignore_conflicts=True)
+                    created += needed
+                    logger.info(
+                        f"maintain_voucher_pool: topped up {needed} vouchers "
+                        f"for {package.code} @ {location.name}"
+                    )
+
+        logger.info(f"maintain_voucher_pool: created {created} vouchers total")
+        return {'created': created, 'batch_id': batch_id}
+
+    except Exception as e:
+        logger.error(f"maintain_voucher_pool error: {e}", exc_info=True)
+        return {'error': str(e)}
+    finally:
+        connection.close_if_unusable_or_obsolete()
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+def push_certificate_to_mikrotik(self):
+    """
+    Push renewed Let's Encrypt cert to MikroTik router.
+    Triggered by certbot deploy hook after successful renewal.
+    Retries 3 times with 60s delay on failure.
+    """
+    try:
+        connection.close_if_unusable_or_obsolete()
+        from finance.cert_push import push_cert_to_mikrotik
+        result = push_cert_to_mikrotik()
+        if result['success']:
+            logger.info(f"Cert push succeeded: steps={result['steps']}")
+        else:
+            logger.error(f"Cert push failed: {result['error']}")
+            raise Exception(result['error'])
+        return result
+    except Exception as e:
+        logger.error(f"push_certificate_to_mikrotik error: {e}", exc_info=True)
+        try:
+            raise self.retry(exc=e)
+        except self.MaxRetriesExceededError:
+            logger.error("Max retries exceeded for cert push")
+            return {'success': False, 'error': str(e)}
+    finally:
+        connection.close_if_unusable_or_obsolete()

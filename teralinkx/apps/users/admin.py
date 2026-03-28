@@ -67,11 +67,15 @@ class ClientHAdmin(admin.ModelAdmin):
         'account_tier', 
         'status', 
         'balance_display',
+        'credit_limit',
+        'total_spent',
         'reward_points_display',
         'reward_tier_badge',
         'availability_status_badge',
         'active_devices_count',
         'active_sessions_count',
+        'two_factor_enabled',
+        'auto_renew',
         'last_login',
         'last_seen',
         'view_profile'
@@ -80,7 +84,11 @@ class ClientHAdmin(admin.ModelAdmin):
     list_filter = (
         'status',
         'account_tier',
+        'reward_tier',
+        'two_factor_enabled',
+        'auto_renew',
         'home_location',
+        'current_location',
         'last_login'
     )
     
@@ -93,8 +101,8 @@ class ClientHAdmin(admin.ModelAdmin):
     )
     
     readonly_fields = (
-        'created_display',
-        'modified_display',
+        'created_at',
+        'updated_at',
         'last_login',
         'last_seen',
         'last_balance_update',
@@ -110,7 +118,8 @@ class ClientHAdmin(admin.ModelAdmin):
         'profile_image_preview',
         'reward_points_display',
         'reward_tier_badge',
-        'reward_stats_display'
+        'reward_stats_display',
+        'lifetime_data_used_display'
     )
     
     fieldsets = (
@@ -132,6 +141,7 @@ class ClientHAdmin(admin.ModelAdmin):
                 'credit_limit',
                 'total_spent',
                 'lifetime_data_used',
+                'lifetime_data_used_display',
                 'is_eligible_for_credit_display',
                 'available_credit_display'
             )
@@ -148,8 +158,7 @@ class ClientHAdmin(admin.ModelAdmin):
         ('Security', {
             'fields': (
                 'failed_login_attempts',
-                'two_factor_enabled',
-                'auto_renew'
+                'two_factor_enabled'
             )
         }),
         ('Location', {
@@ -176,8 +185,8 @@ class ClientHAdmin(admin.ModelAdmin):
         }),
         ('Metadata', {
             'fields': (
-                'created_display',
-                'modified_display',
+                'created_at',
+                'updated_at',
                 'last_login',
                 'last_seen',
                 'availability_status_badge',
@@ -198,13 +207,13 @@ class ClientHAdmin(admin.ModelAdmin):
     ]
     
     # Custom methods for timestamp fields
-    def created_display(self, obj):
-        return obj.created.strftime('%Y-%m-%d %H:%M:%S') if obj.created else "-"
-    created_display.short_description = "Created"
+    def created_at(self, obj):
+        return obj.created_at.strftime('%Y-%m-%d %H:%M:%S') if obj.created_at else "-"
+    created_at.short_description = "Created"
     
-    def modified_display(self, obj):
-        return obj.modified.strftime('%Y-%m-%d %H:%M:%S') if obj.modified else "-"
-    modified_display.short_description = "Last Modified"
+    def updated_at(self, obj):
+        return obj.updated_at.strftime('%Y-%m-%d %H:%M:%S') if obj.updated_at else "-"
+    updated_at.short_description = "Last Modified"
     
     def user_link(self, obj):
         if obj.user:
@@ -312,6 +321,19 @@ class ClientHAdmin(admin.ModelAdmin):
             next_tier_points if next_tier_points > 0 else 'Max Tier Reached'
         )
     reward_stats_display.short_description = "Reward Statistics"
+    
+    def lifetime_data_used_display(self, obj):
+        """Display lifetime data used in human readable format"""
+        bytes_used = obj.lifetime_data_used
+        if bytes_used < 1024:
+            return f"{bytes_used} B"
+        elif bytes_used < 1024 * 1024:
+            return f"{bytes_used / 1024:.2f} KB"
+        elif bytes_used < 1024 * 1024 * 1024:
+            return f"{bytes_used / (1024 * 1024):.2f} MB"
+        else:
+            return f"{bytes_used / (1024 * 1024 * 1024):.2f} GB"
+    lifetime_data_used_display.short_description = "Lifetime Data Used"
     
     def active_devices_count(self, obj):
         count = obj.devices.filter(status='active').count()
@@ -485,11 +507,16 @@ class UserDeviceAdmin(admin.ModelAdmin):
         'device_name',
         'owner_link',
         'device_type',
+        'device_platform',
+        'device_model',
+        'device_manufacturer',
         'status_badge',
         'is_trusted_badge',
         'is_online_badge',
         'has_active_voucher_badge',
         'total_connections',
+        'max_concurrent_sessions',
+        'auto_connect',
         'last_seen',
         'view_device'
     )
@@ -499,8 +526,11 @@ class UserDeviceAdmin(admin.ModelAdmin):
         'device_type',
         'device_platform',
         'is_trusted',
+        'auto_connect',
         'user__account_tier',
-        'last_seen'
+        'last_seen',
+        'last_seen_location',
+        'favorite_location'
     )
     
     search_fields = (
@@ -514,8 +544,8 @@ class UserDeviceAdmin(admin.ModelAdmin):
     )
     
     readonly_fields = (
-        'created_display',  
-        'modified_display',  
+        'created_at',
+        'updated_at',
         'total_connections',
         'is_online_badge',
         'has_active_voucher_badge',
@@ -526,8 +556,8 @@ class UserDeviceAdmin(admin.ModelAdmin):
         'connection_statistics',
         'current_session_link',
         'view_sessions',
-        'owner_link',  
-        'device_identification_display', 
+        'owner_link',
+        'device_identification_display'
     )
     
     fieldsets = (
@@ -586,8 +616,8 @@ class UserDeviceAdmin(admin.ModelAdmin):
         }),
         ('Metadata', {
             'fields': (
-                'created_display',  
-                'modified_display'  
+                'created_at',
+                'updated_at'
             )
         })
     )
@@ -755,7 +785,7 @@ class UserDeviceAdmin(admin.ModelAdmin):
         stats = obj.get_connection_statistics(days=30)
         return format_html(
             '''
-            <div style="padding: 10px; background: #f5f5f5; border-radius= 5px; font-size: 12px;">
+            <div style="padding: 10px; background: #f5f5f5; border-radius: 5px; font-size: 12px;">
                 <strong>30-Day Statistics:</strong><br>
                 • Total Sessions: {}<br>
                 • Average Duration: {}<br>
@@ -830,8 +860,13 @@ class UserSessionAdmin(admin.ModelAdmin):
         'session_type_badge',
         'is_active_badge',
         'is_owner_badge',
+        'was_transferred',
         'has_active_voucher_badge',
         'duration_display',
+        'auto_logout_minutes',
+        'data_used_mb',
+        'ip_address',
+        'location',
         'login_time',
         'last_activity',
         'view_session'
@@ -843,7 +878,8 @@ class UserSessionAdmin(admin.ModelAdmin):
         'is_owner',
         'was_transferred',
         'location',
-        'login_time'
+        'login_time',
+        'user__account_tier'
     )
     
     search_fields = (
@@ -854,24 +890,24 @@ class UserSessionAdmin(admin.ModelAdmin):
         'device__mac_address',
         'device__device_name',
         'active_voucher',
-        'ip_address'
+        'ip_address',
+        'user_agent'
     )
     
     readonly_fields = (
-        'created_display',  
-        'modified_display',  
+        'created_at',
+        'updated_at',
         'duration_display',
         'is_expired_badge',
         'has_active_voucher_badge',
         'voucher_time_remaining_display',
         'session_summary',
         'request_metadata_display',
-        'user_link',  
-        'device_link',  
+        'user_link',
+        'device_link',
         'data_used_mb',
-        'login_time',  
-        'last_activity',
-
+        'login_time',
+        'last_activity'
     )
     
     fieldsets = (
@@ -889,7 +925,8 @@ class UserSessionAdmin(admin.ModelAdmin):
         ('Network Details', {
             'fields': (
                 'ip_address',
-                'location'
+                'location',
+                'user_agent'
             )
         }),
         ('Voucher Information', {
@@ -901,22 +938,18 @@ class UserSessionAdmin(admin.ModelAdmin):
                 'voucher_time_remaining_display'
             )
         }),
-        ('Timing', {
+        ('Timing & Configuration', {
             'fields': (
                 'duration_display',
                 'auto_logout_minutes',
                 'is_expired_badge'
             )
         }),
-        ('Usage', {
+        ('Usage & Metadata', {
             'fields': (
                 'data_used',
-                'data_used_mb'
-            )
-        }),
-        ('Request Details', {
-            'fields': (
-                'request_metadata_display',
+                'data_used_mb',
+                'request_metadata_display'
             )
         }),
         ('Summary', {
@@ -924,13 +957,14 @@ class UserSessionAdmin(admin.ModelAdmin):
                 'session_summary',
             )
         }),
-        ('Metadata', {
+        ('Timestamps', {
             'fields': (
-                'created_display',  
-                'modified_display',
+                'created_at',
+                'updated_at',
                 'login_time',  
                 'last_activity'
-            )
+            ),
+            'classes': ('collapse',)
         })
     )
     

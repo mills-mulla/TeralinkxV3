@@ -1,3 +1,4 @@
+import { api } from '../services/api'
 // composables/useDeviceAuth.js
 import { useAuthStore } from '@/stores/auth'
 import { useHotspot } from '@/plugins/hotspot'
@@ -51,9 +52,9 @@ export const useDeviceAuth = () => {
         body: JSON.stringify(payload)
       })
       
-      const data = await response.json()
+      const data = response.data
       
-      if (response.ok && data.success && data.auth) {
+      if (response.status === 200 && data.success && data.auth) {
         // Update auth store with new tokens
         authStore.token = data.auth.access
         authStore.refreshToken = data.auth.refresh

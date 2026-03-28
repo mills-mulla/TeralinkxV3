@@ -90,7 +90,7 @@ export default {
   methods: {
     async fetchRevenueStreams() {
       try {
-        const response = await fetch('https://service.teralinkxwaves.uk/api/finance/api/revenue-streams/', {
+        const response = await fetch('https://srv.teralinkxwaves.uk/api/finance/api/revenue-streams/', {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
         })
         if (!response.ok) throw new Error('Failed to fetch')
@@ -102,7 +102,7 @@ export default {
     },
     async fetchExpenses() {
       try {
-        const response = await fetch('https://service.teralinkxwaves.uk/api/finance/api/expenses/', {
+        const response = await fetch('https://srv.teralinkxwaves.uk/api/finance/api/expenses/', {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
         })
         if (!response.ok) throw new Error('Failed to fetch')
@@ -114,7 +114,7 @@ export default {
     },
     async fetchInvestments() {
       try {
-        const response = await fetch('https://service.teralinkxwaves.uk/api/finance/api/investments/', {
+        const response = await fetch('https://srv.teralinkxwaves.uk/api/finance/api/investments/', {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
         })
         if (!response.ok) throw new Error('Failed to fetch')
@@ -126,7 +126,7 @@ export default {
     },
     async fetchDepartments() {
       try {
-        const response = await fetch('https://service.teralinkxwaves.uk/api/finance/api/departments/', {
+        const response = await fetch('https://srv.teralinkxwaves.uk/api/finance/api/departments/', {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
         })
         if (!response.ok) throw new Error('Failed to fetch')

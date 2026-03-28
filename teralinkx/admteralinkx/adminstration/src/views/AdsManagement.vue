@@ -311,7 +311,7 @@ export default {
     async fetchAds() {
       this.loading = true
       try {
-        const response = await fetch('https://service.teralinkxwaves.uk/api/ads/manage/', {
+        const response = await fetch('https://srv.teralinkxwaves.uk/api/ads/manage/', {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
         })
         const data = await response.json()
@@ -347,8 +347,8 @@ export default {
       this.saveLoading = true
       try {
         const url = this.selectedAd
-          ? `https://service.teralinkxwaves.uk/api/ads/manage/${this.selectedAd.id}/`
-          : 'https://service.teralinkxwaves.uk/api/ads/manage/'
+          ? `https://srv.teralinkxwaves.uk/api/ads/manage/${this.selectedAd.id}/`
+          : 'https://srv.teralinkxwaves.uk/api/ads/manage/'
         const method = this.selectedAd ? 'PUT' : 'POST'
         
         const response = await fetch(url, {
@@ -377,7 +377,7 @@ export default {
       if (!confirm(`Delete "${ad.title}"?`)) return
       
       try {
-        const response = await fetch(`https://service.teralinkxwaves.uk/api/ads/manage/${ad.id}/`, {
+        const response = await fetch(`https://srv.teralinkxwaves.uk/api/ads/manage/${ad.id}/`, {
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
         })

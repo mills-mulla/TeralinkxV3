@@ -212,6 +212,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { api } from '@/services/api'
 import { useRewards } from '@/composables/useRewards'
 import { useToast } from '@/composables/useToast'
 import { useAuthStore } from '@/stores/auth'
@@ -262,14 +263,11 @@ const handleRedeem = async (reward) => {
 
 const fetchUserCoupons = async () => {
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/rewards/coupons/`, {
-      headers: authStore.authHeaders
-    })
+    const response = await api.get('/api/rewards/coupons/')
     
-    if (response.ok) {
-      const data = await response.json()
-      userCoupons.value = data.coupons || []
-      console.log('Fetched coupons:', data.coupons) // Debug log
+    if (response.status === 200) {
+      userCoupons.value = response.data.coupons || []
+      console.log('Fetched coupons:', response.data.coupons) // Debug log
     } else {
       console.error('Failed to fetch coupons:', response.status)
     }

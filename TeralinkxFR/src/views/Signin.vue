@@ -198,10 +198,10 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { api } from '@/services/api'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useNetworkStore } from '../stores/network'
-
 import { useToast } from '../composables/useToast'
 import { useHotspot } from '@/plugins/hotspot'
 import { storage } from '../utils/storage'
@@ -673,17 +673,11 @@ const attemptAutoSignIn = async () => {
       location_id: 1 // Default location must be available
     }
     
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/auth/device-auto/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    })
+    const response = await api.post('/api/auth/device-auto/', payload)
     
-    const data = await response.json()
+    const data = response.data
     
-    if (response.ok && data.success) {
+    if (response.status === 200 && data.success) {
       
       // Store authentication data using the same format as passwordless auth
       if (data.auth) {

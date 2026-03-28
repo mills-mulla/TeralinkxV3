@@ -180,7 +180,7 @@ export default {
   methods: {
     async fetchPackages() {
       try {
-        const response = await fetch('https://service.teralinkxwaves.uk/suapi/packages/', {
+        const response = await fetch('https://srv.teralinkxwaves.uk/suapi/packages/', {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
         })
         if (response.ok) {
@@ -212,7 +212,7 @@ export default {
       
       this.saveLoading = true
       try {
-        const response = await fetch('https://service.teralinkxwaves.uk/suapi/promotions/', {
+        const response = await fetch('https://srv.teralinkxwaves.uk/suapi/promotions/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

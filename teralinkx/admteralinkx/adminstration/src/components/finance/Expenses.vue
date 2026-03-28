@@ -305,8 +305,8 @@ export default {
       this.saveLoading = true
       try {
         const url = this.selectedExpense 
-          ? `https://service.teralinkxwaves.uk/api/finance/api/expenses/${this.selectedExpense.id}/`
-          : 'https://service.teralinkxwaves.uk/api/finance/api/expenses/'
+          ? `https://srv.teralinkxwaves.uk/api/finance/api/expenses/${this.selectedExpense.id}/`
+          : 'https://srv.teralinkxwaves.uk/api/finance/api/expenses/'
         const method = this.selectedExpense ? 'PUT' : 'POST'
         
         const response = await fetch(url, {
@@ -339,7 +339,7 @@ export default {
     async confirmDelete() {
       this.deleteLoading = true
       try {
-        const response = await fetch(`https://service.teralinkxwaves.uk/api/finance/api/expenses/${this.expenseToDelete.id}/`, {
+        const response = await fetch(`https://srv.teralinkxwaves.uk/api/finance/api/expenses/${this.expenseToDelete.id}/`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('access_token')}`

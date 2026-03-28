@@ -201,7 +201,7 @@ export default {
       try {
         console.log('🚀 Starting JWT authentication...')
 
-        const response = await fetch('https://service.teralinkxwaves.uk/suapi/auth/login/', {
+        const response = await fetch('https://srv.teralinkxwaves.uk/suapi/auth/login/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

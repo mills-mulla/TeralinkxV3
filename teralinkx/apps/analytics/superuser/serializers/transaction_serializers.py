@@ -41,7 +41,7 @@ class TransactionQueueSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'queue_type', 'user', 'user_account', 'method', 'initiator',
             'checkout_request_id', 'package_code', 'package', 'price', 'status',
-            'recipient', 'used_credit', 'failure_reason', 'error_code',
+            'account_reference', 'used_credit', 'failure_reason', 'error_code',
             'failure_category', 'retry_count', 'max_retries', 'last_retry_at',
             'priority', 'expires_at', 'pending_timeout_hours', 'gateway_result_data',
             'metadata', 'completed_at', 'failed_at', 'created_at', 'updated_at'

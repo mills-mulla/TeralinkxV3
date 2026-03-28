@@ -63,13 +63,20 @@ if (savedContext?.mac && savedContext?.ip) {
 
 // Initialize auth store after pinia is set up
 import { useAuthStore } from './stores/auth'
-const authStore = useAuthStore()
-authStore.initialize()
 
-app.mount('#app')
+// Create an async initialization function
+const initializeApp = async () => {
+  const authStore = useAuthStore()
+  await authStore.initialize()
+  
+  app.mount('#app')
+  
+  // Initialize API proactive refresh after app is mounted and auth is ready
+  initializeProactiveRefresh()
+}
 
-// Initialize API proactive refresh after app is mounted
-initializeProactiveRefresh()
+// Initialize the app
+initializeApp().catch(console.error)
 
 // Type augmentation for TypeScript support
 declare global {

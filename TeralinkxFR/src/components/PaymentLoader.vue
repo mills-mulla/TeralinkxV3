@@ -240,6 +240,7 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
+import { api } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import { useDashboardStore } from '@/stores/dashboard'
 import { toast } from '@/composables/useCustomToast'
@@ -307,9 +308,9 @@ const fetchAds = async () => {
       headers: authStore.authHeaders
     })
     
-    const data = await response.json()
+    const data = response.data
     
-    if (response.ok && data.success && data.ads.length > 0) {
+    if (response.status === 200 && data.success && data.ads.length > 0) {
       ads.value = data.ads.map(ad => ({
         id: ad.id,
         type: ad.type,
@@ -481,7 +482,7 @@ const startPolling = () => {
         { headers: authStore.authHeaders }
       )
 
-      const data = await response.json()
+      const data = response.data
       const paymentStatus = data.payment?.payment_status || data.payment?.status
       const isTerminal = data.payment?.terminal === true
 

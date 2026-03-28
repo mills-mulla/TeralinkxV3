@@ -236,7 +236,7 @@ class ClientViewSet(viewsets.ModelViewSet):
                 transactions = TransactionQueue.objects.filter(
                     user=client,
                     status__in=['completed', 'processed'],
-                    method__in=['mpesa', 'mixed']  # Only M-Pesa payments
+                    method__in=['mpesa', 'mpesa+balance']  # Only M-Pesa payments
                 )
                 total_revenue = transactions.aggregate(total=Sum('price'))['total'] or Decimal('0')
                 transaction_count = transactions.count()

@@ -23,6 +23,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { api } from '@/services/api'
 
 const announcements = ref([])
 
@@ -34,10 +35,9 @@ const priorityClasses = {
 
 const fetchAnnouncements = async () => {
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/notifications/announcements/public/`)
-    if (response.ok) {
-      const data = await response.json()
-      announcements.value = data.filter(a => a.notification_type === 'maintenance')
+    const response = await api.get('/api/notifications/announcements/public/')
+    if (response.status === 200) {
+      announcements.value = response.data.filter(a => a.notification_type === 'maintenance')
     }
   } catch (error) {
     console.warn('Failed to fetch announcements:', error)

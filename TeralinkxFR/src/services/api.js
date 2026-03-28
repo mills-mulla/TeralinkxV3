@@ -1,16 +1,48 @@
 // services/api.js - ENHANCED WITH BETTER SESSION PERSISTENCE
 import axios from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+// Multi-endpoint configuration like admin panel
+const PRIMARY_URL = import.meta.env.VITE_API_PRIMARY_URL || 'https://srv.teralinkxwaves.uk'
+const FALLBACK_URL = import.meta.env.VITE_API_FALLBACK_URL || 'https://service.teralinkxwaves.uk'
+const LOCAL_URL = import.meta.env.VITE_API_BASE_URL || 'https://srv.teralinkxwaves.uk'
 
-// Create axios instance
+// Track which base URL is currently active
+let activeBaseURL = PRIMARY_URL
+let primaryFailed = false
+
+// Create axios instance WITHOUT baseURL - we'll use full URLs
 const api = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 15000,
   headers: {
     'Content-Type': 'application/json'
   }
 })
+
+// Helper function to get full API URL
+const getApiUrl = (endpoint) => {
+  // Remove leading slash if present
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint
+  return `${activeBaseURL}/${cleanEndpoint}`
+}
+
+// Custom API methods that use full URLs
+const apiMethods = {
+  get: (endpoint, config = {}) => {
+    return api.get(getApiUrl(endpoint), config)
+  },
+  post: (endpoint, data = {}, config = {}) => {
+    return api.post(getApiUrl(endpoint), data, config)
+  },
+  put: (endpoint, data = {}, config = {}) => {
+    return api.put(getApiUrl(endpoint), data, config)
+  },
+  delete: (endpoint, config = {}) => {
+    return api.delete(getApiUrl(endpoint), config)
+  },
+  patch: (endpoint, data = {}, config = {}) => {
+    return api.patch(getApiUrl(endpoint), data, config)
+  }
+}
 
 // Token refresh state
 let isRefreshing = false
@@ -92,9 +124,9 @@ const proactiveRefresh = async () => {
   }
 }
 
-// Refresh tokens function
+// Refresh tokens function with fallback support
 const refreshTokens = async (refreshToken) => {
-  const response = await axios.post(`${API_BASE_URL}/api/token/refresh/`, {
+  const response = await axios.post(`${activeBaseURL}/api/token/refresh/`, {
     refresh: refreshToken
   })
   
@@ -172,15 +204,39 @@ api.interceptors.request.use(
   }
 )
 
-// Response interceptor with automatic device auth retry
+// Response interceptor with automatic device auth retry and fallback support
 api.interceptors.response.use(
   (response) => {
+    // Primary responded successfully - reset fallback flag
+    if (primaryFailed) {
+      primaryFailed = false
+      activeBaseURL = PRIMARY_URL
+      console.log('✅ Primary server restored:', PRIMARY_URL)
+    }
     refreshAttempts = 0
     return response
   },
   async (error) => {
     const originalRequest = error.config
     
+    // Handle server failover first
+    const isNetworkError = !error.response
+    const isServerError = error.response?.status >= 500
+    const isUsingFallback = originalRequest.url?.includes(FALLBACK_URL)
+    
+    if ((isNetworkError || isServerError) && !isUsingFallback && !primaryFailed) {
+      console.warn(`🔄 Primary ${PRIMARY_URL} unreachable, falling back to ${FALLBACK_URL}`)
+      primaryFailed = true
+      activeBaseURL = FALLBACK_URL
+      
+      // Retry the failed request on fallback by reconstructing the URL
+      const endpoint = originalRequest.url.replace(PRIMARY_URL, '')
+      const fallbackUrl = `${FALLBACK_URL}${endpoint}`
+      const retryConfig = { ...originalRequest, url: fallbackUrl }
+      return axios(retryConfig)
+    }
+    
+    // Handle 401 authentication errors
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
@@ -202,7 +258,7 @@ api.interceptors.response.use(
           refreshAttempts++
           console.log('🔄 401 detected - attempting device auto-auth...')
           
-          const deviceAuthResponse = await axios.post(`${API_BASE_URL}/api/users/auth/device-auto/`, {
+          const deviceAuthResponse = await axios.post(`${activeBaseURL}/api/users/auth/device-auto/`, {
             current_mac: generateFallbackMac(),
             current_ip: generateFallbackIP(),
             location_id: 1,
@@ -245,7 +301,7 @@ api.interceptors.response.use(
             originalRequest.headers['Authorization'] = `Bearer ${newToken}`
             refreshAttempts = 0
             console.log('✅ Device auto-auth successful - retrying request')
-            return api(originalRequest)
+            return apiMethods.get(originalRequest.url.replace(activeBaseURL, ''))
           }
         } catch (deviceAuthError) {
           console.warn('❌ Device auto-auth failed:', deviceAuthError.message)
@@ -308,5 +364,35 @@ export const handleError = (error) => {
   }
 }
 
-// Export ONLY ONCE at the end
-export { api }
+// Initialize axios with stored token
+const initializeAuth = () => {
+  const token = localStorage.getItem('auth_token')
+  if (token && !isTokenExpired(token)) {
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+    console.log('✅ API initialized with stored token')
+  } else {
+    console.log('⚠️ No valid token found in localStorage')
+  }
+}
+
+// Call initialization immediately
+initializeAuth()
+
+// Function to manually set authorization token
+const setAuthToken = (token) => {
+  if (token) {
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+    console.log('✅ Authorization token set manually')
+  } else {
+    delete api.defaults.headers.common['Authorization']
+    console.log('❌ Authorization token removed')
+  }
+}
+
+// Export API configuration and helper functions
+export { apiMethods as api, setAuthToken }
+export const getActiveURL = () => activeBaseURL
+export const getPrimaryURL = () => PRIMARY_URL
+export const getFallbackURL = () => FALLBACK_URL
+export const getLocalURL = () => LOCAL_URL
+export const isPrimaryFailed = () => primaryFailed

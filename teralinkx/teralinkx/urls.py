@@ -31,8 +31,38 @@ urlpatterns = [
     path('api/ads/',include('ads.urls')),
     path('api/notifications/',include('notifications.urls')),
     path('suapi/', include('analytics.superuser.urls')),
+    path('locations/', include('locations.urls')),  # Add locations URLs
     path('__debug__/', include('debug_toolbar.urls')), 
-   
 ]
 urlpatterns += [path('silk/', include('silk.urls', namespace='silk'))]
+
+# Optional includes for when packages are available
+try:
+    from django_prometheus import urls as prometheus_urls
+    urlpatterns.insert(0, path('', include('django_prometheus.urls')))
+except ImportError:
+    pass
+
+try:
+    import debug_toolbar
+    urlpatterns.append(path('__debug__/', include('debug_toolbar.urls')))
+except ImportError:
+    pass
+
+try:
+    import silk
+    urlpatterns.append(path('silk/', include('silk.urls', namespace='silk')))
+except ImportError:
+    pass
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Auth Resilience URLs
+from django.urls import include
+urlpatterns += [
+    path('api/', include('core.urls_auth_resilience')),
+]
+
+# Auth Resilience URLs
+from django.urls import include
+urlpatterns += [
+    path('api/', include('core.urls_auth_resilience')),
+]

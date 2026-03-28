@@ -1,37 +1,35 @@
-tunnel: 1fb40a2f-56df-4268-b480-fad4fc059f22
-credentials-file: /etc/cloudflared/1fb40a2f-56df-4268-b480-fad4fc059f22.json
+tunnel: e0261038-4629-4917-a7de-3f617c934afb
+credentials-file: /etc/cloudflared/e0261038-4629-4917-a7de-3f617c934afb.json
 
 ingress:
-  # Main app (nginx routes everything)
   - hostname: teralinkxwaves.uk
     service: http://nginx:80
-  
-  - hostname: service.teralinkxwaves.uk
+
+  - hostname: cli.teralinkxwaves.uk
     service: http://nginx:80
-  
-  # Admin panel
-  - hostname: admin.teralinkxwaves.uk
+
+  - hostname: srv.teralinkxwaves.uk
     service: http://nginx:80
-  
-  # RADIUS API
+
+  - hostname: su.teralinkxwaves.uk
+    service: http://nginx:80
+
+  - hostname: router.teralinkxwaves.uk
+    service: http://nginx:80
+
   - hostname: radius.teralinkxwaves.uk
-    service: http://radiusapi:8010
-  
-  # HIDS Dashboard
-  - hostname: hids.teralinkxwaves.uk
-    service: http://hids_dashboard:5002
-  
-  # Monitoring - Grafana
-  - hostname: grafana.teralinkxwaves.uk
-    service: http://grafana:3000
-  
-  # Monitoring - Prometheus (optional)
-  - hostname: prometheus.teralinkxwaves.uk
-    service: http://prometheus:9090
-  
-  # Dev - Jupyter (optional)
-  - hostname: jupyter.teralinkxwaves.uk
-    service: http://jupyter:8888
-  
-  # Catch-all
+    service: http://nginx:80
+
+  - hostname: mt.teralinkxwaves.uk
+    service: http://nginx:80
+
+  - hostname: prom.teralinkxwaves.uk
+    service: http://nginx:80
+
+  - hostname: sec.teralinkxwaves.uk
+    service: http://nginx:80
+
+  - hostname: lab.teralinkxwaves.uk
+    service: http://nginx:80
+
   - service: http_status:404

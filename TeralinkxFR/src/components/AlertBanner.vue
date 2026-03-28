@@ -62,6 +62,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { api } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 
 const authStore = useAuthStore()
@@ -123,10 +124,7 @@ function dismissAnnouncement(announcementId) {
 
 async function markAsRead(notificationId) {
   try {
-    await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/notifications/${notificationId}/read/`, {
-      method: 'POST',
-      headers: authStore.authHeaders
-    })
+    await api.post(`/api/notifications/${notificationId}/read/`)
   } catch (error) {
     console.error('Failed to mark announcement as read:', error)
   }
@@ -134,13 +132,10 @@ async function markAsRead(notificationId) {
 
 async function fetchAnnouncements() {
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/notifications/announcements/`, {
-      headers: authStore.authHeaders
-    })
+    const response = await api.get('/api/notifications/announcements/')
 
-    if (response.ok) {
-      const data = await response.json()
-      announcements.value = Array.isArray(data) ? data : []
+    if (response.status === 200) {
+      announcements.value = Array.isArray(response.data) ? response.data : []
     }
   } catch (error) {
     console.error('❌ Failed to fetch announcements:', error)

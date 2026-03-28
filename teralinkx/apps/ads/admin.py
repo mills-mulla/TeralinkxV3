@@ -10,9 +10,15 @@ class AdvertisementAdmin(admin.ModelAdmin):
         'ad_type',
         'status',
         'campaign_name',
+        'campaign_id',
+        'brand_name',
         'is_active',
         'start_date',
         'end_date',
+        'priority',
+        'target_audience',
+        'bidding_strategy',
+        'budget',
         'impressions',
         'clicks',
         'ctr_display',
@@ -43,7 +49,10 @@ class AdvertisementAdmin(admin.ModelAdmin):
         'total_spent',
         'ctr_calculated',
         'created_at_display',
-        'is_live_display'
+        'modified_at_display',
+        'is_live_display',
+        'media_assets_display',
+        'performance_metrics_display'
     ]
     
     fieldsets = (
@@ -147,6 +156,40 @@ class AdvertisementAdmin(admin.ModelAdmin):
         """Format created_at date"""
         return obj.created_at.strftime("%Y-%m-%d %H:%M:%S")
     created_at_display.short_description = 'Created'
+    
+    def modified_at_display(self, obj):
+        """Format modified_at date"""
+        return obj.modified_at.strftime("%Y-%m-%d %H:%M:%S")
+    modified_at_display.short_description = 'Modified'
+    
+    def media_assets_display(self, obj):
+        """Display media assets summary"""
+        assets = obj.media_assets
+        if not assets:
+            return "No media assets"
+        
+        asset_list = []
+        for key, value in assets.items():
+            if value:
+                asset_list.append(f"{key}: ✓")
+        
+        return ", ".join(asset_list) if asset_list else "No assets"
+    media_assets_display.short_description = 'Media Assets'
+    
+    def performance_metrics_display(self, obj):
+        """Display performance metrics"""
+        metrics = obj.get_performance_metrics()
+        return format_html(
+            '<div style="font-size: 11px;">'
+            'CTR: {:.2f}% | '
+            'Remaining Budget: KES {:.2f} | '
+            'Actual CPC: KES {:.2f}'
+            '</div>',
+            metrics['click_through_rate'],
+            metrics['remaining_budget'],
+            metrics['cost_per_click_actual']
+        )
+    performance_metrics_display.short_description = 'Performance'
     
     def is_live_display(self, obj):
         """Display live status with error handling"""

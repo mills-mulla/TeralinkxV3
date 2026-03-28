@@ -187,6 +187,7 @@ import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import logoImage from '@/assets/teralinkx2.png'
 import { useDashboardStore } from '@/stores/dashboard'
+import { api } from '@/services/api'
 
 const router = useRouter()
 const dashboardStore = useDashboardStore()
@@ -219,15 +220,9 @@ const toggleMenu = () => {
 
 const markAsRead = async (notificationId) => {
   try {
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/notifications/${notificationId}/read/`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Token ${localStorage.getItem('authToken')}`,
-        'Content-Type': 'application/json'
-      }
-    })
+    const response = await api.post(`/api/notifications/${notificationId}/read/`)
     
-    if (response.ok) {
+    if (response.status === 200) {
       await dashboardStore.fetchDashboardData()
       showNotifications.value = false
     }
@@ -238,13 +233,7 @@ const markAsRead = async (notificationId) => {
 
 const logout = async () => {
   try {
-    const token = localStorage.getItem('authToken')
-    if (token) {
-      await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/logout/`, {
-        method: 'POST',
-        headers: { 'Authorization': `Token ${token}` }
-      })
-    }
+    await api.post('/api/logout/')
   } catch (error) {
     console.error('Logout error:', error)
   } finally {

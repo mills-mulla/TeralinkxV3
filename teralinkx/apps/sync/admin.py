@@ -5,8 +5,8 @@ from .models import LocationSyncLog, SyncConfiguration, DataChangeLog
 
 @admin.register(LocationSyncLog)
 class LocationSyncLogAdmin(admin.ModelAdmin):
-    list_display = ('location', 'sync_type', 'sync_direction', 'status_badge', 'records_synced', 'success_rate', 'duration', 'started_at')
-    list_filter = ('sync_type', 'sync_direction', 'status', 'is_manual', 'started_at')
+    list_display = ('location', 'sync_type', 'sync_direction', 'status_badge', 'records_processed', 'records_synced', 'records_failed', 'success_rate', 'duration', 'is_manual', 'retry_count', 'started_at')
+    list_filter = ('sync_type', 'sync_direction', 'status', 'is_manual', 'started_at', 'location')
     search_fields = ('location__name', 'location__id', 'last_error')
     readonly_fields = ('created_at', 'updated_at', 'started_at', 'completed_at', 'duration_seconds', 'success_rate')
     date_hierarchy = 'started_at'
@@ -114,8 +114,8 @@ class LocationSyncLogAdmin(admin.ModelAdmin):
 
 @admin.register(SyncConfiguration)
 class SyncConfigurationAdmin(admin.ModelAdmin):
-    list_display = ('location', 'auto_sync_enabled', 'sync_endpoint', 'max_sync_retries', 'updated_at')
-    list_filter = ('auto_sync_enabled', 'compression_enabled', 'encryption_enabled')
+    list_display = ('location', 'auto_sync_enabled', 'sync_endpoint', 'max_sync_retries', 'compression_enabled', 'encryption_enabled', 'updated_at')
+    list_filter = ('auto_sync_enabled', 'compression_enabled', 'encryption_enabled', 'conflict_resolution')
     search_fields = ('location__name', 'location__id', 'sync_endpoint')
     readonly_fields = ('created_at', 'updated_at')
     
@@ -159,8 +159,8 @@ class SyncConfigurationAdmin(admin.ModelAdmin):
 
 @admin.register(DataChangeLog)
 class DataChangeLogAdmin(admin.ModelAdmin):
-    list_display = ('model_type', 'change_type', 'location', 'object_id', 'is_synced', 'created_at')
-    list_filter = ('model_type', 'change_type', 'is_synced', 'location', 'created_at')
+    list_display = ('model_type', 'change_type', 'location', 'object_id', 'is_synced', 'sync_attempts', 'changed_by', 'created_at')
+    list_filter = ('model_type', 'change_type', 'is_synced', 'location', 'created_at', 'changed_by')
     search_fields = ('object_id', 'location__name', 'change_reason')
     readonly_fields = ('created_at', 'updated_at', 'synced_at')
     

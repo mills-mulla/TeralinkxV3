@@ -43,14 +43,12 @@ class RouterOSManager:
         
     def connect(self) -> bool:
         """
-        Connect to RouterOS API
-        
-        Returns:
-            bool: True if connected successfully
+        Connect to RouterOS API with explicit timeout to prevent hanging workers.
         """
+        import socket
+        socket.setdefaulttimeout(5)  # 5s max — router is either up or it isn't
         try:
             if self.ssl:
-                # For SSL connections (port 8729)
                 self.connection = librouteros.connect(
                     host=self.host,
                     username=self.username,
@@ -59,19 +57,16 @@ class RouterOSManager:
                     use_ssl=True
                 )
             else:
-                # For plain connections (port 8728)
                 self.connection = librouteros.connect(
                     host=self.host,
                     username=self.username,
                     password=self.password,
                     port=self.port
                 )
-            
             self.api = self.connection
             logger.info(f"Connected to RouterOS at {self.host}:{self.port}")
             return True
-            
-        except Exception as e:  # Catch all exceptions
+        except Exception as e:
             logger.error(f"Connection failed to {self.host}:{self.port}: {e}")
             raise ConnectionError(f"RouterOS connection failed: {str(e)}")
     

@@ -1,3 +1,4 @@
+import { api } from '../services/api'
 import { defineStore } from 'pinia'
 import axios from 'axios'
 import defaultAvatar from '@/assets/avatar2.png'

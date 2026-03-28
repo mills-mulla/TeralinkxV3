@@ -237,7 +237,7 @@
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import axios from 'axios'
+import { api } from '@/services/api'
 import { toast } from '@/composables/useCustomToast'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useAuthStore } from '@/stores/auth'
@@ -437,13 +437,10 @@ function formatPhoneNumber() {
 const fetchAvailableCoupons = async () => {
   try {
     loading.value = true
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/rewards/coupons/`, {
-      headers: authStore.authHeaders
-    })
+    const response = await api.get('/api/rewards/coupons/')
     
-    if (response.ok) {
-      const data = await response.json()
-      availableCoupons.value = data.coupons || []
+    if (response.status === 200) {
+      availableCoupons.value = response.data.coupons || []
     }
   } catch (error) {
   } finally {
@@ -504,16 +501,12 @@ async function handleUnifiedPayment() {
     
     // Log the payload being sent
     
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/payments/unified/`, {
-      method: 'POST',
-      headers: authStore.authHeaders,
-      body: JSON.stringify(paymentData)
-    })
+    const response = await api.post('/api/payments/unified/', paymentData)
     
-    const data = await response.json()
+    const data = response.data
 
     
-    if (response.ok && data.success) {
+    if (response.status === 200 && data.success) {
       if (paymentMethod === 'credit') {
         // Pure credit payment - immediate success
         toast.success('Package purchased successfully with account credit!')

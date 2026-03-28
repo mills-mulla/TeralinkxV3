@@ -32,9 +32,6 @@ class UnifiedPaymentAPIView(APIView):
         coupon_code = data.get('coupon_code')
         use_credit = data.get('use_credit', True)  # Check if user wants to use credit
         
-        # 🔍 DEBUG: Log the incoming payload
-        logger.info(f"UNIFIED PAYMENT DEBUG - Incoming payload: {data}")
-        logger.info(f"UNIFIED PAYMENT DEBUG - payment_method: {payment_method}, use_credit: {use_credit}")
         
         # Validate required fields
         if not all([payment_method, package_id]):
@@ -68,9 +65,7 @@ class UnifiedPaymentAPIView(APIView):
         # Override payment method if user doesn't want to use credit
         if not use_credit and payment_method in ['credit', 'mixed']:
             payment_method = 'mpesa'
-            logger.info(f"UNIFIED PAYMENT DEBUG - User opted not to use credit, forcing M-Pesa payment")
-        
-        logger.info(f"UNIFIED PAYMENT DEBUG - Final payment_method: {payment_method}, final_price: {final_price}")
+            
         
         # Route to appropriate payment handler
         if payment_method == 'credit':
@@ -201,9 +196,7 @@ class UnifiedPaymentAPIView(APIView):
             
             client = user_context['client']
             
-            # 🔍 DEBUG: Log M-Pesa payment details
-            logger.info(f"MPESA PAYMENT DEBUG - Client: {client.account}, Final Price: {final_price}, Used Credit: 0 (pure M-Pesa)")
-            
+                
             # Initiate M-Pesa payment
             result = MpesaGatewayHelper.initiate_stk_push(
                 phone=phone_number,
@@ -236,8 +229,6 @@ class UnifiedPaymentAPIView(APIView):
                 result=result
             )
             
-            # 🔍 DEBUG: Log queue item creation
-            logger.info(f"MPESA PAYMENT DEBUG - Queue item created: ID={queue_item.id}, used_credit={queue_item.used_credit}")
             
             # Store coupon info in queue metadata
             if applied_coupon:
@@ -333,8 +324,7 @@ class UnifiedPaymentAPIView(APIView):
                 result=result
             )
             
-            # Update queue item for mixed payment
-            queue_item.payment_method = 'mixed'
+            # method is already set to 'mpesa+balance' in create_payment_queue
             queue_item.metadata.update({
                 'payment_breakdown': {
                     'total_amount': float(final_price),

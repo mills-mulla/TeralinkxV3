@@ -2,6 +2,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from .models import Location
+import json
 
 @admin.register(Location)
 class LocationAdmin(admin.ModelAdmin):
@@ -11,31 +12,47 @@ class LocationAdmin(admin.ModelAdmin):
         'location_type', 
         'city', 
         'is_active',
+        'is_central',
+        'is_online',
         'max_concurrent_users',
+        'current_user_count',
+        'capacity_percentage_display',
         'roaming_status',
+        'maintenance_mode',
         'created_display'
     ]
     
     list_filter = [
         'location_type',
         'is_active',
+        'is_central',
+        'is_online',
+        'maintenance_mode',
         'allow_roaming_in',
         'allow_roaming_out',
+        'offline_operation_enabled',
         'city'
     ]
     
     search_fields = [
         'code',
         'name', 
+        'node_id',
         'city',
         'address',
-        'nas_identifier'
+        'nas_identifier',
+        'description'
     ]
     
     readonly_fields = [
         'created_display',
         'modified_display',
-        'roaming_locations_list'
+        'roaming_locations_list',
+        'capacity_percentage_display',
+        'is_operational_display',
+        'is_overloaded_display',
+        'offline_duration_display',
+        'router_config_preview'
     ]
     
     fieldsets = (
@@ -44,7 +61,17 @@ class LocationAdmin(admin.ModelAdmin):
                 'code', 
                 'name', 
                 'location_type',
-                'is_active'
+                'is_active',
+                'description',
+                'priority'
+            )
+        }),
+        ('Multi-Location Node Identity', {
+            'fields': (
+                'node_id',
+                'is_central',
+                'central_api_url',
+                'sync_api_key'
             )
         }),
         ('Physical Location', {
@@ -56,17 +83,50 @@ class LocationAdmin(admin.ModelAdmin):
         }),
         ('Network Configuration', {
             'fields': (
+                'router_config',
+                'router_config_preview',
                 'router_ip',
-                'nas_identifier',
-                'max_concurrent_users'
+                'nas_identifier'
             )
         }),
-        ('Roaming Settings', {
+        ('Connectivity & Health', {
+            'fields': (
+                'is_online',
+                'last_seen_online',
+                'health_check_interval',
+                'offline_duration_display'
+            )
+        }),
+        ('Capacity & Performance', {
+            'fields': (
+                'max_concurrent_users',
+                'current_user_count',
+                'capacity_percentage_display',
+                'bandwidth_limit_mbps',
+                'is_operational_display',
+                'is_overloaded_display'
+            )
+        }),
+        ('Operational Status', {
+            'fields': (
+                'maintenance_mode',
+                'maintenance_message'
+            )
+        }),
+        ('Roaming Configuration', {
             'fields': (
                 'allow_roaming_in',
                 'allow_roaming_out', 
                 'roaming_price_multiplier',
+                'max_roaming_locations',
+                'roaming_time_restrictions',
                 'roaming_locations_list'
+            )
+        }),
+        ('Offline Operation', {
+            'fields': (
+                'offline_operation_enabled',
+                'offline_credit_limit'
             )
         }),
         ('Metadata', {
@@ -152,4 +212,51 @@ class LocationAdmin(admin.ModelAdmin):
         """Admin action to disable roaming for selected locations"""
         updated = queryset.update(allow_roaming_in=False, allow_roaming_out=False)
         self.message_user(request, f'Roaming disabled for {updated} locations.')
-    disable_roaming.short_description = "Disable roaming for selected locations"
+    def capacity_percentage_display(self, obj):
+        """Display capacity percentage with color coding"""
+        percentage = obj.capacity_percentage
+        if percentage > 90:
+            color = 'red'
+        elif percentage > 75:
+            color = 'orange'
+        else:
+            color = 'green'
+        
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{:.1f}%</span>',
+            color,
+            percentage
+        )
+    capacity_percentage_display.short_description = 'Capacity %'
+    
+    def is_operational_display(self, obj):
+        """Display operational status"""
+        if obj.is_operational:
+            return format_html('<span style="color: green;">✓ Operational</span>')
+        return format_html('<span style="color: red;">✗ Not Operational</span>')
+    is_operational_display.short_description = 'Operational'
+    
+    def is_overloaded_display(self, obj):
+        """Display overload status"""
+        if obj.is_overloaded:
+            return format_html('<span style="color: red;">⚠ Overloaded</span>')
+        return format_html('<span style="color: green;">✓ Normal</span>')
+    is_overloaded_display.short_description = 'Load Status'
+    
+    def offline_duration_display(self, obj):
+        """Display offline duration if applicable"""
+        duration = obj.get_offline_duration()
+        if duration:
+            hours = duration.total_seconds() / 3600
+            return f"{hours:.1f} hours"
+        return "Online"
+    offline_duration_display.short_description = 'Offline Duration'
+    
+    def router_config_preview(self, obj):
+        """Display router configuration preview"""
+        config = obj.get_router_config()
+        return format_html(
+            '<pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; max-height: 200px; overflow: auto;">{}</pre>',
+            json.dumps(config, indent=2)
+        )
+    router_config_preview.short_description = 'Router Config Preview'

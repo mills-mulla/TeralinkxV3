@@ -452,6 +452,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { api } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useToast } from '@/composables/useToast'
@@ -558,7 +559,7 @@ const uploadImage = async (file) => {
       body: formData
     })
 
-    if (response.ok) {
+    if (response.status === 200) {
       showSuccess('Profile image updated!')
       await refreshData()
     } else {
@@ -591,7 +592,7 @@ const updateField = async (field, value) => {
       body: JSON.stringify({ [field]: value })
     })
 
-    if (response.ok) {
+    if (response.status === 200) {
       showSuccess(`${field.replace('_', ' ')} updated successfully!`)
       await refreshData()
     } else {
@@ -629,8 +630,8 @@ const loadDevices = async () => {
       headers: authStore.authHeaders
     })
     
-    if (response.ok) {
-      const data = await response.json()
+    if (response.status === 200) {
+      const data = response.data
       devices.value = data.map(device => ({
         ...device,
         showMenu: false,
@@ -670,7 +671,7 @@ const saveDeviceName = async (device) => {
       body: JSON.stringify({ device_name: device.editName })
     })
     
-    if (response.ok) {
+    if (response.status === 200) {
       device.device_name = device.editName
       device.isEditing = false
       showSuccess('Device name updated successfully!')
@@ -694,7 +695,7 @@ const blockDevice = async (device) => {
       headers: authStore.authHeaders
     })
     
-    if (response.ok) {
+    if (response.status === 200) {
       device.status = 'suspended'
       device.showMenu = false
       showSuccess('Device blocked successfully!')
@@ -711,7 +712,7 @@ const unblockDevice = async (device) => {
       headers: authStore.authHeaders
     })
     
-    if (response.ok) {
+    if (response.status === 200) {
       device.status = 'active'
       device.showMenu = false
       showSuccess('Device unblocked successfully!')
@@ -732,7 +733,7 @@ const trustDevice = async (device) => {
       body: JSON.stringify({ is_trusted: !device.is_trusted })
     })
     
-    if (response.ok) {
+    if (response.status === 200) {
       device.is_trusted = !device.is_trusted
       device.showMenu = false
       showSuccess(`Device ${device.is_trusted ? 'trusted' : 'untrusted'} successfully!`)
@@ -751,7 +752,7 @@ const removeDevice = async (device) => {
       headers: authStore.authHeaders
     })
     
-    if (response.ok) {
+    if (response.status === 200) {
       devices.value = devices.value.filter(d => d.id !== device.id)
       showSuccess('Device removed successfully!')
     }

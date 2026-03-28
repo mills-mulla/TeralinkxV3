@@ -38,8 +38,13 @@ class PackageTypeAdmin(admin.ModelAdmin):
         'duration_display',
         'speed_limit_mbps',
         'data_limit_display',
+        'device_limit',
+        'qos_priority',
         'is_active',
+        'is_public',
         'is_featured',
+        'allow_roaming',
+        'auto_renew',
         'sales_display'
     ]
     
@@ -47,8 +52,10 @@ class PackageTypeAdmin(admin.ModelAdmin):
         'category',
         'tier',
         'is_active',
+        'is_public',
         'is_featured',
         'allow_roaming',
+        'auto_renew',
         'qos_priority'
     ]
     
@@ -56,13 +63,18 @@ class PackageTypeAdmin(admin.ModelAdmin):
         'name',
         'code',
         'description',
-        'radius_group'
+        'radius_group',
+        'tags'
     ]
     
     readonly_fields = [
         'sold_quantity',
         'availability_status',
-        'created_display'
+        'created_display',
+        'modified_display',
+        'discount_percentage_display',
+        'available_quantity_display',
+        'promotion_status_display'
     ]
     
     # UPDATED: Removed 'locations' from fieldsets
@@ -80,6 +92,7 @@ class PackageTypeAdmin(admin.ModelAdmin):
             'fields': (
                 'price',
                 'original_price',
+                'discount_percentage_display',
                 'duration',
                 'auto_renew'
             )
@@ -100,7 +113,7 @@ class PackageTypeAdmin(admin.ModelAdmin):
         }),
         ('Availability & Display', {
             'fields': (
-                'is_active',        # REMOVED: 'locations',
+                'is_active',
                 'is_public',
                 'is_featured',
                 'display_order',
@@ -108,16 +121,25 @@ class PackageTypeAdmin(admin.ModelAdmin):
                 'tags'
             )
         }),
+        ('Promotions', {
+            'fields': (
+                'promotion_start',
+                'promotion_end',
+                'promotion_status_display'
+            )
+        }),
         ('Inventory Management', {
             'fields': (
                 'total_quantity',
                 'sold_quantity',
+                'available_quantity_display',
                 'availability_status'
             )
         }),
         ('Metadata', {
             'fields': (
                 'created_display',
+                'modified_display'
             ),
             'classes': ('collapse',)
         })
@@ -224,6 +246,36 @@ class PackageTypeAdmin(admin.ModelAdmin):
         updated = queryset.update(is_featured=False)
         self.message_user(request, f'{updated} packages unfeatured successfully.')
     unfeature_packages.short_description = "Unfeature selected packages"
+    
+    def modified_display(self, obj):
+        """Format modified_at date"""
+        return obj.modified_at.strftime("%Y-%m-%d %H:%M:%S")
+    modified_display.short_description = 'Modified'
+    
+    def discount_percentage_display(self, obj):
+        """Display discount percentage"""
+        percentage = obj.discount_percentage
+        if percentage > 0:
+            return f"{percentage}%"
+        return "No discount"
+    discount_percentage_display.short_description = 'Discount %'
+    
+    def available_quantity_display(self, obj):
+        """Display available quantity"""
+        available = obj.available_quantity
+        if available is None:
+            return "Unlimited"
+        return str(available)
+    available_quantity_display.short_description = 'Available'
+    
+    def promotion_status_display(self, obj):
+        """Display promotion status"""
+        if obj.is_promotion_active:
+            return format_html('<span style="color: green;">✓ Active</span>')
+        elif obj.promotion_start and obj.promotion_end:
+            return format_html('<span style="color: orange;">Scheduled</span>')
+        return format_html('<span style="color: gray;">None</span>')
+    promotion_status_display.short_description = 'Promotion Status'
 
 
 @admin.register(DispatchVoucher)

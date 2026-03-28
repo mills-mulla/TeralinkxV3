@@ -321,8 +321,8 @@ export default {
       this.saveLoading = true
       try {
         const url = this.selectedStream 
-          ? `https://service.teralinkxwaves.uk/api/finance/api/revenue-streams/${this.selectedStream.id}/`
-          : 'https://service.teralinkxwaves.uk/api/finance/api/revenue-streams/'
+          ? `https://srv.teralinkxwaves.uk/api/finance/api/revenue-streams/${this.selectedStream.id}/`
+          : 'https://srv.teralinkxwaves.uk/api/finance/api/revenue-streams/'
         const method = this.selectedStream ? 'PUT' : 'POST'
         
         const response = await fetch(url, {
@@ -355,7 +355,7 @@ export default {
     async confirmDelete() {
       this.deleteLoading = true
       try {
-        const response = await fetch(`https://service.teralinkxwaves.uk/api/finance/api/revenue-streams/${this.streamToDelete.id}/`, {
+        const response = await fetch(`https://srv.teralinkxwaves.uk/api/finance/api/revenue-streams/${this.streamToDelete.id}/`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('access_token')}`

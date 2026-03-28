@@ -41,18 +41,15 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import axios from 'axios'
+import { api } from '../services/api'
 
 const ads = ref([])
 const currentIndex = ref(0)
 let intervalId = null
 
-// Base domain for images from .env
-const IMAGE_BASE_URL = import.meta.env.VITE_API_PROD_ADS_URL?.replace(/\/+$/, '')
-
 async function fetchAds() {
   try {
-    const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/ads/activeads/`)
+    const response = await api.get('/api/ads/activeads/')
 
     ads.value = response.data.ads.map(ad => ({
       image: ad.image,
@@ -70,6 +67,8 @@ async function fetchAds() {
 }
 
 onMounted(async () => {
+  // Wait a bit for auth to initialize
+  await new Promise(resolve => setTimeout(resolve, 100))
   await fetchAds()
   if (ads.value.length > 0) {
     intervalId = setInterval(() => {

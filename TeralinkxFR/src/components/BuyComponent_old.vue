@@ -219,12 +219,15 @@
 
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue'
+import { api } from '@/services/api'
 import { useRouter } from 'vue-router'
+import { api } from '@/services/api'
 import axios from 'axios'
 import { toast } from '@/composables/useCustomToast'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useAuthStore } from '@/stores/auth'
 import PaymentLoader from './PaymentLoader.vue'
+import { api } from '@/services/api'
 
 const $router = useRouter()
 
@@ -384,8 +387,8 @@ const fetchAvailableCoupons = async () => {
       headers: authStore.authHeaders
     })
     
-    if (response.ok) {
-      const data = await response.json()
+    if (response.status === 200) {
+      const data = response.data
       availableCoupons.value = data.coupons || []
     }
   } catch (error) {
@@ -473,9 +476,9 @@ async function handleUnifiedPayment() {
       body: JSON.stringify(paymentData)
     })
     
-    const data = await response.json()
+    const data = response.data
     
-    if (response.ok && data.success) {
+    if (response.status === 200 && data.success) {
       if (paymentMethod === 'credit') {
         // Pure credit payment - immediate success
         toast.success('Package purchased successfully with account credit!')

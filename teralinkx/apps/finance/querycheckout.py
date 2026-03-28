@@ -422,37 +422,29 @@ class VoucherManager:
     
     @staticmethod
     def perform_auto_login(account, voucher_code, hotspot_ip):
-        """
-        CORRECT version using RouterManager
-        """
+        """Auto-login user to hotspot using RouterManager."""
+        if not hotspot_ip:
+            logger.info(f"Auto-login skipped for {account}: no hotspot IP")
+            return False
         try:
+            from .authentications import RouterManager, RouterConfig, validate_voucher
             is_valid, _ = validate_voucher(account, voucher_code)
             if not is_valid:
-                logger.warning(f"Voucher validation failed for auto-login: {account}")
+                logger.warning(f"Auto-login: voucher validation failed for {account}")
                 return False
-            
-            # Use RouterManager with default config
-            router_manager = RouterManager()
-            
-            try:
-                # Connect and execute command
-                router_manager.connect()
-                          
-                router_manager.execute_command(
-                    path='/ip/hotspot/active/login', 
-                    user=voucher_code,
-                    ip=hotspot_ip
+            router_config = RouterConfig.get_config()
+            with RouterManager(router_config) as router:
+                result = router.hotspot_login(
+                    username=voucher_code,
+                    ip_address=hotspot_ip
                 )
-                
+            if result:
                 logger.info(f"Auto-login successful for {account}")
-                return True
-                
-            finally:
-                # Ensure connection is closed
-                router_manager.disconnect()
-                
+            else:
+                logger.warning(f"Auto-login failed for {account}")
+            return bool(result)
         except Exception as e:
-            logger.error(f"Auto-login failed for {account}: {e}")
+            logger.error(f"Auto-login error for {account}: {e}")
             return False
 
 # ============================================================================
@@ -615,7 +607,24 @@ class PaymentProcessor:
             raise ValueError(f"Package not found: {package_code}")
         
         result_code = str(mpesa_response.get('ResultCode'))
-        
+
+        # All result codes that mean the payment definitively failed
+        DEFINITIVE_FAILURES = {
+            '1':    'Insufficient funds in your M-Pesa account',
+            '2':    'Amount is below the minimum allowed',
+            '3':    'Amount exceeds the maximum allowed',
+            '4':    'Transaction would exceed your daily limit',
+            '8':    'Transaction would exceed maximum account balance',
+            '17':   'Duplicate transaction — please wait 2 minutes before retrying',
+            '1019': 'Transaction expired — please try again',
+            '1025': 'Payment request error — please try again',
+            '1032': 'Request cancelled by user',
+            '1037': 'Your phone could not be reached — please try again',
+            '2001': 'Incorrect M-Pesa PIN entered',
+            '2028': 'Invalid payment configuration',
+            '8006': 'M-Pesa account locked — contact Safaricom',
+        }
+
         if result_code == '0':
             
             result = PaymentProcessor.handle_successful_payment(
@@ -637,14 +646,54 @@ class PaymentProcessor:
                 IdempotencyManager.update(idempotency_key, result)
             
             return result
+
+        elif result_code in DEFINITIVE_FAILURES:
+            # Definitive payment failure — mark queue failed immediately
+            reason = DEFINITIVE_FAILURES[result_code]
+            try:
+                transaction_record.mark_failed(
+                    reason=reason,
+                    error_code=f'MPESA_{result_code}',
+                    failure_category='payment_gateway',
+                    increment_retry=False
+                )
+                # Refund used_credit if mixed payment
+                if transaction_record.used_credit and transaction_record.used_credit > 0:
+                    with transaction.atomic():
+                        client = ClientH.objects.select_for_update().get(
+                            pk=user_context['client'].pk
+                        )
+                        client.balance += Decimal(str(transaction_record.used_credit))
+                        client.save(update_fields=['balance'])
+                    logger.info(
+                        f"[{checkout_request_id}] Refunded credit "
+                        f"{transaction_record.used_credit} to {user_context['account']}"
+                    )
+            except Exception as e:
+                logger.error(f"[{checkout_request_id}] Failed to mark failed/refund: {e}")
+
+            PaymentMetrics.record_payment_failure(f'mpesa_{result_code}')
+            AuditLogger.log_payment_failure(
+                user=user_context['user'],
+                checkout_request_id=checkout_request_id,
+                reason=reason,
+                error_category='payment_gateway'
+            )
+            return {
+                'success': False,
+                'payment_status': 'failed',
+                'status': 'failed',
+                'terminal': True,
+                'result_code': result_code,
+                'description': reason
+            }
+
         else:
             result = PaymentProcessor.handle_pending_payment(
                 user_context=user_context,
                 transaction_record=transaction_record,
                 mpesa_response=mpesa_response
             )
-            
-            PaymentMetrics.record_payment_failure('payment_pending')#to be reviewed later for correct queue status update!!!
             return result
     
     @staticmethod
@@ -741,8 +790,8 @@ class PaymentProcessor:
         try:
             from core.services.rewards_service import RewardsService
             payment_method = getattr(transaction_record, 'method', 'mpesa')
-            if payment_method in ('mpesa', 'mixed'):
-                if payment_method == 'mixed' and transaction_record.used_credit:
+            if payment_method in ('mpesa', 'mpesa+balance'):
+                if payment_method == 'mpesa+balance' and transaction_record.used_credit:
                     mpesa_amount = transaction_record.price - Decimal(str(transaction_record.used_credit))
                 else:
                     mpesa_amount = transaction_record.price

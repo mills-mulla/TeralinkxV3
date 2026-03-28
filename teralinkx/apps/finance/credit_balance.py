@@ -474,13 +474,8 @@ class BalanceVoucherManager:
     """Manages voucher activation with circuit breaker - V3 integrated"""
     
     @staticmethod
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type(Exception)
-    )
     def activate_voucher_with_retry(prefix: str, profile: str, devices: int) -> Dict:
-        """Activate voucher with retry and circuit breaker using generate.py"""
+        """Activate voucher using generate.py. Single attempt — router is either up or it isn't."""
         return router_circuit_breaker.call(
             activate_voucher,
             prefix=prefix,
@@ -520,20 +515,16 @@ class BalanceVoucherManager:
         is_balance_purchase = getattr(transaction_record, 'method', None) == 'balance'
         
         if is_balance_purchase:
-            logger.info(f"DEBUG: Balance purchase - deducting {deduction_amount} from {client.account}")
-            
             # Get fresh client and deduct balance
             client.refresh_from_db()
-            old_balance = client.balance
             client.balance -= deduction_amount
             client.total_spent += deduction_amount
             client.active_voucher = voucher_code
             client.voucher_expiry = dispatch_voucher.expires_at
             client.save()
             
-            logger.info(f"BALANCE DEDUCTION: {old_balance} -> {client.balance} (deducted {deduction_amount}) for {client.account}")
+            logger.info(f"Balance deducted {deduction_amount} for {client.account}")
         else:
-            logger.info(f"DEBUG: M-Pesa payment - NO balance deduction for {client.account}")
             
             # Update client voucher info without balance deduction
             client.refresh_from_db()
@@ -663,7 +654,7 @@ class BalancePurchaseProcessor:
             package=package.name,
             price=price,
             status='pending',
-            recipient=client.account,
+            account_reference=client.account,
             used_credit=price,
             priority='normal',
             metadata=metadata
@@ -801,26 +792,8 @@ class BalancePurchaseProcessor:
                 transaction_record=transaction_record,
                 final_price=final_price
             )
-            logger.info(f"DEBUG: Dispatch voucher created successfully")
-            
-            # Verify balance was actually deducted by re-fetching client
-            client_after_deduction = ClientH.objects.get(id=client.id)
-            logger.info(f"DEBUG: Client balance after voucher creation: {client_after_deduction.balance}")
-            
-            # 🔴 CRITICAL: Mark transaction as completed IMMEDIATELY after balance deduction
-            # This ensures the transaction is committed before any non-critical operations
             transaction_record.mark_processed()
-            logger.info(f"DEBUG: Transaction marked as processed - balance should be committed")
-            
-            # Force transaction commit by ending the current transaction block
-            transaction.commit()
-            logger.info(f"DEBUG: Transaction explicitly committed")
-            
-            # Verify balance is still deducted after commit
-            client_post_commit = ClientH.objects.get(id=client.id)
-            logger.info(f"DEBUG: Client balance after explicit commit: {client_post_commit.balance}")
-            
-            # 🎁 REWARD POINTS POLICY: Balance-only purchases do NOT earn points
+                        # 🎁 REWARD POINTS POLICY: Balance-only purchases do NOT earn points
             # Only M-Pesa and M-Pesa + balance purchases earn reward points
             # This encourages users to use M-Pesa for payments
             logger.info(f"Balance-only purchase completed for {client.account} - NO reward points awarded (policy)")
@@ -1091,29 +1064,9 @@ class BalancePurchaseAPIView(APIView):
                     'code': 'INSUFFICIENT_BALANCE'
                 }, status=status.HTTP_402_PAYMENT_REQUIRED)
             
-            # Build response with fresh database query
-            logger.info(f"DEBUG: Building response - final client balance check")
-            
-            # Direct database query to get most accurate balance
-            from django.db import connection
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    "SELECT balance, account FROM users_clienth WHERE id = %s",
-                    [user_context['client'].id]
-                )
-                db_result = cursor.fetchone()
-                if db_result:
-                    actual_balance, account = db_result
-                    logger.info(f"DEBUG: DIRECT DB QUERY - Account: {account}, Balance: {actual_balance}")
-                else:
-                    logger.error(f"DEBUG: DIRECT DB QUERY - No client found with ID {user_context['client'].id}")
-                    actual_balance = 0
-            
-            # Also get via ORM for comparison
-            final_client_check = ClientH.objects.get(id=user_context['client'].id)
-            logger.info(f"DEBUG: ORM QUERY - Balance: {final_client_check.balance}")
-            logger.info(f"DEBUG: BALANCE COMPARISON - DB: {actual_balance}, ORM: {final_client_check.balance}")
-            
+            fresh_client = ClientH.objects.get(id=user_context['client'].id)
+            actual_balance = fresh_client.balance
+
             response_data = {
                 'success': True,
                 'timestamp': timezone.now().isoformat(),

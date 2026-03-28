@@ -1,6 +1,7 @@
 // stores/dashboard.js - Unified dashboard store
 import { defineStore } from 'pinia'
 import { useAuthStore } from './auth'
+import { api } from '../services/api'
 
 export const useDashboardStore = defineStore('dashboard', {
   state: () => ({
@@ -56,19 +57,14 @@ export const useDashboardStore = defineStore('dashboard', {
         const hotspotMac = localStorage.getItem('hs_mac') || ''
         const hotspotIp = localStorage.getItem('hs_ip') || ''
         
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/dashboard/`, {
+        const response = await api.get('/api/dashboard/', {
           headers: {
-            ...authStore.authHeaders,
             'X-Device-MAC': hotspotMac,
             'X-Device-IP': hotspotIp
           }
         })
 
-        if (!response.ok) {
-          throw new Error(`Dashboard fetch failed: ${response.status}`)
-        }
-
-        const data = await response.json()
+        const data = response.data
         
         // Update client data
         this.account = data.client?.acc_no || ''

@@ -108,9 +108,9 @@
 
 <script setup>
 import { ref } from 'vue'
+import { api } from '@/services/api'
 import { useCsrfTokenStore } from '@/stores/useCsrf' 
 import NavBar from '@/components/NavBar.vue'
-import axios from 'axios'
 
 const voucherCode = ref('')
 const error = ref('')
@@ -130,17 +130,7 @@ async function login() {
       bound_mac: localStorage.getItem('mac_addr'),
     }
 
-    const res = await axios.post(
-      `${import.meta.env.VITE_API_BASE_URL}/api/connect/`,
-      payload,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': csrfStore.csrfToken,
-          Authorization: `Token ${localStorage.getItem('authToken')}`,
-        },
-      }
-    )
+    const res = await api.post('/api/connect/', payload)
 
     if (res.status === 200) {
       window.location.href = '#/connected'

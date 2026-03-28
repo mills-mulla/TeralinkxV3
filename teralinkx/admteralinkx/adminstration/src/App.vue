@@ -246,7 +246,7 @@ import Auth from './views/Auth.vue'
 import axios from 'axios';
 
 // Set base URL and default headers
-axios.defaults.baseURL = 'https://service.teralinkxwaves.uk';
+axios.defaults.baseURL = 'https://srv.teralinkxwaves.uk';
 axios.defaults.headers.common['Content-Type'] = 'application/json';
 
 export default {

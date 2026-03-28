@@ -967,11 +967,45 @@ class UserDevice(TimeStampedModel):
         )
         return total_duration / len(sessions)
     
+    def _calculate_average_duration(self, sessions):
+        """Calculate average session duration"""
+        if not sessions:
+            return timedelta(0)
+        
+        total_duration = sum(
+            (s.last_activity - s.login_time for s in sessions if s.last_activity),
+            timedelta(0)
+        )
+        return total_duration / len(sessions)
+    
     def _get_most_frequent_location(self, sessions):
         """Get the most frequently used location"""
         from django.db.models import Count
         location_count = sessions.values('location').annotate(count=Count('location')).order_by('-count').first()
         return location_count['location'] if location_count else None
+    
+    def get_connection_statistics(self, days=30):
+        """
+        Get connection statistics for the device over a specified period.
+        
+        Args:
+            days (int): Number of days to analyze
+            
+        Returns:
+            dict: Connection statistics
+        """
+        from_date = timezone.now() - timedelta(days=days)
+        sessions = self.sessions.filter(login_time__gte=from_date)
+        
+        from django.db.models import Sum
+        return {
+            'total_sessions': sessions.count(),
+            'average_duration': self._calculate_average_duration(sessions),
+            'unique_locations': sessions.values('location').distinct().count(),
+            'most_frequent_location': self._get_most_frequent_location(sessions),
+            'total_data_used': sessions.aggregate(total=Sum('data_used'))['total'] or 0,
+            'voucher_sessions': sessions.filter(active_voucher__isnull=False).count(),
+        }
 
     class Meta:
         indexes = [

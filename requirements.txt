@@ -29,12 +29,13 @@ click-repl==0.3.0
 constantly==23.10.4
 cron-descriptor==1.4.5
 cryptography==42.0.5
+paramiko>=3.4.0
 daphne==4.1.2
 decouple==0.0.7
 dj-database-url==2.1.0
-Django==5.2.4
+Django==5.2.12
 django-background-tasks==1.2.5
-django-celery-beat==2.8.1
+django-celery-beat==2.9.0
 django-celery-results==2.5.1
 django-compat==1.0.15
 django-cors-headers==4.3.1
@@ -42,8 +43,8 @@ django-debug-toolbar==4.3.0
 django-json-widget==2.1.1
 django-prometheus==2.4.1
 django-redis==6.0.0
-django-silk==5.3.2
-django-timezone-field==7.1
+django-silk==5.5.0
+django-timezone-field==7.2.1
 djangorestframework==3.15.1
 djangorestframework_simplejwt==5.5.1
 flower==2.0.1
@@ -80,7 +81,7 @@ pipx==1.5.0
 platformdirs==4.2.0
 plotly==6.3.1
 plotly-express==0.4.1
-prometheus_client==0.20.0
+prometheus_client==0.24.1
 prompt-toolkit==3.0.43
 protobuf==6.32.1
 psutil==7.2.2
@@ -92,7 +93,7 @@ pyasn1_modules==0.4.0
 pycodestyle==2.14.0
 pycparser==2.22
 pydeck==0.9.1
-PyJWT==2.8.0
+PyJWT==2.12.1
 PyNaCl==1.5.0
 pyOpenSSL==24.1.0
 python-crontab==3.3.0
@@ -101,7 +102,7 @@ python-decouple==3.8
 python-dotenv==1.0.1
 pytz==2024.1
 PyYAML==6.0.2
-redis==5.0.3
+redis==7.4.0
 referencing==0.36.2
 requests==2.31.0
 requests-oauthlib==2.0.0
@@ -134,7 +135,7 @@ watchdog==6.0.0
 watchfiles==0.23.0
 wcwidth==0.2.13
 websockets==13.0
-whitenoise==6.9.0
+whitenoise==6.12.0
 wsproto==1.2.0
 yarl>=1.17.0
 zope.interface==6.3

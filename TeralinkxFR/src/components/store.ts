@@ -1,3 +1,4 @@
+import { api } from '../services/api'
 import { createStore } from 'vuex';
 import axios from 'axios';
 

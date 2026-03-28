@@ -1,3 +1,4 @@
+import { api } from '../services/api'
 import { ref } from 'vue'
 import axios from 'axios'
 

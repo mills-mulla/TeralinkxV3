@@ -43,32 +43,36 @@ class RouterConfig:
     @classmethod
     def get_config(cls, location: Optional[Location] = None) -> Dict:
         """
-        Get router configuration, optionally based on location
-        
-        Args:
-            location: Optional Location object to get location-specific config
-        
-        Returns:
-            Dictionary with router configuration
+        Get router configuration.
+        Base config (no location) is cached in Redis for 1 hour.
+        Location-specific config is not cached (varies per location).
         """
+        import os
+        from django.core.cache import cache
+
+        if location is None:
+            cached = cache.get('router_base_config')
+            if cached:
+                return cached
+
         config = cls.DEFAULT_CONFIG.copy()
-        
-        # Override with location-specific configuration if available
+
         if location and hasattr(location, 'router_config'):
-            # Assuming Location model has router_config JSONField
             location_config = location.router_config or {}
             config.update(location_config)
-        
-        # Override with environment variables
-        import os
+
         config.update({
-            'host': os.getenv('ROUTER_HOST', config['host']),
-            'username': os.getenv('ROUTER_USER', config['username']),
+            'host':     os.getenv('ROUTER_HOST',     config['host']),
+            'username': os.getenv('ROUTER_USER',     config['username']),
             'password': os.getenv('ROUTER_PASSWORD', config['password']),
-            'port': int(os.getenv('ROUTER_PORT', config['port'])),
-            'ssl': os.getenv('ROUTER_SSL', 'False').lower() == 'true',
+            'port':     int(os.getenv('ROUTER_PORT', config['port'])),
+            'ssl':      os.getenv('ROUTER_SSL', 'False').lower() == 'true',
+            'timeout':  5,  # hard 5s — matches socket.setdefaulttimeout(5)
         })
-        
+
+        if location is None:
+            cache.set('router_base_config', config, 3600)
+
         return config
 
 
@@ -80,13 +84,10 @@ class RouterManager:
         self.connection = None
         # Remove: self._api_version = None
     
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type(Exception)
-    )
     def connect(self):
-        """Connect to RouterOS API"""
+        """Connect to RouterOS API with 5s socket timeout."""
+        import socket
+        socket.setdefaulttimeout(5)
         try:
             if self.config.get('ssl', False):
                 self.connection = librouteros.connect(
@@ -95,7 +96,7 @@ class RouterManager:
                     password=self.config['password'],
                     port=self.config['port'],
                     use_ssl=True,
-                    timeout=self.config.get('timeout', 10)
+                    timeout=self.config.get('timeout', 5)
                 )
             else:
                 self.connection = librouteros.connect(
@@ -103,12 +104,10 @@ class RouterManager:
                     username=self.config['username'],
                     password=self.config['password'],
                     port=self.config['port'],
-                    timeout=self.config.get('timeout', 10)
+                    timeout=self.config.get('timeout', 5)
                 )
-            
             logger.info(f"Connected to RouterOS at {self.config['host']}:{self.config['port']}")
             return True
-            
         except Exception as e:
             logger.error(f"Connection failed to {self.config['host']}: {e}")
             raise ConnectionError(f"RouterOS connection failed: {str(e)}")
@@ -133,11 +132,6 @@ class RouterManager:
         """Context manager exit"""
         self.disconnect()
     
-    @retry(
-        stop=stop_after_attempt(2),
-        wait=wait_exponential(multiplier=1, min=1, max=5),
-        retry=retry_if_exception_type(Exception)
-    )
     def execute_command(self, path: str, command: str = None, **kwargs) -> list:
         """
         Universal RouterOS command execution
