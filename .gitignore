@@ -1,5 +1,16 @@
 /teracore
 
+# Node modules
+node_modules/
+
+# HIDS logs and data
+hids/suricata/logs/
+hids/zeek/logs/
+hids/pcaps/
+hids/datasets/
+hids/notebooks/
+hids/models/*.pkl
+
 # Database files
 *.sqlite3
 *.db
