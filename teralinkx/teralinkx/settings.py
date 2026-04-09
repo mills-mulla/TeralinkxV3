@@ -54,6 +54,7 @@ ALLOWED_HOSTS = [
     'su.teralinkxwaves.uk',
     'service.teralinkxwaves.uk',
     'account.teralinkxwaves.uk',
+    'accounts.teralinkxwaves.uk',
     'adm.teralinkxwaves.uk',
     'router.teralinkxwaves.uk',
     'routeradm.teralinkxwaves.uk',
@@ -146,6 +147,22 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = 'DENY'
 
+# CSRF Trusted Origins
+CSRF_TRUSTED_ORIGINS = [
+    'https://teralinkxwaves.uk',
+    'https://*.teralinkxwaves.uk',
+    'https://cli.teralinkxwaves.uk',
+    'https://srv.teralinkxwaves.uk',
+    'https://su.teralinkxwaves.uk',
+    'https://accounts.teralinkxwaves.uk',
+    'https://service.teralinkxwaves.uk',
+    'https://router.teralinkxwaves.uk',
+    'https://mt.teralinkxwaves.uk',
+    'https://prom.teralinkxwaves.uk',
+    'https://sec.teralinkxwaves.uk',
+    'https://lab.teralinkxwaves.uk',
+]
+
 # Session settings
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_COOKIE_NAME = 'sessionid'
@@ -174,7 +191,7 @@ TEMPLATES = [
     },
 ]
 
-# Database - PostgreSQL for production
+# Database - PostgreSQL for production with TimescaleDB support
 if dj_database_url:
     DATABASES = {
         'default': dj_database_url.config(
@@ -182,15 +199,22 @@ if dj_database_url:
             conn_max_age=60,
             conn_health_checks=True,
             ssl_require=False
+        ),
+        'timescale': dj_database_url.config(
+            default='postgres://teralinkx:justboot@192.168.88.16:5432/teralinkx',
+            conn_max_age=60,
+            conn_health_checks=True,
+            ssl_require=False
         )
     }
     # Add connection timeout and statement timeout
-    DATABASES['default']['OPTIONS'] = {
-        'connect_timeout': 10,
-        'options': '-c statement_timeout=30000 -c idle_in_transaction_session_timeout=60000',
-    }
-    DATABASES['default'].setdefault('CONN_MAX_AGE', 60)
-    DATABASES['default'].setdefault('ATOMIC_REQUESTS', False)
+    for db in ['default', 'timescale']:
+        DATABASES[db]['OPTIONS'] = {
+            'connect_timeout': 10,
+            'options': '-c statement_timeout=30000 -c idle_in_transaction_session_timeout=60000',
+        }
+        DATABASES[db].setdefault('CONN_MAX_AGE', 60)
+        DATABASES[db].setdefault('ATOMIC_REQUESTS', False)
 else:
     # Fallback database configuration
     DATABASES = {
@@ -201,8 +225,19 @@ else:
             'PASSWORD': 'justboot',
             'HOST': '192.168.88.16',
             'PORT': '5432',
+        },
+        'timescale': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': 'teralinkx',
+            'USER': 'teralinkx',
+            'PASSWORD': 'justboot',
+            'HOST': '192.168.88.16',
+            'PORT': '5432',
         }
     }
+
+# Database router for TimescaleDB gradual migration
+DATABASE_ROUTERS = ['apps.finance.timescale_router.TimescaleDBRouter']
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -284,6 +319,7 @@ CORS_ALLOWED_ORIGINS = [
     'https://su.teralinkxwaves.uk',
     'https://service.teralinkxwaves.uk',
     'https://account.teralinkxwaves.uk',
+    'https://accounts.teralinkxwaves.uk',
     'https://adm.teralinkxwaves.uk',
     'https://router.teralinkxwaves.uk',
     'https://routeradm.teralinkxwaves.uk',
@@ -309,6 +345,10 @@ CORS_ALLOWED_ORIGINS = [
     'http://192.168.88.16',
     'http://10.0.0.1',
     'http://0.0.0.0:8000',
+]
+
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r'^https://.*\.teralinkxwaves\.uk$',
 ]
 
 CORS_ALLOW_CREDENTIALS = True

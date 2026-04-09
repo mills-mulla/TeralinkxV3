@@ -2,7 +2,7 @@ import { ref } from 'vue'
 import axios from 'axios'
 
 const PRIMARY_URL  = import.meta.env.VITE_SUAPI_PRIMARY_URL  || 'https://srv.teralinkxwaves.uk'
-const FALLBACK_URL = import.meta.env.VITE_SUAPI_FALLBACK_URL || 'https://srv.teralinkxwaves.uk'
+const FALLBACK_URL = import.meta.env.VITE_SUAPI_FALLBACK_URL || 'https://accounts.teralinkxwaves.uk'
 
 // Track which base URL is currently active
 let activeBaseURL = PRIMARY_URL
@@ -21,6 +21,22 @@ function createHttp(baseURL) {
 }
 
 const http = createHttp(PRIMARY_URL)
+
+// Test primary server on startup and switch to fallback if needed
+const testPrimaryServer = async () => {
+  try {
+    await axios.get(`${PRIMARY_URL}/api/health/`, { timeout: 2000 })
+    console.log('[API] Primary server is reachable:', PRIMARY_URL)
+  } catch (error) {
+    console.warn('[API] Primary server unreachable on startup, switching to fallback:', FALLBACK_URL)
+    primaryFailed = true
+    activeBaseURL = FALLBACK_URL
+    http.defaults.baseURL = FALLBACK_URL
+  }
+}
+
+// Run test on module load
+testPrimaryServer()
 
 // Request interceptor — inject auth token
 http.interceptors.request.use(
@@ -42,19 +58,12 @@ http.interceptors.response.use(
       primaryFailed = false
       activeBaseURL = PRIMARY_URL
       http.defaults.baseURL = PRIMARY_URL
+      console.log('[API] Primary server restored:', PRIMARY_URL)
     }
     return response
   },
   async (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('access_token')
-      localStorage.removeItem('refresh_token')
-      localStorage.removeItem('user')
-      window.location.href = '/login'
-      return Promise.reject(error)
-    }
-
-    // Network error or 5xx on primary — try fallback
+    // Network error or 5xx on primary — try fallback FIRST
     const isNetworkError = !error.response
     const isServerError  = error.response?.status >= 500
     const alreadyFallback = error.config?.baseURL === FALLBACK_URL
@@ -68,6 +77,15 @@ http.interceptors.response.use(
       // Retry the failed request on fallback
       const retryConfig = { ...error.config, baseURL: FALLBACK_URL }
       return axios(retryConfig)
+    }
+
+    // Handle 401 after fallback attempt
+    if (error.response?.status === 401) {
+      localStorage.removeItem('access_token')
+      localStorage.removeItem('refresh_token')
+      localStorage.removeItem('user')
+      window.location.href = '/su/login'
+      return Promise.reject(error)
     }
 
     return Promise.reject(error)

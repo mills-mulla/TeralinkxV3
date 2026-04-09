@@ -274,30 +274,22 @@ export default {
 
     const fetchStats = async () => {
       try {
-        // Calculate total revenue from completed M-Pesa transactions in queue
-        const completedMpesa = queue.value.filter(t => 
-          (t.status === 'completed' || t.status === 'processed') && t.method === 'mpesa'
-        )
-        const paymentTotal = completedMpesa.reduce((sum, t) => sum + parseFloat(t.price || 0), 0)
-        const queuePending = queue.value.filter(t => t.status === 'pending' || t.status === 'Pending...').length
-        const queueFailed = queue.value.filter(t => t.status === 'failed').length
-        const paymentCompleted = completedMpesa.length
-        
+        const data = await makeRequest('get', 'finance/api/transaction-stats/')
         stats.value = {
-          total_revenue: paymentTotal,
-          completed_count: paymentCompleted,
-          pending_count: queuePending,
-          failed_count: queueFailed
+          total_revenue: data.queue.total_amount || 0,
+          completed_count: data.queue.completed || 0,
+          pending_count: data.queue.pending || 0,
+          failed_count: data.queue.failed || 0
         }
       } catch (err) { 
-        console.error('Error calculating stats:', err)
+        console.error('Error fetching stats:', err)
         stats.value = { total_revenue: 0, completed_count: 0, pending_count: 0, failed_count: 0 }
       }
     }
 
     const refreshData = async () => {
-      await Promise.all([fetchPayments(), fetchBalance(), fetchQueue(), fetchPoints()])
       await fetchStats()
+      await Promise.all([fetchPayments(), fetchBalance(), fetchQueue(), fetchPoints()])
     }
 
     const formatCurrency = (amount) => {

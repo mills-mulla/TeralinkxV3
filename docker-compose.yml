@@ -99,6 +99,7 @@ services:
       - ./teralinkx/staticfiles:/app/staticfiles:ro
       - ./radius_api/media:/app/radius-media:ro
       - ./radius_api/staticfiles:/app/radius-staticfiles:ro
+      - ./teralinkx/admteralinkx/adminstration/dist-standalone:/app/admin-dist-standalone:ro
       - ./teralinkx/admteralinkx/adminstration/dist:/app/admin-dist:ro
       - ./TeralinkxFR/dist:/app/frontend-dist:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
@@ -173,15 +174,23 @@ services:
       - app_network
 
   # ===============================
-  # POSTGRES DATABASE
+  # POSTGRES DATABASE (TimescaleDB)
   # ===============================
   db:
-    image: postgres:15
+    image: timescale/timescaledb:latest-pg15
     container_name: db
+    env_file:
+      - .env
     environment:
-      POSTGRES_DB: teralinkx
-      POSTGRES_USER: teralinkx
-      POSTGRES_PASSWORD: justboot
+      POSTGRES_DB: ${POSTGRES_DB:-teralinkx}
+      POSTGRES_USER: ${POSTGRES_USER:-teralinkx}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-justboot}
+      HIDS_POSTGRES_DB: ${HIDS_POSTGRES_DB:-hids}
+      HIDS_POSTGRES_USER: ${HIDS_POSTGRES_USER:-hids}
+      HIDS_POSTGRES_PASSWORD: ${HIDS_POSTGRES_PASSWORD:-hidspass}
+      RADIUS_POSTGRES_DB: ${RADIUS_POSTGRES_DB:-radius_db}
+      RADIUS_POSTGRES_USER: ${RADIUS_POSTGRES_USER:-radius_user}
+      RADIUS_POSTGRES_PASSWORD: ${RADIUS_POSTGRES_PASSWORD:-justboot}
     volumes:
       - pg_data:/var/lib/postgresql/data
       - ./postgres/init-databases.sh:/docker-entrypoint-initdb.d/01-init-databases.sh

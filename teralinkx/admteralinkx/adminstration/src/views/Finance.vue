@@ -35,6 +35,11 @@
 
     <!-- Tab Content -->
     <div>
+      <!-- Analytics Tab -->
+      <div v-if="activeTab === 'analytics'">
+        <FinancialAnalytics :metrics="metrics" :packages="packagePerformance" :loading="loading" />
+      </div>
+
       <!-- Revenue Streams Tab -->
       <div v-if="activeTab === 'revenue-streams'">
         <RevenueStreams :data="revenueStreams" @refresh="fetchRevenueStreams" />
@@ -59,6 +64,7 @@
 </template>
 
 <script>
+import FinancialAnalytics from '../components/FinancialAnalytics.vue'
 import RevenueStreams from '../components/finance/RevenueStreams.vue'
 import Expenses from '../components/finance/Expenses.vue'
 import Investments from '../components/finance/Investments.vue'
@@ -67,6 +73,7 @@ import Departments from '../components/finance/Departments.vue'
 export default {
   name: 'Finance',
   components: {
+    FinancialAnalytics,
     RevenueStreams,
     Expenses,
     Investments,
@@ -74,13 +81,17 @@ export default {
   },
   data() {
     return {
-      activeTab: 'revenue-streams',
+      activeTab: 'analytics',
       tabs: [
+        { id: 'analytics', name: 'Analytics' },
         { id: 'revenue-streams', name: 'Revenue Streams' },
         { id: 'expenses', name: 'Expenses' },
         { id: 'investments', name: 'Investments' },
         { id: 'departments', name: 'Departments' }
       ],
+      loading: false,
+      metrics: { mrr: 0, arr: 0, arpu: 0, ltv: 0, growth_rate: 0 },
+      packagePerformance: [],
       revenueStreams: [],
       expenses: [],
       investments: [],
@@ -88,9 +99,48 @@ export default {
     }
   },
   methods: {
+    async fetchMetrics() {
+      try {
+        this.loading = true
+        const response = await fetch('/api/finance/api/metrics/', {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+        })
+        if (!response.ok) throw new Error('Failed to fetch')
+        const data = await response.json()
+        this.metrics = {
+          mrr: data.mrr || 0,
+          arr: data.arr || 0,
+          arpu: data.arpu || 0,
+          ltv: data.ltv || 0,
+          growth_rate: 0
+        }
+      } catch (error) {
+        console.error('Error fetching metrics:', error)
+      } finally {
+        this.loading = false
+      }
+    },
+    async fetchPackagePerformance() {
+      try {
+        const response = await fetch('/api/finance/api/package-performance/', {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+        })
+        if (!response.ok) throw new Error('Failed to fetch')
+        const data = await response.json()
+        this.packagePerformance = data.map(pkg => ({
+          name: pkg.package_name,
+          sales: pkg.sales,
+          revenue: pkg.revenue,
+          profit: pkg.revenue * 0.7,
+          margin: 70
+        }))
+      } catch (error) {
+        console.error('Error fetching package performance:', error)
+      }
+    },
     async fetchRevenueStreams() {
       try {
-        const response = await fetch('https://srv.teralinkxwaves.uk/api/finance/api/revenue-streams/', {
+        const response = await fetch('/api/finance/api/revenue-streams/', {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
         })
         if (!response.ok) throw new Error('Failed to fetch')
@@ -102,7 +152,7 @@ export default {
     },
     async fetchExpenses() {
       try {
-        const response = await fetch('https://srv.teralinkxwaves.uk/api/finance/api/expenses/', {
+        const response = await fetch('/api/finance/api/expenses/', {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
         })
         if (!response.ok) throw new Error('Failed to fetch')
@@ -114,7 +164,7 @@ export default {
     },
     async fetchInvestments() {
       try {
-        const response = await fetch('https://srv.teralinkxwaves.uk/api/finance/api/investments/', {
+        const response = await fetch('/api/finance/api/investments/', {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
         })
         if (!response.ok) throw new Error('Failed to fetch')
@@ -126,7 +176,7 @@ export default {
     },
     async fetchDepartments() {
       try {
-        const response = await fetch('https://srv.teralinkxwaves.uk/api/finance/api/departments/', {
+        const response = await fetch('/api/finance/api/departments/', {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
         })
         if (!response.ok) throw new Error('Failed to fetch')
@@ -137,6 +187,8 @@ export default {
       }
     },
     refreshData() {
+      this.fetchMetrics()
+      this.fetchPackagePerformance()
       this.fetchRevenueStreams()
       this.fetchExpenses()
       this.fetchInvestments()

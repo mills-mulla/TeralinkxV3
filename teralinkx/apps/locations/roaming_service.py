@@ -16,7 +16,7 @@ from django.core.cache import cache
 from django.conf import settings
 
 from .models import Location, NodeIdentity, DistributedTransaction
-from .sync_services import sync_service, transaction_manager, ConflictFreeReplicatedDataType
+from .sync_services import get_sync_service, get_transaction_manager, ConflictFreeReplicatedDataType
 from users.models import ClientH
 from packages.models import DispatchVoucher, PackageType
 
@@ -609,6 +609,6 @@ class RoamingConflictResolver:
 
 
 # Global service instances
-roaming_validator = RoamingValidator()
-roaming_activation_service = RoamingActivationService()
-roaming_conflict_resolver = RoamingConflictResolver()
+roaming_validator = None
+roaming_activation_service = None
+roaming_conflict_resolver = None

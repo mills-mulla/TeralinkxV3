@@ -13,6 +13,66 @@ from core.models import TimeStampedModel, StatusTrackedModel
 User = get_user_model()
 
 
+class MLModel(models.Model):
+    """ML Model Registry for version control and deployment management"""
+    name = models.CharField(max_length=100, unique=True)
+    version = models.CharField(max_length=50)
+    description = models.TextField(blank=True)
+    MODEL_TYPE_CHOICES = [('classification', 'Classification'), ('regression', 'Regression'), ('forecasting', 'Time Series Forecasting')]
+    model_type = models.CharField(max_length=50, choices=MODEL_TYPE_CHOICES)
+    USE_CASE_CHOICES = [('churn_prediction', 'Churn Prediction'), ('fraud_detection', 'Fraud Detection'), ('cash_flow_forecast', 'Cash Flow Forecasting')]
+    use_case = models.CharField(max_length=50, choices=USE_CASE_CHOICES)
+    model_file_path = models.CharField(max_length=500)
+    accuracy = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0.0), MaxValueValidator(1.0)])
+    auc_roc = models.FloatField(null=True, blank=True, validators=[MinValueValidator(0.0), MaxValueValidator(1.0)])
+    feature_importance = models.JSONField(null=True, blank=True)
+    training_data_size = models.IntegerField(null=True, blank=True)
+    training_date = models.DateTimeField(null=True, blank=True)
+    STATUS_CHOICES = [('training', 'Training'), ('testing', 'Testing'), ('active', 'Active'), ('inactive', 'Inactive')]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='training')
+    is_active = models.BooleanField(default=False)
+    FALLBACK_CHOICES = [('rule_based', 'Rule-Based Model'), ('previous_version', 'Previous Model Version'), ('none', 'No Fallback')]
+    fallback_strategy = models.CharField(max_length=50, choices=FALLBACK_CHOICES, default='rule_based')
+    fallback_model = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
+    prediction_count = models.IntegerField(default=0)
+    error_count = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    activated_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        app_label = 'finance'
+        verbose_name = "ML Model"
+        verbose_name_plural = "ML Models"
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.name} v{self.version} ({self.status})"
+    
+    def activate(self):
+        MLModel.objects.filter(use_case=self.use_case, is_active=True).exclude(id=self.id).update(is_active=False, status='inactive')
+        self.is_active = True
+        self.status = 'active'
+        self.activated_at = timezone.now()
+        self.save()
+    
+    def deactivate(self):
+        self.is_active = False
+        self.status = 'inactive'
+        self.save()
+    
+    @classmethod
+    def get_active_model(cls, use_case):
+        try:
+            return cls.objects.get(use_case=use_case, is_active=True, status='active')
+        except cls.DoesNotExist:
+            return None
+    
+    @classmethod
+    def register_model(cls, name, version, use_case, model_file_path, **kwargs):
+        return cls.objects.create(name=name, version=version, use_case=use_case, model_file_path=model_file_path, status='testing', **kwargs)
+
+
 class Currency(TimeStampedModel):
     """
     Universal currency support for all world currencies
@@ -1098,7 +1158,7 @@ class Department(TimeStampedModel):
         return Expense.objects.filter(
             department=self,
             expense_date__gte=current_month
-        ).aggregate(total=Sum('amount_base'))['total'] or 0
+        ).aggregate(total=Sum('amount'))['total'] or 0
 
     @property
     def budget_utilization(self):

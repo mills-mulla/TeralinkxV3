@@ -1018,12 +1018,18 @@ class RevenueStreamAdmin(admin.ModelAdmin):
     target_achievement_display.short_description = 'Target Achievement'
     
     def revenue_growth_display(self, obj):
-        growth = obj.revenue_growth
-        if growth > 0:
-            return format_html('<span style="color: green;">↑ {:.1f}%</span>', growth)
-        elif growth < 0:
-            return format_html('<span style="color: red;">↓ {:.1f}%</span>', abs(growth))
-        return "0%"
+        try:
+            growth = obj.revenue_growth
+            if growth is None:
+                return "N/A"
+            growth = float(growth)
+            if growth > 0:
+                return format_html('<span style="color: green;">↑ {:.1f}%</span>', growth)
+            elif growth < 0:
+                return format_html('<span style="color: red;">↓ {:.1f}%</span>', float(abs(growth)))
+            return "0%"
+        except Exception as e:
+            return "Error"
     revenue_growth_display.short_description = 'Revenue Growth'
     
     def clv_display(self, obj):

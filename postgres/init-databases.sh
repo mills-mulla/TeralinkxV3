@@ -1,30 +1,39 @@
 #!/bin/bash
 set -e
 
+# Use environment variables or defaults
+HIDS_DB_NAME=${HIDS_POSTGRES_DB:-hids}
+HIDS_DB_USER=${HIDS_POSTGRES_USER:-hids}
+HIDS_DB_PASSWORD=${HIDS_POSTGRES_PASSWORD:-hidspass}
+
+RADIUS_DB_NAME=${RADIUS_POSTGRES_DB:-radius_db}
+RADIUS_DB_USER=${RADIUS_POSTGRES_USER:-radius_user}
+RADIUS_DB_PASSWORD=${RADIUS_POSTGRES_PASSWORD:-justboot}
+
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
-    SELECT 'CREATE DATABASE hids'
-    WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'hids')\gexec
+    SELECT 'CREATE DATABASE $HIDS_DB_NAME'
+    WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '$HIDS_DB_NAME')\gexec
 
     DO \$\$
     BEGIN
-        IF NOT EXISTS (SELECT FROM pg_user WHERE usename = 'hids') THEN
-            CREATE USER hids WITH PASSWORD 'hidspass';
+        IF NOT EXISTS (SELECT FROM pg_user WHERE usename = '$HIDS_DB_USER') THEN
+            CREATE USER $HIDS_DB_USER WITH PASSWORD '$HIDS_DB_PASSWORD';
         END IF;
     END
     \$\$;
 
-    GRANT ALL PRIVILEGES ON DATABASE hids TO hids;
+    GRANT ALL PRIVILEGES ON DATABASE $HIDS_DB_NAME TO $HIDS_DB_USER;
 
-    SELECT 'CREATE DATABASE radius'
-    WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'radius')\gexec
+    SELECT 'CREATE DATABASE $RADIUS_DB_NAME'
+    WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '$RADIUS_DB_NAME')\gexec
 
     DO \$\$
     BEGIN
-        IF NOT EXISTS (SELECT FROM pg_user WHERE usename = 'radius') THEN
-            CREATE USER radius WITH PASSWORD 'radiuspass';
+        IF NOT EXISTS (SELECT FROM pg_user WHERE usename = '$RADIUS_DB_USER') THEN
+            CREATE USER $RADIUS_DB_USER WITH PASSWORD '$RADIUS_DB_PASSWORD';
         END IF;
     END
     \$\$;
 
-    GRANT ALL PRIVILEGES ON DATABASE radius TO radius;
+    GRANT ALL PRIVILEGES ON DATABASE $RADIUS_DB_NAME TO $RADIUS_DB_USER;
 EOSQL

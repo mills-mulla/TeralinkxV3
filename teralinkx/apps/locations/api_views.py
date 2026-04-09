@@ -24,7 +24,7 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 
 from .models import Location, NodeIdentity, LocationHealthMetrics, DistributedTransaction
-from .sync_services import sync_service, transaction_manager, SyncEvent, SyncPriority
+from .sync_services import get_sync_service, get_transaction_manager, SyncEvent, SyncPriority
 from .roaming_service import roaming_activation_service, roaming_validator
 from .health_monitor_simple import health_monitor
 

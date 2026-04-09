@@ -72,4 +72,10 @@ class HealthMonitoringService:
 
 
 # Global health monitoring service
-health_monitor = HealthMonitoringService()
+health_monitor = None
+
+def get_health_monitor():
+    global health_monitor
+    if health_monitor is None:
+        health_monitor = HealthMonitoringService()
+    return health_monitor

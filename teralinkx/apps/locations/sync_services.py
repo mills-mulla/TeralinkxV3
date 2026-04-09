@@ -165,9 +165,19 @@ class LocationSyncService:
     
     def __init__(self):
         self.circuit_breaker = CircuitBreaker()
-        self.node_identity = NodeIdentity.get_current_node()
+        self.node_identity = None  # Lazy load to avoid DB query at import
         self.event_queue = asyncio.Queue()
         self.sync_intervals = self._get_adaptive_sync_intervals()
+    
+    def _ensure_node_identity(self):
+        """Lazy load node identity"""
+        if self.node_identity is None:
+            try:
+                self.node_identity = NodeIdentity.get_current_node()
+            except Exception as e:
+                logger.warning(f"Could not load node identity: {e}")
+                self.node_identity = None
+        return self.node_identity
     
     def _get_adaptive_sync_intervals(self) -> Dict[str, int]:
         """Get adaptive sync intervals based on current load"""
@@ -191,21 +201,31 @@ class LocationSyncService:
     
     def _get_activity_level(self) -> str:
         """Determine current activity level"""
-        # Check recent transaction count
-        recent_transactions = DataChangeLog.objects.filter(
-            created_at__gte=timezone.now() - timedelta(minutes=10)
-        ).count()
-        
-        if recent_transactions > 100:
-            return 'high'
-        elif recent_transactions > 20:
+        try:
+            # Check recent transaction count
+            from sync.models import DataChangeLog
+            recent_transactions = DataChangeLog.objects.filter(
+                created_at__gte=timezone.now() - timedelta(minutes=10)
+            ).count()
+            
+            if recent_transactions > 100:
+                return 'high'
+            elif recent_transactions > 20:
+                return 'normal'
+            else:
+                return 'low'
+        except Exception as e:
+            logger.warning(f"Could not determine activity level: {e}")
             return 'normal'
-        else:
-            return 'low'
     
     async def start_sync_worker(self):
         """Start the async sync worker"""
-        logger.info(f"Starting sync worker for node {self.node_identity.node_id}")
+        node_identity = self._ensure_node_identity()
+        if not node_identity:
+            logger.error("Cannot start sync worker without node identity")
+            return
+            
+        logger.info(f"Starting sync worker for node {node_identity.node_id}")
         
         # Start event processor
         asyncio.create_task(self._process_sync_events())
@@ -252,6 +272,10 @@ class LocationSyncService:
     
     async def _sync_to_central(self, event: SyncEvent):
         """Sync data to central server"""
+        node_identity = self._ensure_node_identity()
+        if not node_identity:
+            return
+            
         try:
             # Use circuit breaker for central API calls
             result = self.circuit_breaker.call(
@@ -261,7 +285,7 @@ class LocationSyncService:
             )
             
             # Update node status
-            self.node_identity.update_central_contact(success=True)
+            node_identity.update_central_contact(success=True)
             
         except CircuitBreakerError:
             logger.warning("Circuit breaker open - queueing for later sync")
@@ -269,7 +293,8 @@ class LocationSyncService:
             
         except Exception as e:
             logger.error(f"Failed to sync to central: {e}")
-            self.node_identity.update_central_contact(success=False)
+            if node_identity:
+                node_identity.update_central_contact(success=False)
             await self._handle_sync_failure(event)
     
     async def _sync_to_locations(self, event: SyncEvent):
@@ -295,12 +320,13 @@ class LocationSyncService:
         """Make API call to central server"""
         import requests
         
-        if not self.node_identity.central_api_url:
+        node_identity = self._ensure_node_identity()
+        if not node_identity or not node_identity.central_api_url:
             raise Exception("Central API URL not configured")
         
-        url = f"{self.node_identity.central_api_url}/{endpoint}"
+        url = f"{node_identity.central_api_url}/{endpoint}"
         headers = {
-            'Authorization': f'Bearer {self.node_identity.api_key}',
+            'Authorization': f'Bearer {node_identity.api_key}',
             'Content-Type': 'application/json'
         }
         
@@ -327,20 +353,25 @@ class LocationSyncService:
     
     async def _switch_to_offline_mode(self):
         """Switch node to offline operation mode"""
-        self.node_identity.current_mode = OperationalMode.OFFLINE.value
-        self.node_identity.save()
+        node_identity = self._ensure_node_identity()
+        if not node_identity:
+            return
+            
+        node_identity.current_mode = OperationalMode.OFFLINE.value
+        node_identity.save()
         
-        logger.warning(f"Node {self.node_identity.node_id} switched to offline mode")
+        logger.warning(f"Node {node_identity.node_id} switched to offline mode")
         
         # Notify administrators
         await self._send_offline_alert()
     
     async def _try_peer_sync(self, event: SyncEvent):
         """Try to sync via peer locations"""
-        if self.node_identity.role != 'location':
+        node_identity = self._ensure_node_identity()
+        if not node_identity or node_identity.role != 'location':
             return
         
-        available_peers = LocationMesh.get_available_peers(self.node_identity.location)
+        available_peers = LocationMesh.get_available_peers(node_identity.location)
         
         for peer_connection in available_peers[:3]:  # Try top 3 peers
             try:
@@ -361,8 +392,10 @@ class LocationSyncService:
     
     async def _send_offline_alert(self):
         """Send alert when node goes offline"""
+        node_identity = self._ensure_node_identity()
+        node_id = node_identity.node_id if node_identity else 'unknown'
         # Implementation would send email/SMS/Slack notification
-        logger.critical(f"ALERT: Node {self.node_identity.node_id} is operating offline")
+        logger.critical(f"ALERT: Node {node_id} is operating offline")
     
     async def _periodic_sync(self, sync_type: str, interval: int):
         """Periodic sync for non-critical data"""
@@ -376,11 +409,15 @@ class LocationSyncService:
     
     async def _perform_periodic_sync(self, sync_type: str):
         """Perform periodic sync for specific data type"""
+        node_identity = self._ensure_node_identity()
+        if not node_identity:
+            return
+            
         # Get pending changes for this sync type
         pending_changes = DataChangeLog.objects.filter(
             model_type=sync_type,
             is_synced=False,
-            location=self.node_identity.location
+            location=node_identity.location
         ).order_by('created_at')[:100]  # Batch size
         
         if not pending_changes:
@@ -389,7 +426,7 @@ class LocationSyncService:
         # Create sync event
         event = SyncEvent(
             event_type=f'periodic_{sync_type}_sync',
-            location_id=self.node_identity.location.id if self.node_identity.location else 0,
+            location_id=node_identity.location.id if node_identity.location else 0,
             data={
                 'sync_type': sync_type,
                 'changes': [change.id for change in pending_changes]
@@ -416,6 +453,10 @@ class LocationSyncService:
     
     async def _process_sync_batch(self, batch_key: str, batch: List[SyncEvent]):
         """Process a batch of sync events"""
+        node_identity = self._ensure_node_identity()
+        if not node_identity:
+            return
+            
         try:
             # Combine events into single sync request
             combined_data = {
@@ -424,7 +465,7 @@ class LocationSyncService:
                 'timestamp': timezone.now().isoformat()
             }
             
-            if self.node_identity.role == 'location':
+            if node_identity.role == 'location':
                 result = self.circuit_breaker.call(
                     self._make_central_api_call,
                     'sync/batch/',
@@ -444,7 +485,17 @@ class DistributedTransactionManager:
     """Two-phase commit transaction manager"""
     
     def __init__(self):
-        self.node_identity = NodeIdentity.get_current_node()
+        self.node_identity = None  # Lazy load
+    
+    def _ensure_node_identity(self):
+        """Lazy load node identity"""
+        if self.node_identity is None:
+            try:
+                self.node_identity = NodeIdentity.get_current_node()
+            except Exception as e:
+                logger.warning(f"Could not load node identity: {e}")
+                self.node_identity = None
+        return self.node_identity
     
     async def execute_distributed_transaction(
         self, 
@@ -454,10 +505,13 @@ class DistributedTransactionManager:
     ) -> Tuple[bool, str]:
         """Execute a distributed transaction using 2PC"""
         
+        node_identity = self._ensure_node_identity()
+        coordinator = node_identity.location if node_identity and node_identity.location else Location.objects.filter(is_central=True).first()
+        
         # Create transaction record
         distributed_tx = DistributedTransaction.objects.create(
             transaction_type=transaction_type,
-            coordinator_location=self.node_identity.location or Location.objects.filter(is_central=True).first(),
+            coordinator_location=coordinator,
             transaction_data=transaction_data,
             timeout_at=timezone.now() + timedelta(minutes=10)
         )
@@ -504,6 +558,20 @@ class DistributedTransactionManager:
         return distributed_tx.commit_phase()
 
 
-# Global sync service instance
-sync_service = LocationSyncService()
-transaction_manager = DistributedTransactionManager()
+# Global sync service instance - lazy initialization
+sync_service = None
+transaction_manager = None
+
+def get_sync_service():
+    """Get or create sync service instance"""
+    global sync_service
+    if sync_service is None:
+        sync_service = LocationSyncService()
+    return sync_service
+
+def get_transaction_manager():
+    """Get or create transaction manager instance"""
+    global transaction_manager
+    if transaction_manager is None:
+        transaction_manager = DistributedTransactionManager()
+    return transaction_manager

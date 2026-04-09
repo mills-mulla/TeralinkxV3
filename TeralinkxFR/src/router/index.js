@@ -1,4 +1,4 @@
-import { createRouter, createWebHashHistory } from 'vue-router'; // Changed to createWebHashHistory
+import { createRouter, createWebHistory } from 'vue-router';
 import Dashboard from '@/views/Dashboard.vue';
 import SignIn from '@/views/Signin.vue';
 import ImConnected from '@/views/Connected.vue';
@@ -79,7 +79,7 @@ const routes = [
 ];
 
 const router = createRouter({
-  history: createWebHashHistory(), // Using hash mode for MikroTik
+  history: createWebHistory(),
   routes
 });
 

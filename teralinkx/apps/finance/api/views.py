@@ -2,8 +2,15 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
-from django.db.models import Sum, Count, Avg
-from finance.models import RevenueStream, Expense, Investment, Department
+from django.db.models import Sum, Count, Avg, Q
+from django.utils import timezone
+from datetime import timedelta
+from finance.models import (
+    RevenueStream, Expense, Investment, Department,
+    PaymentTransaction, BalanceTransaction, TransactionQueue
+)
+from packages.models import PackageType
+from users.models import ClientH
 from decimal import Decimal
 
 
@@ -247,3 +254,204 @@ class DepartmentAPIView(APIView):
             return Response({'message': 'Deleted'}, status=status.HTTP_204_NO_CONTENT)
         except Department.DoesNotExist:
             return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class FinancialMetricsAPIView(APIView):
+    """Backend calculation of MRR, ARR, ARPU, LTV"""
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        # Calculate MRR from completed transactions
+        current_month = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        mrr = TransactionQueue.objects.filter(
+            status__in=['completed', 'processed'],
+            created_at__gte=current_month
+        ).aggregate(total=Sum('price'))['total'] or 0
+        
+        # ARR = MRR * 12
+        arr = float(mrr) * 12
+        
+        # ARPU = MRR / Active Users
+        active_users = ClientH.objects.filter(status='active').count()
+        arpu = float(mrr) / active_users if active_users > 0 else 0
+        
+        # LTV = ARPU * Average Customer Lifespan (24 months)
+        ltv = arpu * 24
+        
+        return Response({
+            'mrr': float(mrr),
+            'arr': arr,
+            'arpu': arpu,
+            'ltv': ltv,
+            'active_users': active_users,
+            'calculated_at': timezone.now().isoformat()
+        })
+
+
+class PackagePerformanceAPIView(APIView):
+    """Backend calculation of package performance metrics"""
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        current_month = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+        # Get package sales from TransactionQueue
+        package_stats = TransactionQueue.objects.filter(
+            status__in=['completed', 'processed'],
+            created_at__gte=current_month
+        ).values('package_code', 'package').annotate(
+            sales=Count('id'),
+            revenue=Sum('price')
+        ).order_by('-revenue')
+        
+        # Enrich with package details
+        data = []
+        for stat in package_stats:
+            try:
+                pkg = PackageType.objects.get(code=stat['package_code'])
+                data.append({
+                    'package_code': stat['package_code'],
+                    'package_name': stat['package'],
+                    'sales': stat['sales'],
+                    'revenue': float(stat['revenue']),
+                    'price': float(pkg.price),
+                    'validity_days': pkg.validity_days
+                })
+            except PackageType.DoesNotExist:
+                data.append({
+                    'package_code': stat['package_code'],
+                    'package_name': stat['package'],
+                    'sales': stat['sales'],
+                    'revenue': float(stat['revenue']),
+                    'price': 0,
+                    'validity_days': 0
+                })
+        
+        return Response(data)
+
+
+class TransactionStatsAPIView(APIView):
+    """Unified transaction statistics for all transaction types"""
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        # Payment Transactions Stats
+        payment_stats = PaymentTransaction.objects.aggregate(
+            total=Sum('amount'),
+            count=Count('id'),
+            avg=Avg('amount')
+        )
+        
+        # Balance Transactions Stats
+        balance_stats = BalanceTransaction.objects.aggregate(
+            total_credit=Sum('credit'),
+            total_debit=Sum('debit'),
+            count=Count('id')
+        )
+        
+        # Transaction Queue Stats
+        queue_stats = TransactionQueue.objects.aggregate(
+            total=Sum('price'),
+            count=Count('id'),
+            pending=Count('id', filter=Q(status='pending')),
+            completed=Count('id', filter=Q(status__in=['completed', 'processed'])),
+            failed=Count('id', filter=Q(status='failed'))
+        )
+        
+        return Response({
+            'payments': {
+                'total_amount': float(payment_stats['total'] or 0),
+                'count': payment_stats['count'],
+                'average': float(payment_stats['avg'] or 0)
+            },
+            'balance': {
+                'total_credit': float(balance_stats['total_credit'] or 0),
+                'total_debit': float(balance_stats['total_debit'] or 0),
+                'net': float((balance_stats['total_credit'] or 0) - (balance_stats['total_debit'] or 0)),
+                'count': balance_stats['count']
+            },
+            'queue': {
+                'total_amount': float(queue_stats['total'] or 0),
+                'count': queue_stats['count'],
+                'pending': queue_stats['pending'],
+                'completed': queue_stats['completed'],
+                'failed': queue_stats['failed']
+            }
+        })
+
+
+class UnifiedTransactionsAPIView(APIView):
+    """Unified endpoint for all transaction types with pagination"""
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        transaction_type = request.query_params.get('type', 'all')
+        page = int(request.query_params.get('page', 1))
+        page_size = int(request.query_params.get('page_size', 50))
+        search = request.query_params.get('search', '')
+        
+        start = (page - 1) * page_size
+        end = start + page_size
+        
+        result = {'payments': [], 'balance': [], 'queue': [], 'points': []}
+        
+        if transaction_type in ['all', 'payments']:
+            payments = PaymentTransaction.objects.select_related('user', 'currency').all()
+            if search:
+                payments = payments.filter(
+                    Q(transaction_id__icontains=search) |
+                    Q(initiator__icontains=search) |
+                    Q(user__account__icontains=search)
+                )
+            payments = payments.order_by('-created_at')[start:end]
+            result['payments'] = [{
+                'id': p.id,
+                'transaction_id': p.transaction_id,
+                'user': p.user.account,
+                'amount': float(p.amount),
+                'currency': p.currency.code,
+                'method': p.payment_method,
+                'status': p.status,
+                'date': p.created_at.isoformat()
+            } for p in payments]
+        
+        if transaction_type in ['all', 'balance']:
+            balance = BalanceTransaction.objects.select_related('user').all()
+            if search:
+                balance = balance.filter(
+                    Q(user__account__icontains=search) |
+                    Q(description__icontains=search)
+                )
+            balance = balance.order_by('-created_at')[start:end]
+            result['balance'] = [{
+                'id': b.id,
+                'user': b.user.account,
+                'type': b.transaction_type,
+                'debit': float(b.debit),
+                'credit': float(b.credit),
+                'balance_after': float(b.balance_after),
+                'description': b.description,
+                'date': b.created_at.isoformat()
+            } for b in balance]
+        
+        if transaction_type in ['all', 'queue']:
+            queue = TransactionQueue.objects.select_related('user').all()
+            if search:
+                queue = queue.filter(
+                    Q(initiator__icontains=search) |
+                    Q(package__icontains=search) |
+                    Q(user__account__icontains=search)
+                )
+            queue = queue.order_by('-created_at')[start:end]
+            result['queue'] = [{
+                'id': q.id,
+                'user': q.user.account,
+                'initiator': q.initiator,
+                'package': q.package,
+                'price': float(q.price),
+                'status': q.status,
+                'method': q.method,
+                'date': q.created_at.isoformat()
+            } for q in queue]
+        
+        return Response(result)

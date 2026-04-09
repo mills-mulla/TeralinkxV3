@@ -3,8 +3,8 @@ import axios from 'axios'
 
 // Multi-endpoint configuration like admin panel
 const PRIMARY_URL = import.meta.env.VITE_API_PRIMARY_URL || 'https://srv.teralinkxwaves.uk'
-const FALLBACK_URL = import.meta.env.VITE_API_FALLBACK_URL || 'https://service.teralinkxwaves.uk'
-const LOCAL_URL = import.meta.env.VITE_API_BASE_URL || 'https://srv.teralinkxwaves.uk'
+const FALLBACK_URL = import.meta.env.VITE_API_FALLBACK_URL || 'https://accounts.teralinkxwaves.uk'
+const LOCAL_URL = import.meta.env.VITE_API_BASE_URL || 'https://accounts.teralinkxwaves.uk'
 
 // Track which base URL is currently active
 let activeBaseURL = PRIMARY_URL

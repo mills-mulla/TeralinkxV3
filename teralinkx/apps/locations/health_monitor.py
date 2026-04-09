@@ -20,7 +20,7 @@ from django.conf import settings
 from django.core.mail import send_mail
 
 from .models import Location, NodeIdentity, LocationHealthMetrics, LocationMesh
-from .sync_services import sync_service
+from .sync_services import get_sync_service
 
 logger = logging.getLogger(__name__)
 

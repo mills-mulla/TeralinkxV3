@@ -191,7 +191,7 @@ export default {
       return valid
     }
 
-    // JWT Authentication
+    // JWT Authentication with comprehensive fallback
     const handleLogin = async () => {
       if (!validateForm()) return
 
@@ -201,18 +201,64 @@ export default {
       try {
         console.log('🚀 Starting JWT authentication...')
 
-        const response = await fetch('https://srv.teralinkxwaves.uk/suapi/auth/login/', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            username: loginForm.username,
-            password: loginForm.password,
-          }),
-        })
+        // Use dynamic fallback: try primary first, then fallback
+        const PRIMARY_URL = 'https://srv.teralinkxwaves.uk'
+        const FALLBACK_URL = 'https://accounts.teralinkxwaves.uk'
+        
+        let response
+        let usedFallback = false
+        let primaryError = null
+        
+        try {
+          console.log('📡 Trying primary:', PRIMARY_URL)
+          
+          // Create abort controller for timeout
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), 5000)
+          
+          response = await fetch(`${PRIMARY_URL}/suapi/auth/login/`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              username: loginForm.username,
+              password: loginForm.password,
+            }),
+            signal: controller.signal,
+          })
+          
+          clearTimeout(timeoutId)
+          
+          // Trigger fallback on ANY error response (4xx, 5xx) or network issues
+          if (!response.ok) {
+            primaryError = `HTTP ${response.status}`
+            throw new Error(primaryError)
+          }
+        } catch (error) {
+          console.warn('⚠️ Primary failed:', error.message || error.name)
+          console.log('🔄 Trying fallback:', FALLBACK_URL)
+          usedFallback = true
+          primaryError = error
+          
+          try {
+            response = await fetch(`${FALLBACK_URL}/suapi/auth/login/`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                username: loginForm.username,
+                password: loginForm.password,
+              }),
+            })
+          } catch (fallbackError) {
+            console.error('❌ Fallback also failed:', fallbackError.message)
+            throw new Error('Both primary and fallback servers are unreachable')
+          }
+        }
 
-        console.log('📨 Login response status:', response.status)
+        console.log(`📨 Login response status: ${response.status} (via ${usedFallback ? 'fallback' : 'primary'})`)
         
         const data = await response.json()
         console.log('📊 Login response data:', data)
@@ -245,8 +291,12 @@ export default {
         
         // Enhanced error messages
         let userMessage = error.message
-        if (error.message.includes('Network') || error.message.includes('Fetch')) {
+        if (error.name === 'AbortError') {
+          userMessage = 'Connection timeout. Please check your network and try again.'
+        } else if (error.message.includes('Network') || error.message.includes('Failed to fetch')) {
           userMessage = 'Network error. Please check your connection and try again.'
+        } else if (error.message.includes('unreachable')) {
+          userMessage = 'Unable to connect to authentication servers. Please try again later.'
         }
         
         showError.value = true

@@ -28,6 +28,22 @@ DEFAULT_DB_PASSWORD="justboot"
 DEFAULT_REDIS_PASSWORD=""
 DEFAULT_ADMIN_PASSWORD="admin"
 
+# Show spinner during long operations
+show_spinner() {
+    local pid=$1
+    local message=$2
+    local spin='-\|/'
+    local i=0
+    
+    echo -n "  $message "
+    while kill -0 $pid 2>/dev/null; do
+        i=$(( (i+1) %4 ))
+        printf "\r  $message ${CYAN}${spin:$i:1}${NC}"
+        sleep 0.1
+    done
+    printf "\r  $message ${GREEN}✓${NC}\n"
+}
+
 # Functions
 log() {
     echo -e "${CYAN}▶${NC} ${GREEN}[$(date +'%H:%M:%S')]${NC} $1" | tee -a "$LOG_FILE"
@@ -129,12 +145,12 @@ check_prerequisites() {
     fi
     
     # Check Docker Compose
-    if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
+    if ! command -v docker compose &> /dev/null && ! docker compose version &> /dev/null; then
         warn "Docker Compose is not installed."
         if command -v docker &> /dev/null; then
             log "Installing Docker Compose..."
-            sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-            sudo chmod +x /usr/local/bin/docker-compose
+            sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker compose
+            sudo chmod +x /usr/local/bin/docker compose
         else
             error "Docker Compose is required. Please install Docker Compose first."
         fi
@@ -312,7 +328,7 @@ create_backup() {
     
     # Backup configuration files
     config_files=(
-        "docker-compose.yml"
+        "docker compose.yml"
         "nginx/default.conf"
         "nginx/nginx.conf"
         "certbot/cloudflare.ini"
@@ -742,7 +758,7 @@ setup_ssl() {
     
     if [[ $SSL_METHOD == "1" && $SETUP_CLOUDFLARE == "y" ]]; then
         info "Setting up Cloudflare DNS challenge..."
-        docker-compose exec -T certbot certbot certonly \
+        docker compose exec -T certbot certbot certonly \
             --dns-cloudflare \
             --dns-cloudflare-credentials /etc/cloudflare.ini \
             --email "$CF_EMAIL" \
@@ -752,7 +768,7 @@ setup_ssl() {
             -d "*.$DOMAIN"
     elif [[ $SSL_METHOD == "2" && $SETUP_HTTP_CHALLENGE == "y" ]]; then
         info "Setting up HTTP challenge..."
-        docker-compose exec -T certbot certbot certonly \
+        docker compose exec -T certbot certbot certonly \
             --webroot \
             --webroot-path=/var/www/certbot \
             --email "admin@$DOMAIN" \
@@ -770,7 +786,7 @@ setup_ssl() {
     fi
     
     # Reload nginx with SSL
-    docker-compose exec nginx nginx -s reload
+    docker compose exec nginx nginx -s reload
     
     success "SSL certificates configured"
 }
@@ -831,7 +847,7 @@ check_service_health() {
     local attempt=1
     
     while [[ $attempt -le $max_attempts ]]; do
-        if docker-compose ps "$service" | grep -q "Up"; then
+        if docker compose ps "$service" | grep -q "Up"; then
             return 0
         fi
         sleep 2
@@ -846,7 +862,7 @@ check_database_health() {
     local attempt=1
     
     while [[ $attempt -le $max_attempts ]]; do
-        if docker-compose exec -T db pg_isready -U "$DB_USER" -d "$DB_NAME" &>/dev/null; then
+        if docker compose exec -T db pg_isready -U "$DB_USER" -d "$DB_NAME" &>/dev/null; then
             success "Database is ready"
             return 0
         fi
@@ -859,7 +875,7 @@ check_database_health() {
 
 check_redis_health() {
     log "Checking Redis health..."
-    if docker-compose exec -T redis redis-cli ping | grep -q "PONG"; then
+    if docker compose exec -T redis redis-cli ping | grep -q "PONG"; then
         success "Redis is ready"
         return 0
     fi
@@ -868,7 +884,7 @@ check_redis_health() {
 
 check_django_health() {
     log "Checking Django application health..."
-    if docker-compose exec -T web python manage.py check --deploy &>/dev/null; then
+    if docker compose exec -T web python manage.py check --deploy &>/dev/null; then
         success "Django application is healthy"
         return 0
     fi
@@ -877,7 +893,7 @@ check_django_health() {
 
 check_nginx_health() {
     log "Checking Nginx configuration..."
-    if docker-compose exec -T nginx nginx -t &>/dev/null; then
+    if docker compose exec -T nginx nginx -t &>/dev/null; then
         success "Nginx configuration is valid"
         return 0
     fi
@@ -888,7 +904,7 @@ check_hids_health() {
     log "Checking HIDS services health..."
     
     # Check ML Service
-    if docker-compose ps ml_service | grep -q "Up"; then
+    if docker compose ps ml_service | grep -q "Up"; then
         if curl -s http://localhost:5001/health | grep -q "healthy" 2>/dev/null; then
             success "ML Service is healthy"
         else
@@ -899,14 +915,14 @@ check_hids_health() {
     fi
     
     # Check HIDS Engine
-    if docker-compose ps hids_engine | grep -q "Up"; then
+    if docker compose ps hids_engine | grep -q "Up"; then
         success "HIDS Engine is running"
     else
         warn "HIDS Engine is not running"
     fi
     
     # Check HIDS Dashboard
-    if docker-compose ps hids_dashboard | grep -q "Up"; then
+    if docker compose ps hids_dashboard | grep -q "Up"; then
         if curl -s http://localhost:5002/api | grep -q "HIDS Dashboard" 2>/dev/null; then
             success "HIDS Dashboard is healthy"
         else
@@ -925,19 +941,74 @@ deploy_services() {
     
     # Stop any existing containers
     info "Stopping existing containers..."
-    docker-compose down --remove-orphans 2>/dev/null || true
+    docker compose down --remove-orphans 2>/dev/null || true
     
     # Pull latest images
-    info "Pulling latest Docker images..."
-    docker-compose pull
+    log "Pulling latest Docker images (this may take several minutes)..."
+    echo
+    
+    # Get list of services
+    local services=$(docker compose config --services 2>/dev/null)
+    local total_services=$(echo "$services" | wc -l)
+    local current=0
+    
+    echo -e "${CYAN}╔════════════════════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${CYAN}║${NC}                    ${YELLOW}📦 PULLING DOCKER IMAGES 📦${NC}                           ${CYAN}║${NC}"
+    echo -e "${CYAN}╚════════════════════════════════════════════════════════════════════════════╝${NC}"
+    echo
+    
+    # Pull images with progress
+    while IFS= read -r service; do
+        ((current++))
+        local image=$(docker compose config | grep -A 5 "^  $service:" | grep "image:" | awk '{print $2}' | head -1)
+        
+        if [[ -n "$image" ]]; then
+            echo -e "${BLUE}[$current/$total_services]${NC} Pulling ${GREEN}$service${NC} (${CYAN}$image${NC})..."
+            
+            if docker pull "$image" 2>&1 | grep -E "Pulling|Downloading|Extracting|Pull complete|Already exists" | while read line; do
+                echo -e "  ${PURPLE}│${NC} $line"
+            done; then
+                echo -e "  ${GREEN}✓${NC} ${GREEN}$service${NC} image ready"
+            else
+                echo -e "  ${YELLOW}⚠${NC}  ${YELLOW}$service${NC} - using cached or will build locally"
+            fi
+        else
+            echo -e "${BLUE}[$current/$total_services]${NC} ${GREEN}$service${NC} - will be built from Dockerfile"
+        fi
+        echo
+    done <<< "$services"
+    
+    success "Image pull phase completed"
     
     # Build custom images
-    info "Building custom Docker images..."
-    docker-compose build --no-cache
+    log "Building custom Docker images..."
+    echo
+    echo -e "${CYAN}╔════════════════════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "${CYAN}║${NC}                    ${YELLOW}🔨 BUILDING CUSTOM IMAGES 🔨${NC}                          ${CYAN}║${NC}"
+    echo -e "${CYAN}╚════════════════════════════════════════════════════════════════════════════╝${NC}"
+    echo
+    
+    info "Building TeralinkX web application..."
+    docker compose build --no-cache web 2>&1 | grep -E "Step|Successfully|naming to" | sed 's/^/  │ /'
+    
+    info "Building RADIUS API..."
+    docker compose build --no-cache radius_api 2>&1 | grep -E "Step|Successfully|naming to" | sed 's/^/  │ /'
+    
+    if [[ $INSTALL_HIDS == true ]]; then
+        info "Building HIDS services..."
+        docker compose build --no-cache ml_service hids_engine hids_dashboard 2>&1 | grep -E "Step|Successfully|naming to" | sed 's/^/  │ /'
+    fi
+    
+    echo
+    success "Custom images built successfully"
     
     # Phase 1: Core Infrastructure
     log "Phase 1: Starting core infrastructure services..."
-    docker-compose up -d db redis
+    echo -e "${BLUE}┌───────────────────────────────────────────────────────────────────────────┐${NC}"
+    echo -e "${BLUE}│${NC} ${CYAN}📦 PostgreSQL Database${NC}                                                  ${BLUE}│${NC}"
+    echo -e "${BLUE}│${NC} ${CYAN}📦 Redis Cache${NC}                                                         ${BLUE}│${NC}"
+    echo -e "${BLUE}└───────────────────────────────────────────────────────────────────────────┘${NC}"
+    docker compose up -d db redis
     
     # Wait for core services
     info "Waiting for database to be ready..."
@@ -951,11 +1022,11 @@ deploy_services() {
     
     # Run database migrations
     info "Running database migrations..."
-    docker-compose run --rm web python manage.py migrate
+    docker compose run --rm web python manage.py migrate
     
     # Create admin superuser
     info "Creating admin superuser..."
-    docker-compose run --rm web python manage.py shell -c "
+    docker compose run --rm web python manage.py shell -c "
 from django.contrib.auth import get_user_model
 User = get_user_model()
 if not User.objects.filter(username='$ADMIN_USERNAME').exists():
@@ -967,23 +1038,23 @@ else:
     
     # Collect static files
     info "Collecting static files..."
-    docker-compose run --rm web python manage.py collectstatic --noinput
+    docker compose run --rm web python manage.py collectstatic --noinput
     
     # Start web services
-    docker-compose up -d web celery celery_beat
+    docker compose up -d web celery celery_beat
     
     # Phase 3: RADIUS Services
     log "Phase 3: Starting RADIUS services..."
-    docker-compose up -d radius_api freeradius
+    docker compose up -d radius_api freeradius
     
     # Phase 4: Reverse Proxy
     log "Phase 4: Starting reverse proxy..."
-    docker-compose up -d nginx
+    docker compose up -d nginx
     check_nginx_health
     
     # Phase 5: SSL and Tunneling
     log "Phase 5: Starting SSL and tunneling services..."
-    docker-compose up -d certbot cloudflared
+    docker compose up -d certbot cloudflared
     
     # Phase 6: Optional Services
     if [[ $INSTALL_HIDS == true ]]; then
@@ -991,22 +1062,22 @@ else:
         
         # Start ML service first (dependency for engine)
         info "Starting ML service..."
-        docker-compose up -d ml_service
+        docker compose up -d ml_service
         sleep 5
         
         # Start HIDS engine (depends on ML service)
         info "Starting HIDS engine..."
-        docker-compose up -d hids_engine
+        docker compose up -d hids_engine
         sleep 5
         
         # Start supporting services
         info "Starting Suricata and Zeek..."
-        docker-compose up -d suricata zeek
+        docker compose up -d suricata zeek
         sleep 3
         
         # Start HIDS dashboard (depends on engine)
         info "Starting HIDS dashboard..."
-        docker-compose up -d hids_dashboard
+        docker compose up -d hids_dashboard
         
         # Check HIDS health
         sleep 10
@@ -1015,7 +1086,7 @@ else:
     
     if [[ $INSTALL_MONITORING == true ]]; then
         log "Phase 6b: Starting monitoring services..."
-        docker-compose up -d prometheus grafana loki promtail alertmanager node-exporter cadvisor redis-exporter postgres-exporter
+        docker compose up -d prometheus grafana loki promtail alertmanager node-exporter cadvisor redis-exporter postgres-exporter
     fi
     
     success "All services deployed successfully"
@@ -1031,7 +1102,7 @@ perform_health_checks() {
     local failed_checks=0
     
     # Check database
-    if docker-compose exec -T db pg_isready -U "$DB_USER" -d "$DB_NAME" &>/dev/null; then
+    if docker compose exec -T db pg_isready -U "$DB_USER" -d "$DB_NAME" &>/dev/null; then
         success "Database is healthy"
     else
         warn "Database health check failed"
@@ -1039,7 +1110,7 @@ perform_health_checks() {
     fi
     
     # Check Redis
-    if docker-compose exec -T redis redis-cli ping | grep -q PONG; then
+    if docker compose exec -T redis redis-cli ping | grep -q PONG; then
         success "Redis is healthy"
     else
         warn "Redis health check failed"
@@ -1047,7 +1118,7 @@ perform_health_checks() {
     fi
     
     # Check Django application
-    if docker-compose exec -T web python manage.py check --deploy &>/dev/null; then
+    if docker compose exec -T web python manage.py check --deploy &>/dev/null; then
         success "Django application is healthy"
     else
         warn "Django application health check failed"
@@ -1055,7 +1126,7 @@ perform_health_checks() {
     fi
     
     # Check Nginx configuration
-    if docker-compose exec -T nginx nginx -t &>/dev/null; then
+    if docker compose exec -T nginx nginx -t &>/dev/null; then
         success "Nginx configuration is valid"
     else
         warn "Nginx configuration check failed"
@@ -1070,7 +1141,7 @@ perform_health_checks() {
     fi
     
     # Check RADIUS if enabled
-    if docker-compose ps radius_api | grep -q "Up"; then
+    if docker compose ps radius_api | grep -q "Up"; then
         success "RADIUS API service is running"
     else
         warn "RADIUS API service check failed"
@@ -1202,7 +1273,7 @@ EOF
 EOF
     
     # Add service status
-    docker-compose ps >> "$report_file" 2>/dev/null || echo "Unable to get service status" >> "$report_file"
+    docker compose ps >> "$report_file" 2>/dev/null || echo "Unable to get service status" >> "$report_file"
     
     cat >> "$report_file" << EOF
 
@@ -1290,19 +1361,19 @@ Installation Log: $LOG_FILE
 
 === MAINTENANCE COMMANDS ===
 View all logs:
-  docker-compose logs -f
+  docker compose logs -f
 
 View specific service logs:
-  docker-compose logs -f [service_name]
+  docker compose logs -f [service_name]
 
 Restart all services:
-  docker-compose restart
+  docker compose restart
 
 Restart specific service:
-  docker-compose restart [service_name]
+  docker compose restart [service_name]
 
 Update and restart services:
-  docker-compose pull && docker-compose up -d
+  docker compose pull && docker compose up -d
 
 Backup data:
   ./scripts/deployment/backup.sh
@@ -1318,7 +1389,7 @@ View system resources:
 
 === TROUBLESHOOTING ===
 Common Issues:
-1. Services not starting: Check logs with 'docker-compose logs [service]'
+1. Services not starting: Check logs with 'docker compose logs [service]'
 2. SSL issues: Verify DNS and Cloudflare configuration
 3. Database connection issues: Check database logs and credentials
 4. Frontend not loading: Check nginx logs and build status
