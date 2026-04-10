@@ -385,7 +385,7 @@ This reduces support load and churn risk from outages.
 Single screen for CEO/CFO morning review (loads in < 100ms via pre-computed cache):
 
 **Real-time tiles** (refreshed every 5 minutes):
-- MRR (current vs. last month vs. target)
+- MRR (curre2nt vs. last month vs. target)
 - Active customers (vs. last month)
 - Churn rate (trailing 30 days)
 - Cash position (vs. 30 days ago)

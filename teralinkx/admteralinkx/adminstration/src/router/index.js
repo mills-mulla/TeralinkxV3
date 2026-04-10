@@ -85,6 +85,12 @@ const routes = [
     component: () => import('../views/Refunds.vue'),
     meta: { requiresAuth: true } 
   },
+  {
+    path: '/finance/churn',
+    name: 'ChurnPrediction',
+    component: () => import('../components/finance/ChurnDashboard.vue'),
+    meta: { requiresAuth: true } 
+  },
 ]
 
 const router = createRouter({

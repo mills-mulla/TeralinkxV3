@@ -138,49 +138,72 @@ class InvestmentAPIView(APIView):
     
     def get(self, request):
         investments = Investment.objects.order_by('-investment_date')[:100]
-        
         data = []
         for inv in investments:
-            roi = ((float(inv.current_value or 0) - float(inv.amount)) / float(inv.amount) * 100) if inv.amount else 0
             data.append({
                 'id': inv.id,
-                'name': inv.investor_name,
+                'investor_name': inv.investor_name,
                 'amount': float(inv.amount),
-                'current_value': float(inv.current_value or inv.amount),
                 'investment_type': inv.investment_type,
                 'type_display': inv.get_investment_type_display(),
                 'investment_date': inv.investment_date.isoformat(),
-                'status': inv.investment_status,
+                'investment_status': inv.investment_status,
                 'status_display': inv.get_investment_status_display(),
-                'roi': roi
+                'equity_percentage': float(inv.equity_percentage) if inv.equity_percentage else None,
+                'interest_rate': float(inv.interest_rate),
+                'repayment_terms': inv.repayment_terms,
+                'expected_roi': float(inv.expected_roi) if inv.expected_roi else None,
+                'maturity_date': inv.maturity_date.isoformat() if inv.maturity_date else None,
+                'is_recurring': inv.is_recurring,
+                'recurrence_pattern': inv.recurrence_pattern,
+                'next_due_date': inv.next_due_date.isoformat() if inv.next_due_date else None,
+                'contract_reference': inv.contract_reference,
+                'description': inv.description,
+                'approved_at': inv.approved_at.isoformat() if inv.approved_at else None,
+                'created_at': inv.created_at.isoformat(),
             })
-        
         return Response(data)
     
     def post(self, request):
         try:
-            investment = Investment.objects.create(
-                investor_name=request.data['name'],
+            inv = Investment.objects.create(
+                investor_name=request.data['investor_name'],
                 investment_type=request.data['investment_type'],
                 amount=request.data['amount'],
-                current_value=request.data.get('current_value', request.data['amount']),
                 investment_date=request.data['investment_date'],
-                investment_status=request.data.get('status', 'active')
+                investment_status=request.data.get('investment_status', 'proposed'),
+                equity_percentage=request.data.get('equity_percentage') or None,
+                interest_rate=request.data.get('interest_rate', 0),
+                repayment_terms=request.data.get('repayment_terms', ''),
+                expected_roi=request.data.get('expected_roi') or None,
+                maturity_date=request.data.get('maturity_date') or None,
+                is_recurring=request.data.get('is_recurring', False),
+                recurrence_pattern=request.data.get('recurrence_pattern', ''),
+                contract_reference=request.data.get('contract_reference', ''),
+                description=request.data.get('description', ''),
             )
-            return Response({'id': investment.id, 'message': 'Created'}, status=status.HTTP_201_CREATED)
+            return Response({'id': inv.id, 'message': 'Created'}, status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     
     def put(self, request, pk):
         try:
-            investment = Investment.objects.get(pk=pk)
-            investment.investor_name = request.data.get('name', investment.investor_name)
-            investment.investment_type = request.data.get('investment_type', investment.investment_type)
-            investment.amount = request.data.get('amount', investment.amount)
-            investment.current_value = request.data.get('current_value', investment.current_value)
-            investment.investment_date = request.data.get('investment_date', investment.investment_date)
-            investment.investment_status = request.data.get('status', investment.investment_status)
-            investment.save()
+            inv = Investment.objects.get(pk=pk)
+            inv.investor_name = request.data.get('investor_name', inv.investor_name)
+            inv.investment_type = request.data.get('investment_type', inv.investment_type)
+            inv.amount = request.data.get('amount', inv.amount)
+            inv.investment_date = request.data.get('investment_date', inv.investment_date)
+            inv.investment_status = request.data.get('investment_status', inv.investment_status)
+            inv.equity_percentage = request.data.get('equity_percentage') or inv.equity_percentage
+            inv.interest_rate = request.data.get('interest_rate', inv.interest_rate)
+            inv.repayment_terms = request.data.get('repayment_terms', inv.repayment_terms)
+            inv.expected_roi = request.data.get('expected_roi') or inv.expected_roi
+            inv.maturity_date = request.data.get('maturity_date') or inv.maturity_date
+            inv.is_recurring = request.data.get('is_recurring', inv.is_recurring)
+            inv.recurrence_pattern = request.data.get('recurrence_pattern', inv.recurrence_pattern)
+            inv.contract_reference = request.data.get('contract_reference', inv.contract_reference)
+            inv.description = request.data.get('description', inv.description)
+            inv.save()
             return Response({'message': 'Updated'})
         except Investment.DoesNotExist:
             return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
@@ -189,8 +212,7 @@ class InvestmentAPIView(APIView):
     
     def delete(self, request, pk):
         try:
-            investment = Investment.objects.get(pk=pk)
-            investment.delete()
+            Investment.objects.get(pk=pk).delete()
             return Response({'message': 'Deleted'}, status=status.HTTP_204_NO_CONTENT)
         except Investment.DoesNotExist:
             return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
@@ -278,11 +300,22 @@ class FinancialMetricsAPIView(APIView):
         # LTV = ARPU * Average Customer Lifespan (24 months)
         ltv = arpu * 24
         
+        # Previous month MRR for growth rate
+        prev_month = (current_month - timedelta(days=1)).replace(day=1)
+        mrr_prev = TransactionQueue.objects.filter(
+            status__in=['completed', 'processed'],
+            created_at__gte=prev_month,
+            created_at__lt=current_month
+        ).aggregate(total=Sum('price'))['total'] or 0
+        
+        growth_rate = ((float(mrr) - float(mrr_prev)) / float(mrr_prev) * 100) if mrr_prev > 0 else 0
+        
         return Response({
             'mrr': float(mrr),
             'arr': arr,
             'arpu': arpu,
             'ltv': ltv,
+            'growth_rate': growth_rate,
             'active_users': active_users,
             'calculated_at': timezone.now().isoformat()
         })

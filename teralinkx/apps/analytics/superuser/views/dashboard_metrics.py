@@ -384,7 +384,7 @@ class RecentActivityView(APIView):
                 activities.append({
                     'type': 'payment',
                     'description': f'Payment of KSh {t.amount}',
-                    'user': t.phone_number,
+                    'user': t.initiator,
                     'time': t.transaction_time.isoformat()
                 })
             

@@ -103,7 +103,6 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
-    'silk',
     'whitenoise.runserver_nostatic',
     'django_celery_beat',
     'django_redis',
@@ -123,7 +122,6 @@ INSTALLED_APPS = [
 
 # Middleware - JWT-only, CSRF not needed
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -132,8 +130,11 @@ MIDDLEWARE = [
     'core.middleware.last_seen_middleware.LastSeenMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'silk.middleware.SilkyMiddleware',
     'core.middleware.db_connection_middleware.DatabaseConnectionMiddleware',
+    # Finance app middleware
+    'finance.middleware.RequestLoggingMiddleware',
+    'finance.middleware.FinanceErrorHandlerMiddleware',
+    'finance.middleware.SensitiveDataFilterMiddleware',
 ]
 
 # Security settings
@@ -195,13 +196,13 @@ TEMPLATES = [
 if dj_database_url:
     DATABASES = {
         'default': dj_database_url.config(
-            default='postgres://teralinkx:justboot@192.168.88.16:5432/teralinkx',
+            default='postgres://teralinkx:justboot@localhost:5433/teralinkx',
             conn_max_age=60,
             conn_health_checks=True,
             ssl_require=False
         ),
         'timescale': dj_database_url.config(
-            default='postgres://teralinkx:justboot@192.168.88.16:5432/teralinkx',
+            default='postgres://teralinkx:justboot@localhost:5433/teralinkx',
             conn_max_age=60,
             conn_health_checks=True,
             ssl_require=False
@@ -223,16 +224,16 @@ else:
             'NAME': 'teralinkx',
             'USER': 'teralinkx',
             'PASSWORD': 'justboot',
-            'HOST': '192.168.88.16',
-            'PORT': '5432',
+            'HOST': 'localhost',
+            'PORT': '5433',
         },
         'timescale': {
             'ENGINE': 'django.db.backends.postgresql',
             'NAME': 'teralinkx',
             'USER': 'teralinkx',
             'PASSWORD': 'justboot',
-            'HOST': '192.168.88.16',
-            'PORT': '5432',
+            'HOST': 'localhost',
+            'PORT': '5433',
         }
     }
 
@@ -266,7 +267,17 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',
-    )
+    ),
+    'DEFAULT_THROTTLE_CLASSES': [
+        'finance.throttling.FinanceAPIThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'user': '2000/hour',
+        'anon': '200/hour',
+        'payment': '1000/hour',
+        'export': '100/hour',
+        'health': '10000/hour',
+    }
 }
 
 # JWT Configuration with persistent secret and resilience features
@@ -318,7 +329,6 @@ CORS_ALLOWED_ORIGINS = [
     'https://srv.teralinkxwaves.uk',
     'https://su.teralinkxwaves.uk',
     'https://service.teralinkxwaves.uk',
-    'https://account.teralinkxwaves.uk',
     'https://accounts.teralinkxwaves.uk',
     'https://adm.teralinkxwaves.uk',
     'https://router.teralinkxwaves.uk',
@@ -365,6 +375,7 @@ CORS_EXPOSE_HEADERS = [
 CORS_ALLOW_HEADERS = list(default_headers) + [
     'authorization',
     'content-type',
+    'x-csrftoken',
     'x-client-timestamp',
     'x-session-id',
     'x-client-version',
@@ -472,10 +483,6 @@ PUSHER_KEY = os.environ.get('PUSHERKEY', '')
 PUSHER_SECRET = os.environ.get('PUSHERSCRT', '')
 PUSHER_CLUSTER = os.environ.get('PUSHERCLT', '')
 PUSHER_SSL = False  # Disable SSL for development
-
-# Silk - disable profiler to avoid conflicts
-SILKY_PYTHON_PROFILER = False
-SILKY_INTERCEPT_FUNC = lambda request: DEBUG
 
 # Channels
 ASGI_APPLICATION = 'teralinkx.asgi.application'

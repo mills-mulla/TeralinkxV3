@@ -11,11 +11,42 @@ from .querycheckout import payment_status, payment_health_check
 from .credit_balance import BalancePurchaseAPIView, balance_health_check
 from .unified_payment import UnifiedPaymentAPIView
 from .authentications import ConnectAPIView,ReconnectAPIView,DisconnectAPIView
+from .views_health import HealthCheckView, ReadinessCheckView, LivenessCheckView, MetricsView
 
 
 urlpatterns = [
+    # Health check endpoints
+    path('health/', HealthCheckView.as_view(), name='health-check'),
+    path('ready/', ReadinessCheckView.as_view(), name='readiness-check'),
+    path('alive/', LivenessCheckView.as_view(), name='liveness-check'),
+    path('metrics/', MetricsView.as_view(), name='metrics'),
+    
     # API endpoints for admin dashboard
     path('finance/api/', include('finance.api.urls')),
+    
+    # Churn prediction endpoints
+    path('finance/api/', include('finance.urls_churn')),
+    
+    # Revenue at risk endpoints
+    path('finance/api/revenue-at-risk/', include('finance.urls_revenue_at_risk')),
+    
+    # Reconciliation endpoints
+    path('finance/api/', include('finance.urls_reconciliation')),
+    
+    # Budget intelligence endpoints
+    path('finance/api/budget/', include('finance.urls_budget')),
+    
+    # KPI endpoints
+    path('finance/api/kpi/', include('finance.urls_kpi')),
+    
+    # Board report endpoints
+    path('finance/api/board-report/', include('finance.urls_board_report')),
+    
+    # Pricing intelligence endpoints (Phase 4.3)
+    path('finance/api/pricing/', include('finance.urls_pricing')),
+    
+    # Vendor intelligence endpoints (Phase 4.4)
+    path('finance/api/vendors/', include('finance.urls_vendor')),
     
     # Payment endpoints
     path('payments/unified/', UnifiedPaymentAPIView.as_view(), name='unified_payment'),

@@ -229,7 +229,7 @@ class Currency(TimeStampedModel):
         return cls.objects.filter(is_active=True)
     
     class Meta:
-        # app_label = ""
+        app_label = 'finance'
         verbose_name = "Currency"
         verbose_name_plural = "Currencies"
         ordering = ['code']
@@ -1681,4 +1681,10 @@ class RevenueStream(TimeStampedModel):
             models.Index(fields=['target_revenue']),
         ]
 
-     
+
+# Import related models to ensure they're registered
+from finance.models_churn import ChurnPrediction, RetentionTask  # noqa
+from finance.models_cashflow import CashFlowForecast, CashFlowAlert  # noqa
+from finance.models_reconciliation import ReconciliationJob, ReconciliationMatch, ReconciliationRule  # noqa
+from finance.models_kpi import KPISnapshot, WeeklySummary  # noqa
+from finance.models_board_report import BoardReport  # noqa

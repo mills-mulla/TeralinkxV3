@@ -241,6 +241,7 @@ import Transactions from './views/Transactions.vue'
 import Refunds from './views/Refunds.vue'
 import Finance from './views/Finance.vue'
 import Auth from './views/Auth.vue'
+import CustomerIntelligence from './views/CustomerIntelligence.vue'
 
 // Axios configuration for JWT
 import axios from 'axios';
@@ -275,6 +276,7 @@ export default {
     Refunds,
     Finance,
     Auth,
+    CustomerIntelligence,
   },
   data() {
     return {
@@ -328,6 +330,8 @@ export default {
         { id: 'locations', icon: '📍', title: 'Locations', subtitle: 'Network locations', component: 'Locations' },
         { id: 'transactions', icon: '💳', title: 'Transactions', subtitle: 'Payment transactions', component: 'Transactions' },
         { id: 'refunds', icon: '🔄', title: 'Refunds', subtitle: 'Refund requests', component: 'Refunds' },
+        { id: 'finance', icon: '📊', title: 'Finance', subtitle: 'Revenue, expenses & analytics', component: 'Finance' },
+        { id: 'customer-intelligence', icon: '🧠', title: 'Customer Intelligence', subtitle: 'Churn, retention & revenue at risk', component: 'CustomerIntelligence' },
       ]
       
       pages.forEach(page => {
