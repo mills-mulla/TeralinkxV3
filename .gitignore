@@ -4,6 +4,7 @@
 node_modules/
 
 # HIDS logs and data
+hids/logs/
 hids/suricata/logs/
 hids/zeek/logs/
 hids/pcaps/
@@ -79,6 +80,13 @@ certbot/cloudflare.ini
 
 # Data directories
 data/
+
+# Large data/dump files
+teralinkx/datadump.json
+*.json.gz
+
+# Media uploads (large binaries)
+teralinkx/media/
 
 # Cloudflare tunnel credentials
 cloudflared/*.pem
