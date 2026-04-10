@@ -1,216 +1,212 @@
 <template>
   <div class="space-y-6">
-    <!-- Summary Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-      <div class="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl p-6 text-white shadow-lg">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-indigo-100 text-sm font-medium">Total Invested</p>
-            <p class="text-3xl font-bold mt-2">KES {{ formatNumber(totalInvested) }}</p>
-          </div>
-          <svg class="w-12 h-12 text-indigo-200" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"/>
+    <div class="flex items-center justify-between">
+      <h2 class="text-xl font-bold text-slate-900 dark:text-white">Investment Portfolio</h2>
+      <div class="flex gap-3">
+        <button @click="load" :disabled="loading"
+          class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-300 text-sm flex items-center gap-2">
+          <svg class="w-4 h-4" :class="{ 'animate-spin': loading }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
           </svg>
-        </div>
-      </div>
-
-      <div class="bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl p-6 text-white shadow-lg">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-teal-100 text-sm font-medium">Current Value</p>
-            <p class="text-3xl font-bold mt-2">KES {{ formatNumber(currentValue) }}</p>
-          </div>
-          <svg class="w-12 h-12 text-teal-200" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clip-rule="evenodd"/>
-          </svg>
-        </div>
-      </div>
-
-      <div class="bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-xl p-6 text-white shadow-lg">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-cyan-100 text-sm font-medium">Total ROI</p>
-            <p class="text-3xl font-bold mt-2">{{ avgROI.toFixed(1) }}%</p>
-          </div>
-          <svg class="w-12 h-12 text-cyan-200" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z" clip-rule="evenodd"/>
-          </svg>
-        </div>
-      </div>
-
-      <div class="bg-gradient-to-br from-violet-500 to-violet-600 rounded-xl p-6 text-white shadow-lg">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-violet-100 text-sm font-medium">Active Investments</p>
-            <p class="text-3xl font-bold mt-2">{{ activeCount }}</p>
-          </div>
-          <svg class="w-12 h-12 text-violet-200" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-          </svg>
-        </div>
-      </div>
-    </div>
-
-    <!-- Investments Table -->
-    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg overflow-hidden">
-      <div class="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
-        <h2 class="text-xl font-bold text-slate-900 dark:text-white">Investment Portfolio</h2>
-        <button @click="openAddModal" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+          Refresh
+        </button>
+        <button @click="openAdd" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
           </svg>
           Add Investment
         </button>
       </div>
-      
+    </div>
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl p-5 text-white">
+        <p class="text-indigo-100 text-xs font-medium">Total Invested</p>
+        <p class="text-2xl font-bold mt-1">KES {{ fmt(totalInvested) }}</p>
+      </div>
+      <div class="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-5 text-white">
+        <p class="text-emerald-100 text-xs font-medium">Active</p>
+        <p class="text-2xl font-bold mt-1">{{ activeCount }}</p>
+      </div>
+      <div class="bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl p-5 text-white">
+        <p class="text-amber-100 text-xs font-medium">Avg Expected ROI</p>
+        <p class="text-2xl font-bold mt-1">{{ avgROI }}%</p>
+      </div>
+      <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-5 text-white">
+        <p class="text-purple-100 text-xs font-medium">Total Records</p>
+        <p class="text-2xl font-bold mt-1">{{ investments.length }}</p>
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="w-full">
+        <table class="w-full text-sm">
           <thead class="bg-slate-50 dark:bg-slate-900">
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Name</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Type</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Amount</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Current Value</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">ROI</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Date</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
-              <th class="px-6 py-3 text-right text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">Actions</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Investor</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Type</th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">Amount</th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">Interest</th>
+              <th class="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase">ROI</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Date</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Maturity</th>
+              <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
+              <th class="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">Actions</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
-            <tr v-for="investment in data" :key="investment.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-              <td class="px-6 py-4">
-                <div class="text-sm font-medium text-slate-900 dark:text-white">{{ investment.name }}</div>
+            <tr v-for="inv in investments" :key="inv.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+              <td class="px-4 py-3">
+                <p class="font-medium text-slate-900 dark:text-white">{{ inv.investor_name }}</p>
+                <p v-if="inv.contract_reference" class="text-xs text-slate-400">{{ inv.contract_reference }}</p>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <span class="px-2 py-1 text-xs font-medium rounded-full" :class="getTypeColor(investment.investment_type)">
-                  {{ investment.type_display }}
-                </span>
+              <td class="px-4 py-3">
+                <span class="px-2 py-1 rounded-full text-xs font-medium" :class="typeBadge(inv.investment_type)">{{ inv.type_display }}</span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm font-semibold text-slate-900 dark:text-white">KES {{ formatNumber(investment.amount) }}</div>
+              <td class="px-4 py-3 text-right font-semibold text-slate-900 dark:text-white">KES {{ fmt(inv.amount) }}</td>
+              <td class="px-4 py-3 text-right text-slate-600 dark:text-slate-400">{{ inv.interest_rate }}%</td>
+              <td class="px-4 py-3 text-right">
+                <span v-if="inv.expected_roi" class="text-emerald-600 font-medium">{{ inv.expected_roi }}%</span>
+                <span v-else class="text-slate-400">-</span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm font-semibold text-slate-900 dark:text-white">KES {{ formatNumber(investment.current_value) }}</div>
+              <td class="px-4 py-3 text-slate-600 dark:text-slate-400">{{ fmtDate(inv.investment_date) }}</td>
+              <td class="px-4 py-3 text-slate-600 dark:text-slate-400">{{ inv.maturity_date ? fmtDate(inv.maturity_date) : '-' }}</td>
+              <td class="px-4 py-3">
+                <span class="px-2 py-1 rounded-full text-xs font-medium" :class="statusBadge(inv.investment_status)">{{ inv.status_display }}</span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="flex items-center gap-1">
-                  <svg v-if="investment.roi > 0" class="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
-                  </svg>
-                  <svg v-else-if="investment.roi < 0" class="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M14.707 10.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 12.586V5a1 1 0 012 0v7.586l2.293-2.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                  </svg>
-                  <span class="text-sm font-medium" :class="investment.roi > 0 ? 'text-emerald-600 dark:text-emerald-400' : investment.roi < 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-400'">
-                    {{ investment.roi.toFixed(1) }}%
-                  </span>
-                </div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-slate-600 dark:text-slate-400">{{ formatDate(investment.investment_date) }}</div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap">
-                <span class="px-2 py-1 text-xs font-medium rounded-full" :class="getStatusColor(investment.status)">
-                  {{ investment.status_display }}
-                </span>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-right">
-                <div class="flex items-center justify-end gap-2">
-                  <button @click="openEditModal(investment)" class="p-2 hover:bg-blue-100 dark:hover:bg-blue-600 rounded transition-colors" title="Edit">
-                    <svg class="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
+              <td class="px-4 py-3 text-center">
+                <div class="flex items-center justify-center gap-2">
+                  <button @click="openEdit(inv)" class="p-1.5 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded text-blue-600 dark:text-blue-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                   </button>
-                  <button @click="openDeleteModal(investment)" class="p-2 hover:bg-red-100 dark:hover:bg-red-600 rounded transition-colors" title="Delete">
-                    <svg class="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
+                  <button @click="openDelete(inv)" class="p-1.5 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-600 dark:text-red-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                   </button>
                 </div>
               </td>
+            </tr>
+            <tr v-if="!investments.length && !loading">
+              <td colspan="9" class="px-4 py-8 text-center text-slate-400">No investments found</td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
 
-    <!-- Form Modal -->
-    <div v-if="showFormModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" @click.self="closeFormModal">
-      <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-2xl w-full">
-        <div class="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
-          <h2 class="text-lg font-semibold text-slate-900 dark:text-white">{{ selectedInvestment ? 'Edit Investment' : 'Add Investment' }}</h2>
-          <button @click="closeFormModal" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
+    <div v-if="showForm" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" @click.self="showForm=false">
+      <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-screen overflow-y-auto">
+        <div class="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-700 sticky top-0 bg-white dark:bg-slate-800 z-10">
+          <h3 class="text-lg font-semibold text-slate-900 dark:text-white">{{ editing ? 'Edit Investment' : 'Add Investment' }}</h3>
+          <button @click="showForm=false" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">
+            <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
-        <div class="p-6 space-y-4">
+        <div class="p-5 space-y-4">
           <div>
-            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Name *</label>
-            <input v-model="formData.name" type="text" required class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" />
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Investor Name *</label>
+            <input v-model="form.investor_name" type="text" class="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-sm"/>
           </div>
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Type *</label>
-              <select v-model="formData.investment_type" required class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white">
-                <option value="equity">Equity</option>
-                <option value="debt">Debt</option>
-                <option value="infrastructure">Infrastructure</option>
-                <option value="technology">Technology</option>
-                <option value="other">Other</option>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Type *</label>
+              <select v-model="form.investment_type" class="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-sm">
+                <option value="seed">Seed Funding</option>
+                <option value="angel">Angel Investment</option>
+                <option value="vc">Venture Capital</option>
+                <option value="loan">Business Loan</option>
+                <option value="personal">Personal Investment</option>
+                <option value="equity">Equity Investment</option>
               </select>
             </div>
             <div>
-              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Amount (KES) *</label>
-              <input v-model="formData.amount" type="number" step="0.01" required class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" />
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Status *</label>
+              <select v-model="form.investment_status" class="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-sm">
+                <option value="proposed">Proposed</option>
+                <option value="approved">Approved</option>
+                <option value="disbursed">Disbursed</option>
+                <option value="active">Active</option>
+                <option value="repaid">Repaid</option>
+                <option value="converted">Converted</option>
+                <option value="written_off">Written Off</option>
+              </select>
             </div>
           </div>
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Current Value (KES) *</label>
-              <input v-model="formData.current_value" type="number" step="0.01" required class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" />
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Amount (KES) *</label>
+              <input v-model="form.amount" type="number" step="0.01" class="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-sm"/>
             </div>
             <div>
-              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Investment Date *</label>
-              <input v-model="formData.investment_date" type="date" required class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" />
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Investment Date *</label>
+              <input v-model="form.investment_date" type="date" class="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-sm"/>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Interest Rate (%)</label>
+              <input v-model="form.interest_rate" type="number" step="0.01" class="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-sm"/>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Equity %</label>
+              <input v-model="form.equity_percentage" type="number" step="0.01" class="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-sm"/>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Expected ROI (%)</label>
+              <input v-model="form.expected_roi" type="number" step="0.01" class="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-sm"/>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Maturity Date</label>
+              <input v-model="form.maturity_date" type="date" class="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-sm"/>
             </div>
           </div>
           <div>
-            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Status *</label>
-            <select v-model="formData.status" required class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white">
-              <option value="active">Active</option>
-              <option value="matured">Matured</option>
-              <option value="liquidated">Liquidated</option>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Contract Reference</label>
+            <input v-model="form.contract_reference" type="text" class="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-sm"/>
+          </div>
+          <div class="flex items-center gap-4">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input v-model="form.is_recurring" type="checkbox" class="w-4 h-4 rounded"/>
+              <span class="text-sm text-slate-700 dark:text-slate-300">Recurring</span>
+            </label>
+            <select v-if="form.is_recurring" v-model="form.recurrence_pattern" class="px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-sm">
+              <option value="monthly">Monthly</option>
+              <option value="quarterly">Quarterly</option>
+              <option value="annual">Annual</option>
             </select>
           </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Repayment Terms</label>
+            <textarea v-model="form.repayment_terms" rows="2" class="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-sm resize-none"></textarea>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Description</label>
+            <textarea v-model="form.description" rows="2" class="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-sm resize-none"></textarea>
+          </div>
+          <p v-if="formError" class="text-sm text-red-600 dark:text-red-400">{{ formError }}</p>
         </div>
-        <div class="flex items-center justify-end gap-3 p-6 border-t border-slate-200 dark:border-slate-700">
-          <button @click="closeFormModal" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-900 dark:text-white rounded-lg">Cancel</button>
-          <button @click="saveInvestment" :disabled="saveLoading" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg" :class="{ 'opacity-50': saveLoading }">{{ saveLoading ? 'Saving...' : 'Save' }}</button>
+        <div class="flex justify-end gap-3 p-5 border-t border-slate-200 dark:border-slate-700">
+          <button @click="showForm=false" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-sm">Cancel</button>
+          <button @click="save" :disabled="saving" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">{{ saving ? 'Saving...' : 'Save' }}</button>
         </div>
       </div>
     </div>
 
-    <!-- Delete Modal -->
-    <div v-if="showDeleteModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" @click.self="closeDeleteModal">
-      <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-md w-full">
-        <div class="p-6">
-          <div class="flex items-center gap-4">
-            <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-              <svg class="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-            <div>
-              <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Delete Investment</h3>
-              <p class="text-sm text-slate-600 dark:text-slate-400 mt-1">Are you sure you want to delete "{{ investmentToDelete?.name }}"?</p>
-            </div>
+    <div v-if="showDel" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" @click.self="showDel=false">
+      <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-md w-full p-6">
+        <div class="flex items-center gap-4 mb-6">
+          <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
+            <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Delete Investment</h3>
+            <p class="text-sm text-slate-500 mt-1">Delete "{{ delTarget && delTarget.investor_name }}"? This cannot be undone.</p>
           </div>
         </div>
-        <div class="flex items-center justify-end gap-3 p-6 border-t border-slate-200 dark:border-slate-700">
-          <button @click="closeDeleteModal" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-900 dark:text-white rounded-lg">Cancel</button>
-          <button @click="confirmDelete" :disabled="deleteLoading" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg" :class="{ 'opacity-50': deleteLoading }">{{ deleteLoading ? 'Deleting...' : 'Delete' }}</button>
+        <div class="flex justify-end gap-3">
+          <button @click="showDel=false" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-sm">Cancel</button>
+          <button @click="confirmDelete" :disabled="deleting" class="px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 disabled:opacity-50">{{ deleting ? 'Deleting...' : 'Delete' }}</button>
         </div>
       </div>
     </div>
@@ -218,156 +214,109 @@
 </template>
 
 <script>
+import { useApi } from '../../composables/useApi'
+
 export default {
   name: 'Investments',
-  props: {
-    data: {
-      type: Array,
-      default: () => []
-    }
-  },
-  emits: ['refresh'],
+  setup() { const { makeRequest } = useApi(); return { makeRequest } },
   data() {
     return {
-      showFormModal: false,
-      showDeleteModal: false,
-      selectedInvestment: null,
-      investmentToDelete: null,
-      saveLoading: false,
-      deleteLoading: false,
-      formData: {
-        name: '',
-        investment_type: 'equity',
-        amount: 0,
-        current_value: 0,
-        investment_date: new Date().toISOString().split('T')[0],
-        status: 'active'
+      investments: [], loading: false,
+      showForm: false, editing: null, saving: false, formError: '',
+      showDel: false, delTarget: null, deleting: false,
+      form: {
+        investor_name: '', investment_type: 'loan', investment_status: 'proposed',
+        amount: '', investment_date: new Date().toISOString().split('T')[0],
+        interest_rate: 0, equity_percentage: '', expected_roi: '', maturity_date: '',
+        is_recurring: false, recurrence_pattern: 'monthly',
+        contract_reference: '', repayment_terms: '', description: ''
       }
     }
   },
   computed: {
-    totalInvested() {
-      return this.data.reduce((sum, inv) => sum + (inv.amount || 0), 0)
-    },
-    currentValue() {
-      return this.data.reduce((sum, inv) => sum + (inv.current_value || 0), 0)
-    },
+    totalInvested() { return this.investments.reduce((s, i) => s + parseFloat(i.amount || 0), 0) },
+    activeCount() { return this.investments.filter(i => ['active','disbursed'].includes(i.investment_status)).length },
     avgROI() {
-      if (this.data.length === 0) return 0
-      return this.data.reduce((sum, inv) => sum + (inv.roi || 0), 0) / this.data.length
-    },
-    activeCount() {
-      return this.data.filter(i => i.status === 'active').length
+      const r = this.investments.filter(i => i.expected_roi)
+      return r.length ? (r.reduce((s, i) => s + parseFloat(i.expected_roi), 0) / r.length).toFixed(1) : 0
     }
   },
   methods: {
-    formatNumber(num) {
-      return new Intl.NumberFormat('en-KE').format(num || 0)
+    fmt(n) { return new Intl.NumberFormat('en-KE').format(Math.round(n || 0)) },
+    fmtDate(d) { return d ? new Date(d).toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' }) : '-' },
+    typeBadge(t) {
+      const m = { seed: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
+        angel: 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-400',
+        vc: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400',
+        loan: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+        personal: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+        equity: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' }
+      return m[t] || 'bg-slate-100 text-slate-800'
     },
-    formatDate(date) {
-      return new Date(date).toLocaleDateString('en-KE', { year: 'numeric', month: 'short', day: 'numeric' })
+    statusBadge(s) {
+      const m = { proposed: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300',
+        approved: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+        disbursed: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400',
+        active: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
+        repaid: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-400',
+        converted: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
+        written_off: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' }
+      return m[s] || 'bg-slate-100 text-slate-800'
     },
-    getTypeColor(type) {
-      const colors = {
-        'equity': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400',
-        'debt': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
-        'infrastructure': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
-        'technology': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-        'other': 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-400'
-      }
-      return colors[type] || colors.other
-    },
-    getStatusColor(status) {
-      const colors = {
-        'active': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
-        'matured': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-        'liquidated': 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-400'
-      }
-      return colors[status] || colors.active
-    },
-    openAddModal() {
-      this.selectedInvestment = null
-      this.formData = {
-        name: '',
-        investment_type: 'equity',
-        amount: 0,
-        current_value: 0,
-        investment_date: new Date().toISOString().split('T')[0],
-        status: 'active'
-      }
-      this.showFormModal = true
-    },
-    openEditModal(investment) {
-      this.selectedInvestment = investment
-      this.formData = {
-        name: investment.name,
-        investment_type: investment.investment_type,
-        amount: investment.amount,
-        current_value: investment.current_value,
-        investment_date: investment.investment_date,
-        status: investment.status
-      }
-      this.showFormModal = true
-    },
-    closeFormModal() {
-      this.showFormModal = false
-      this.selectedInvestment = null
-    },
-    async saveInvestment() {
-      this.saveLoading = true
+    async load() {
+      this.loading = true
       try {
-        const url = this.selectedInvestment 
-          ? `https://srv.teralinkxwaves.uk/api/finance/api/investments/${this.selectedInvestment.id}/`
-          : 'https://srv.teralinkxwaves.uk/api/finance/api/investments/'
-        const method = this.selectedInvestment ? 'PUT' : 'POST'
-        
-        const response = await fetch(url, {
-          method,
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-          },
-          body: JSON.stringify(this.formData)
-        })
-        
-        if (!response.ok) throw new Error('Failed to save')
-        this.$emit('refresh')
-        this.closeFormModal()
-      } catch (error) {
-        console.error('Error saving investment:', error)
-        alert('Failed to save investment')
-      } finally {
-        this.saveLoading = false
+        const data = await this.makeRequest('get', 'api/finance/api/investments/', null, false)
+        this.investments = Array.isArray(data) ? data : (data.results || [])
+      } catch (e) { console.error('load:', e) }
+      finally { this.loading = false }
+    },
+    openAdd() {
+      this.editing = null
+      this.form = { investor_name: '', investment_type: 'loan', investment_status: 'proposed',
+        amount: '', investment_date: new Date().toISOString().split('T')[0],
+        interest_rate: 0, equity_percentage: '', expected_roi: '', maturity_date: '',
+        is_recurring: false, recurrence_pattern: 'monthly',
+        contract_reference: '', repayment_terms: '', description: '' }
+      this.formError = ''; this.showForm = true
+    },
+    openEdit(inv) {
+      this.editing = inv
+      this.form = { investor_name: inv.investor_name, investment_type: inv.investment_type,
+        investment_status: inv.investment_status, amount: inv.amount,
+        investment_date: inv.investment_date, interest_rate: inv.interest_rate,
+        equity_percentage: inv.equity_percentage || '', expected_roi: inv.expected_roi || '',
+        maturity_date: inv.maturity_date || '', is_recurring: inv.is_recurring,
+        recurrence_pattern: inv.recurrence_pattern || 'monthly',
+        contract_reference: inv.contract_reference || '',
+        repayment_terms: inv.repayment_terms || '', description: inv.description || '' }
+      this.formError = ''; this.showForm = true
+    },
+    async save() {
+      if (!this.form.investor_name || !this.form.amount || !this.form.investment_date) {
+        this.formError = 'Investor name, amount and date are required'; return
       }
+      this.saving = true; this.formError = ''
+      try {
+        if (this.editing) {
+          await this.makeRequest('put', 'api/finance/api/investments/' + this.editing.id + '/', this.form)
+        } else {
+          await this.makeRequest('post', 'api/finance/api/investments/', this.form)
+        }
+        this.showForm = false; await this.load()
+      } catch (e) { this.formError = (e.response && e.response.data && e.response.data.error) || 'Failed to save' }
+      finally { this.saving = false }
     },
-    openDeleteModal(investment) {
-      this.investmentToDelete = investment
-      this.showDeleteModal = true
-    },
-    closeDeleteModal() {
-      this.showDeleteModal = false
-      this.investmentToDelete = null
-    },
+    openDelete(inv) { this.delTarget = inv; this.showDel = true },
     async confirmDelete() {
-      this.deleteLoading = true
+      this.deleting = true
       try {
-        const response = await fetch(`https://srv.teralinkxwaves.uk/api/finance/api/investments/${this.investmentToDelete.id}/`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-          }
-        })
-        
-        if (!response.ok) throw new Error('Failed to delete')
-        this.$emit('refresh')
-        this.closeDeleteModal()
-      } catch (error) {
-        console.error('Error deleting investment:', error)
-        alert('Failed to delete investment')
-      } finally {
-        this.deleteLoading = false
-      }
+        await this.makeRequest('delete', 'api/finance/api/investments/' + this.delTarget.id + '/')
+        this.showDel = false; await this.load()
+      } catch (e) { console.error('delete:', e) }
+      finally { this.deleting = false }
     }
-  }
+  },
+  mounted() { this.load() }
 }
 </script>

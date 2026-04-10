@@ -54,6 +54,7 @@
     "start-server-and-test": "^2.1.2",
     "tailwindcss": "^4.1.14",
     "vite": "npm:rolldown-vite@latest",
+    "vite-plugin-pwa": "^1.2.0",
     "vite-plugin-vue-devtools": "^8.0.2",
     "vitest": "^3.2.4"
   }

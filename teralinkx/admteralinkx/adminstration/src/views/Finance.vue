@@ -48,7 +48,7 @@
       <div v-if="activeTab === 'vendors'"><VendorIntelligence /></div>
       <div v-if="activeTab === 'board-reports'"><BoardReports /></div>
       <div v-if="activeTab === 'reconciliation'"><Reconciliation /></div>
-      <div v-if="activeTab === 'investments'"><Investments :data="investments" @refresh="fetchInvestments" /></div>
+      <div v-if="activeTab === 'investments'"><Investments ref="invRef" /></div>
       <div v-if="activeTab === 'departments'"><Departments :data="departments" @refresh="fetchDepartments" /></div>
     </div>
   </div>

@@ -11,16 +11,32 @@ class KPICalculationService:
     
     @staticmethod
     def calculate_mrr():
-        """Calculate Monthly Recurring Revenue"""
-        from .models import TransactionQueue
+        """Calculate MRR — uses daily_revenue aggregate if available, falls back to raw query"""
+        from django.db import connection
+        from django.utils import timezone
         
         current_month = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         
+        # Try fast aggregate first
+        try:
+            with connection.cursor() as c:
+                c.execute("""
+                    SELECT COALESCE(SUM(total_revenue), 0)
+                    FROM daily_revenue
+                    WHERE day >= %s
+                """, [current_month])
+                result = c.fetchone()[0]
+                if result is not None:
+                    return Decimal(str(result))
+        except Exception:
+            pass
+        
+        # Fallback to raw query
+        from .models import TransactionQueue
         mrr = TransactionQueue.objects.filter(
             status__in=['completed', 'processed'],
             created_at__gte=current_month
         ).aggregate(total=Sum('price'))['total'] or 0
-        
         return Decimal(str(mrr))
     
     @staticmethod

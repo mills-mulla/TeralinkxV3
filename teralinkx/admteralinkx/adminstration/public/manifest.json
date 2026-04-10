@@ -1,0 +1,13 @@
+{
+  "name": "TeralinkX Admin",
+  "short_name": "TeralinkX",
+  "description": "TeralinkX ISP Management Platform",
+  "start_url": "/su/",
+  "scope": "/su/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#3b82f6",
+  "icons": [
+    { "src": "/su/favicon.ico", "sizes": "64x64", "type": "image/x-icon" }
+  ]
+}
