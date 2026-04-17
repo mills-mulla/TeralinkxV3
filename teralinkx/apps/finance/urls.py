@@ -39,6 +39,9 @@ urlpatterns = [
     # KPI endpoints
     path('finance/api/kpi/', include('finance.urls_kpi')),
     
+    # Invoice endpoints
+    path('finance/api/', include('finance.urls_invoice')),
+    
     # Board report endpoints
     path('finance/api/board-report/', include('finance.urls_board_report')),
     

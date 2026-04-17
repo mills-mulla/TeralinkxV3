@@ -1688,3 +1688,4 @@ from finance.models_cashflow import CashFlowForecast, CashFlowAlert  # noqa
 from finance.models_reconciliation import ReconciliationJob, ReconciliationMatch, ReconciliationRule  # noqa
 from finance.models_kpi import KPISnapshot, WeeklySummary  # noqa
 from finance.models_board_report import BoardReport  # noqa
+from finance.models_invoice import Invoice  # noqa

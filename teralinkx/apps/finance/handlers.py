@@ -13,8 +13,7 @@ from .signals import (
 )
 from .tasks import (
     refresh_churn_prediction,
-    recalculate_budget_utilization,
-    check_fraud_correlation,
+    send_budget_alerts,
     send_retention_sms
 )
 import logging
@@ -24,17 +23,19 @@ logger = logging.getLogger(__name__)
 
 @receiver(payment_completed)
 def handle_payment_completed(sender, payment, **kwargs):
-    """
-    Handle payment completion event.
-    Triggers churn model refresh for the customer.
-    """
+    """Handle payment completion — auto-generate invoice and refresh churn."""
     logger.info(f"Payment completed: {payment.transaction_id} for customer {payment.user_id}")
-    
-    # Refresh churn prediction for this customer
+
+    # Auto-generate tax invoice
+    try:
+        from finance.models_invoice import Invoice
+        invoice = Invoice.create_from_transaction(payment)
+        logger.info(f"Invoice generated: {invoice.invoice_number}")
+    except Exception as e:
+        logger.error(f"Invoice generation failed for {payment.transaction_id}: {e}")
+
+    # Refresh churn prediction
     refresh_churn_prediction.delay(customer_id=payment.user_id)
-    
-    # Update customer payment history
-    logger.info(f"Triggered churn prediction refresh for customer {payment.user_id}")
 
 
 @receiver(expense_created)
@@ -44,15 +45,8 @@ def handle_expense_created(sender, expense, **kwargs):
     Triggers budget utilization recalculation.
     """
     logger.info(f"Expense created: {expense.id} - {expense.category} - {expense.amount}")
-    
-    # Recalculate budget utilization
-    recalculate_budget_utilization.delay(
-        category=expense.category,
-        month=expense.date.month,
-        year=expense.date.year
-    )
-    
-    logger.info(f"Triggered budget recalculation for {expense.category}")
+    send_budget_alerts.delay()
+    logger.info(f"Triggered budget alert check after expense creation")
 
 
 @receiver(budget_threshold_exceeded)
@@ -78,15 +72,8 @@ def handle_hids_anomaly(sender, anomaly, **kwargs):
     Triggers fraud correlation check.
     """
     logger.warning(f"HIDS anomaly detected: {anomaly.get('type')} from {anomaly.get('src_ip')}")
-    
-    # Check for fraud correlation with recent payments
-    check_fraud_correlation.delay(
-        anomaly_type=anomaly.get('type'),
-        src_ip=anomaly.get('src_ip'),
-        timestamp=anomaly.get('timestamp')
-    )
-    
-    logger.info(f"Triggered fraud correlation check for anomaly")
+    # Fraud correlation deferred to Phase 3 (HIDS integration)
+    logger.info("HIDS anomaly logged — fraud correlation pending Phase 3")
 
 
 @receiver(customer_churn_risk_high)

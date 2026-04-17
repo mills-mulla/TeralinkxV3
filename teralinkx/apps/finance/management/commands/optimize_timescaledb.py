@@ -124,14 +124,14 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING(f'  hourly_transactions: {e}'))
 
     def _add_retention_policy(self):
-        """Keep raw data for 2 years, compressed chunks handle the rest"""
+        """Keep raw data for 10 years (financial audit compliance)"""
         with connection.cursor() as c:
             for table in ['finance_transactionqueue', 'finance_paymenttransaction']:
                 try:
                     c.execute(f"""
                         SELECT add_retention_policy('{table}',
-                            INTERVAL '2 years', if_not_exists => TRUE)
+                            INTERVAL '10 years', if_not_exists => TRUE)
                     """)
-                    self.stdout.write(f'🗑️  {table}: 2-year retention policy added')
+                    self.stdout.write(f'🗑️  {table}: 10-year retention policy added')
                 except Exception as e:
                     self.stdout.write(self.style.WARNING(f'  {table} retention: {e}'))
