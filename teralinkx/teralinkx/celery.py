@@ -87,6 +87,11 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour=8, minute=0),   # 8am
         'options': {'queue': 'notifications'}
     },
+    'send-expense-notifications': {
+        'task': 'finance.send_expense_notifications',
+        'schedule': crontab(hour=9, minute=15),
+        'options': {'queue': 'notifications'}
+    },
     'send-budget-alerts': {
         'task': 'finance.send_budget_alerts',
         'schedule': crontab(hour=9, minute=0),   # 9am
@@ -121,6 +126,46 @@ app.conf.beat_schedule = {
     },
 
     # ── Monthly tasks ─────────────────────────────────────────────────────────
+    'check-tax-deadlines': {
+        'task': 'finance.check_tax_deadlines',
+        'schedule': crontab(hour=9, minute=30),
+        'options': {'queue': 'default'}
+    },
+    'post-monthly-depreciation': {
+        'task': 'finance.post_monthly_depreciation',
+        'schedule': crontab(day_of_month=1, hour=8, minute=0),
+        'options': {'queue': 'default'}
+    },
+    'generate-monthly-pl': {
+        'task': 'finance.generate_monthly_pl',
+        'schedule': crontab(day_of_month=2, hour=8, minute=0),
+        'options': {'queue': 'default'}
+    },
+    'update-ar-collection-cases': {
+        'task': 'finance.update_ar_collection_cases',
+        'schedule': crontab(hour=10, minute=0),
+        'options': {'queue': 'default'}
+    },
+    'check-ap-overdue': {
+        'task': 'finance.check_ap_overdue',
+        'schedule': crontab(hour=9, minute=0),
+        'options': {'queue': 'default'}
+    },
+    'run-monthly-payroll': {
+        'task': 'finance.run_monthly_payroll',
+        'schedule': crontab(day_of_month=25, hour=8, minute=0),
+        'options': {'queue': 'default'}
+    },
+    'calculate-monthly-wht': {
+        'task': 'finance.calculate_monthly_wht',
+        'schedule': crontab(day_of_month=1, hour=7, minute=30),
+        'options': {'queue': 'default'}
+    },
+    'calculate-monthly-vat': {
+        'task': 'finance.calculate_monthly_vat',
+        'schedule': crontab(day_of_month=1, hour=7, minute=0),
+        'options': {'queue': 'default'}
+    },
     'generate-monthly-board-report': {
         'task': 'finance.generate_monthly_board_report',
         'schedule': crontab(day_of_month=1, hour=6, minute=0),  # 1st of month 6am

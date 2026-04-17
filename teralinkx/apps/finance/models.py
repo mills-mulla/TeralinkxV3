@@ -1689,3 +1689,23 @@ from finance.models_reconciliation import ReconciliationJob, ReconciliationMatch
 from finance.models_kpi import KPISnapshot, WeeklySummary  # noqa
 from finance.models_board_report import BoardReport  # noqa
 from finance.models_invoice import Invoice  # noqa
+from finance.models_vat import VATReturn  # noqa
+from finance.models_tax import TaxReturn  # noqa
+from finance.models_reminder import PaymentReminder  # noqa
+from finance.models_reminder import PaymentReminder  # noqafrom finance.models_credit_note import CreditNote  # noqa
+from finance.models_payroll import Employee, PayrollRun, PayslipItem  # noqa
+from finance.models_credit_note import CreditNote  # noqa
+
+from finance.models_asset import Asset  # noqa
+from finance.models_ap import VendorInvoice  # noqa
+
+from finance.models_ar import ARAccount, DebtCollection  # noqa
+
+from finance.models_pl import PLStatement, ForexGainLoss  # noqa
+
+from finance.models_bank_import import BankStatement, BankStatementEntry  # noqa
+from finance.models_billing import RecurringBilling  # noqa
+
+from finance.models_medium import (NotificationPreference, ExpenseNotification, FinancialYear, PettyCashFund, PettyCashTransaction, PurchaseOrder, AuditLog)  # noqa
+
+from finance.models_low import (PaymentAllocation, SLAPolicy, OutageEvent, RepaymentSchedule, Branch, InsurancePolicy, DividendDeclaration, CLVCohort)  # noqa

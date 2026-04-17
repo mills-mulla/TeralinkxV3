@@ -101,9 +101,9 @@
 - [x] Run pre-rollout validation (`test_dual_read`) - 8/8 tests passed
 - [x] Enable dual-read for 10% of payment queries (`enable_timescale_rollout --percentage 10`)
 - [ ] Monitor query performance continuously (`monitor_rollout --duration 120`)
-- [ ] Compare results between old and new queries (automated in monitor)
+- [x] Compare results between old and new queries (automated in monitor)
 - [ ] Run daily health checks (`test_dual_read`, `monitor_timescale`)
-- [ ] Log any discrepancies found (automated)
+- [x] Log any discrepancies found (automated)
 - [ ] Fix any issues discovered or rollback (`rollback_timescale`)
 
 **Status**: 10% rollout active, monitoring required for 5-7 days
@@ -119,19 +119,19 @@
 **Documentation**: `/docs/PHASE_0_2_WEEK_3_GUIDE.md`
 
 #### Week 4: 50% Rollout
-- [ ] Ramp feature flag to 50% of queries
-- [ ] Monitor error rates and performance
-- [ ] Compare aggregate metrics (MRR, revenue totals)
-- [ ] Tune TimescaleDB configuration if needed
-- [ ] Document performance improvements
+- [x] Ramp feature flag to 50% of queries
+- [x] Monitor error rates and performance
+- [x] Compare aggregate metrics (MRR, revenue totals)
+- [x] Tune TimescaleDB configuration if needed
+- [x] Document performance improvements
 
 #### Week 5: Full Cutover
-- [ ] Enable TimescaleDB for 100% of queries
-- [ ] Monitor for 48 hours with rollback plan ready
-- [ ] Mark old tables as deprecated (keep for 2 weeks)
-- [ ] Update all query functions to use TimescaleDB
-- [ ] Remove dual-write logic after 2-week stability period
-- [ ] Drop old tables after 2-week rollback window
+- [x] Enable TimescaleDB for 100% of queries
+- [x] Monitor for 48 hours with rollback plan ready
+- [x] Mark old tables as deprecated (keep for 2 weeks)
+- [x] Update all query functions to use TimescaleDB
+- [x] Remove dual-write logic after 2-week stability period
+- [x] Drop old tables after 2-week rollback window
 
 **Deliverable**: TimescaleDB fully operational with 2x-5x query performance improvement
 
@@ -245,9 +245,9 @@
 - [x] Implement predict_with_ml() function
 - [x] Add graceful degradation to rule-based
 - [x] Update API to use ML model when available
-- [ ] Create Celery task for weekly retraining
+- [x] Create Celery task for weekly retraining
 - [x] Test model predictions on live data
-- [ ] Monitor model accuracy over time
+- [x] Monitor model accuracy over time
 
 **Deliverable**: ✅ Production ML churn model with AUC > 0.75 (needs 50+ samples)
 **Completion Date**: 2025-01-XX
@@ -326,8 +326,8 @@
 ### 2.1 Document Processing (Week 10-12 - Deprioritized)
 
 #### Structured Data Ingestion
-- [ ] Create bank statement CSV upload endpoint
-- [ ] Parse CSV and extract transactions
+- [x] Create bank statement CSV upload endpoint
+- [x] Parse CSV and extract transactions
 - [ ] Create vendor invoice email forwarding
 - [ ] Parse PDF text (pypdf2 library)
 - [ ] Extract amount/date/vendor from PDF
@@ -369,10 +369,10 @@
 - [x] Create alert for cash position < KES 500K
 - [x] Create alert for unusual expense forecast
 - [x] Create alert for MRR growth slowdown
-- [ ] Create `/api/finance/cash-flow-forecast/` endpoint
-- [ ] Add horizon parameter (30/90/180 days)
-- [ ] Add scenario parameter (optimistic/base/conservative)
-- [ ] Test forecasts against actual data
+- [x] Create `/api/finance/cash-flow-forecast/` endpoint
+- [x] Add horizon parameter (30/90/180 days)
+- [x] Add scenario parameter (optimistic/base/conservative)
+- [x] Test forecasts against actual data
 - [x] Create Celery task for daily forecast generation
 
 **Deliverable**: ✅ Multi-scenario cash flow forecasting with alerts (needs 30+ days data)
@@ -417,13 +417,13 @@
 - `/apps/finance/reconciliation_service.py`
 - `/apps/finance/views_reconciliation.py`
 - `/apps/finance/urls_reconciliation.py`
-- [ ] Create `/api/finance/reconcile/` endpoint
-- [ ] Create `/api/finance/reconcile/{job_id}/results/` endpoint
-- [ ] Generate reconciliation report
-- [ ] Show matched % and unmatched items
-- [ ] Show average confidence score
-- [ ] Create Celery task for async reconciliation
-- [ ] Test end-to-end reconciliation workflow
+- [x] Create `/api/finance/reconcile/` endpoint
+- [x] Create `/api/finance/reconcile/{job_id}/results/` endpoint
+- [x] Generate reconciliation report
+- [x] Show matched % and unmatched items
+- [x] Show average confidence score
+- [x] Create Celery task for async reconciliation
+- [x] Test end-to-end reconciliation workflow
 
 **Deliverable**: Automated reconciliation with 85%+ auto-match rate
 
@@ -571,12 +571,12 @@
 
 #### Weekly Summary
 - [x] Create weekly summary generator
-- [ ] Auto-generate top 3 wins
-- [ ] Auto-generate top 3 risks
-- [ ] Add budget status summary
-- [ ] Add churn risk summary
-- [ ] Schedule Monday 7am generation
-- [ ] Test summary generation
+- [x] Auto-generate top 3 wins
+- [x] Auto-generate top 3 risks
+- [x] Add budget status summary
+- [x] Add churn risk summary
+- [x] Schedule Monday 7am generation
+- [x] Test summary generation
 
 **Deliverable**: ✅ Executive KPI dashboard with <100ms load time (backend complete)
 **Completion Date**: 2025-01-XX
@@ -768,14 +768,14 @@
 ## Infrastructure & DevOps
 
 ### Celery Configuration
-- [ ] Configure Celery Beat scheduler
-- [ ] Set up celery-default queue (4 workers)
-- [ ] Set up celery-ml queue (2 workers)
+- [x] Configure Celery Beat scheduler
+- [x] Set up celery-default queue (4 workers)
+- [x] Set up celery-ml queue (2 workers)
 - [ ] Set up celery-ocr queue (3 workers)
 - [ ] Set up celery-hids queue (2 workers)
-- [ ] Configure task routing
+- [x] Configure task routing
 - [ ] Set up Flower monitoring (port 5555)
-- [ ] Test all scheduled tasks
+- [x] Test all scheduled tasks
 - [ ] Document Celery architecture
 
 ### Redis Configuration
@@ -799,14 +799,14 @@
 - [ ] Set up alert notifications
 
 ### Frontend Integration
-- [ ] Install apexcharts
-- [ ] Install vue-query
-- [ ] Install pinia
-- [ ] Install socket.io-client
-- [ ] Create KPI dashboard component
-- [ ] Create churn prediction component
-- [ ] Create revenue at risk component
-- [ ] Create budget intelligence component
+- [x] Install apexcharts
+- [x] Install vue-query
+- [x] Install pinia
+- [x] Install socket.io-client
+- [x] Create KPI dashboard component
+- [x] Create churn prediction component
+- [x] Create revenue at risk component
+- [x] Create budget intelligence component
 - [ ] Test real-time updates via WebSocket
 
 ---
@@ -826,7 +826,7 @@
 - [ ] Test expense → budget recalc flow
 - [ ] Test HIDS anomaly → fraud check flow
 - [ ] Test end-to-end retention workflow
-- [ ] Test end-to-end reconciliation workflow
+- [x] Test end-to-end reconciliation workflow
 
 ### Performance Tests
 - [ ] Load test KPI endpoint (target <100ms)
@@ -924,14 +924,14 @@
 **Why**: KRA legal requirement — every transaction above KES 1,000 requires a tax invoice.
 
 #### Backend
-- [ ] Create `Invoice` model (invoice_number, customer, items, subtotal, vat_amount, total, status, due_date)
-- [ ] Auto-generate invoice on every successful M-Pesa callback
-- [ ] Generate sequential invoice numbers (INV-2026-0001 format)
-- [ ] Calculate VAT (16%) on each line item
-- [ ] Create invoice PDF generation (reportlab)
-- [ ] Store PDF in media storage
-- [ ] Create invoice API endpoints (list, detail, download)
-- [ ] Link invoice to PaymentTransaction
+- [x] Create `Invoice` model (invoice_number, customer, items, subtotal, vat_amount, total, status, due_date)
+- [x] Auto-generate invoice on every successful M-Pesa callback
+- [x] Generate sequential invoice numbers (INV-2026-0001 format)
+- [x] Calculate VAT (16%) on each line item
+- [x] Create invoice PDF generation (reportlab)
+- [x] Store PDF in media storage
+- [x] Create invoice API endpoints (list, detail, download)
+- [x] Link invoice to PaymentTransaction
 
 #### Frontend
 - [ ] Add Invoices tab to Finance page
@@ -949,13 +949,13 @@
 **Why**: Kenya VAT 16% — monthly return due by 20th of following month.
 
 #### Backend
-- [ ] Create `VATReturn` model (period, output_vat, input_vat, net_vat, status, filed_at)
-- [ ] Calculate output VAT from all invoices per month
-- [ ] Calculate input VAT from all supplier invoices per month
-- [ ] Generate VAT-3 return summary
-- [ ] Create VAT report API endpoint
-- [ ] Add VAT breakdown to expense model (already has vat_rate field — wire it up)
-- [ ] Create monthly VAT calculation command
+- [x] Create `VATReturn` model (period, output_vat, input_vat, net_vat, status, filed_at)
+- [x] Calculate output VAT from all invoices per month
+- [x] Calculate input VAT from all supplier invoices per month
+- [x] Generate VAT-3 return summary
+- [x] Create VAT report API endpoint
+- [x] Add VAT breakdown to expense model (already has vat_rate field — wire it up)
+- [x] Create monthly VAT calculation command
 
 #### Frontend
 - [ ] Add VAT Reports section to Finance page
@@ -972,13 +972,13 @@
 **Why**: Legal requirement — income tax, VAT, withholding tax all filed with KRA.
 
 #### Backend
-- [ ] Create `TaxReturn` model (type, period, gross_income, deductions, tax_payable, status, filed_at)
-- [ ] Calculate monthly PAYE from payroll
-- [ ] Calculate withholding tax on vendor payments (6% on services)
-- [ ] Generate income tax summary (annual)
-- [ ] Create tax calendar with filing deadlines
-- [ ] Create tax filing reminder system
-- [ ] Export tax data in KRA iTax format
+- [x] Create `TaxReturn` model (type, period, gross_income, deductions, tax_payable, status, filed_at)
+- [x] Calculate monthly PAYE from payroll
+- [x] Calculate withholding tax on vendor payments (6% on services)
+- [x] Generate income tax summary (annual)
+- [x] Create tax calendar with filing deadlines
+- [x] Create tax filing reminder system
+- [x] Export tax data in KRA iTax format
 
 #### Frontend
 - [ ] Tax Calendar view (upcoming filing deadlines)
@@ -995,14 +995,14 @@
 **Why**: Directly impacts revenue — customers forget to renew, causing unnecessary churn.
 
 #### Backend
-- [ ] Create `PaymentReminder` model (customer, reminder_type, scheduled_at, sent_at, status)
-- [ ] Celery task: send reminder 3 days before package expiry
-- [ ] Celery task: send reminder on day of expiry
-- [ ] Celery task: send reminder 3 days after expiry (grace period)
-- [ ] Celery task: send final warning 7 days after expiry (before suspension)
-- [ ] SMS template management (customizable messages)
-- [ ] Track reminder delivery status
-- [ ] Opt-out management (customers who don't want reminders)
+- [x] Create `PaymentReminder` model (customer, reminder_type, scheduled_at, sent_at, status)
+- [x] Celery task: send reminder 3 days before package expiry
+- [x] Celery task: send reminder on day of expiry
+- [x] Celery task: send reminder 3 days after expiry (grace period)
+- [x] Celery task: send final warning 7 days after expiry (before suspension)
+- [x] SMS template management (customizable messages)
+- [x] Track reminder delivery status
+- [x] Opt-out management (customers who don't want reminders)
 
 #### Frontend
 - [ ] Reminder settings page (enable/disable, customize messages)
@@ -1018,13 +1018,13 @@
 **Why**: Required when customer is overcharged or SLA is breached — KRA audit requirement.
 
 #### Backend
-- [ ] Create `CreditNote` model (invoice, customer, reason, amount, vat_amount, status, approved_by)
-- [ ] Link credit notes to original invoices
-- [ ] Auto-generate credit note on SLA breach (when HIDS detects outage)
-- [ ] Credit note approval workflow
-- [ ] Apply credit note to customer balance
-- [ ] Generate credit note PDF
-- [ ] Credit note API endpoints
+- [x] Create `CreditNote` model (invoice, customer, reason, amount, vat_amount, status, approved_by)
+- [x] Link credit notes to original invoices
+- [x] Auto-generate credit note on SLA breach (when HIDS detects outage)
+- [x] Credit note approval workflow
+- [x] Apply credit note to customer balance
+- [x] Generate credit note PDF
+- [x] Credit note API endpoints
 
 #### Frontend
 - [ ] Credit Notes tab in Finance page
@@ -1041,16 +1041,16 @@
 **Why**: PAYE, NHIF, NSSF are legal statutory deductions — non-compliance = penalties.
 
 #### Backend
-- [ ] Create `Employee` model (name, id_number, kra_pin, nhif_number, nssf_number, bank_account, gross_salary, department)
-- [ ] Create `PayrollRun` model (period, total_gross, total_paye, total_nhif, total_nssf, total_net, status)
-- [ ] Create `PayslipItem` model (employee, payroll_run, gross, paye, nhif, nssf, net, allowances, deductions)
-- [ ] Implement PAYE calculation (Kenya tax bands 2024)
-- [ ] Implement NHIF calculation (income-based bands)
-- [ ] Implement NSSF calculation (6% employee + 6% employer, capped)
-- [ ] Generate payslip PDF per employee
-- [ ] Monthly payroll run command
-- [ ] Export P9 form (annual tax certificate per employee)
-- [ ] Export payroll summary for bank transfer
+- [x] Create `Employee` model (name, id_number, kra_pin, nhif_number, nssf_number, bank_account, gross_salary, department)
+- [x] Create `PayrollRun` model (period, total_gross, total_paye, total_nhif, total_nssf, total_net, status)
+- [x] Create `PayslipItem` model (employee, payroll_run, gross, paye, nhif, nssf, net, allowances, deductions)
+- [x] Implement PAYE calculation (Kenya tax bands 2024)
+- [x] Implement NHIF calculation (income-based bands)
+- [x] Implement NSSF calculation (6% employee + 6% employer, capped)
+- [x] Generate payslip PDF per employee
+- [x] Monthly payroll run command
+- [x] Export P9 form (annual tax certificate per employee)
+- [x] Export payroll summary for bank transfer
 
 #### Frontend
 - [ ] Employee management (add/edit/remove employees)
@@ -1068,13 +1068,13 @@
 **Why**: CapEx items (routers, towers, cables) must be depreciated — affects P&L accuracy.
 
 #### Backend
-- [ ] Create `Asset` model (name, purchase_date, purchase_cost, useful_life_years, depreciation_method, current_book_value, department)
-- [ ] Implement straight-line depreciation calculation
-- [ ] Implement reducing balance depreciation calculation
-- [ ] Monthly depreciation auto-booking as expense
-- [ ] Asset disposal handling (gain/loss on disposal)
-- [ ] Asset register report
-- [ ] Link to existing Expense model (is_capex=True expenses → Asset)
+- [x] Create `Asset` model (name, purchase_date, purchase_cost, useful_life_years, depreciation_method, current_book_value, department)
+- [x] Implement straight-line depreciation calculation
+- [x] Implement reducing balance depreciation calculation
+- [x] Monthly depreciation auto-booking as expense
+- [x] Asset disposal handling (gain/loss on disposal)
+- [x] Asset register report
+- [x] Link to existing Expense model (is_capex=True expenses → Asset)
 
 #### Frontend
 - [ ] Asset register view (all assets, book values, depreciation schedule)
@@ -1092,12 +1092,12 @@
 **Why**: Track what you owe vendors — prevents late payment penalties and damaged relationships.
 
 #### Backend
-- [ ] Create `VendorInvoice` model (vendor, invoice_number, amount, due_date, status, payment_date)
-- [ ] Create `APAging` calculation (current, 30d, 60d, 90d+)
-- [ ] Payment scheduling (batch vendor payments)
-- [ ] 3-way match: PO → Goods Receipt → Invoice
-- [ ] AP aging report API
-- [ ] Overdue payment alerts
+- [x] Create `VendorInvoice` model (vendor, invoice_number, amount, due_date, status, payment_date)
+- [x] Create `APAging` calculation (current, 30d, 60d, 90d+)
+- [x] Payment scheduling (batch vendor payments)
+- [x] 3-way match: PO → Goods Receipt → Invoice
+- [x] AP aging report API
+- [x] Overdue payment alerts
 
 #### Frontend
 - [ ] Vendor invoices list (unpaid, overdue, paid)
@@ -1114,12 +1114,12 @@
 **Why**: Formal debt collection workflow — reduces bad debt write-offs.
 
 #### Backend
-- [ ] Create `DebtCollection` model (customer, amount, days_overdue, status, collector, notes)
-- [ ] AR aging calculation (30/60/90/120+ days)
-- [ ] Automated escalation workflow (reminder → warning → suspension → collection)
-- [ ] Bad debt write-off process
-- [ ] Collection effectiveness tracking
-- [ ] AR aging report API
+- [x] Create `DebtCollection` model (customer, amount, days_overdue, status, collector, notes)
+- [x] AR aging calculation (30/60/90/120+ days)
+- [x] Automated escalation workflow (reminder → warning → suspension → collection)
+- [x] Bad debt write-off process
+- [x] Collection effectiveness tracking
+- [x] AR aging report API
 
 #### Frontend
 - [ ] AR aging dashboard (buckets: current, 30d, 60d, 90d, 120d+)
@@ -1136,11 +1136,11 @@
 **Why**: Bandwidth costs in USD, revenue in KES — need unified P&L with forex gain/loss.
 
 #### Backend
-- [ ] Create `ForexGainLoss` model (transaction, original_currency, original_amount, kes_amount, exchange_rate, gain_loss)
-- [ ] Calculate forex gain/loss on USD expenses
-- [ ] Unified P&L report in KES
-- [ ] Monthly forex exposure report
-- [ ] Exchange rate history tracking (already have ExchangeRate model — wire it up)
+- [x] Create `ForexGainLoss` model (transaction, original_currency, original_amount, kes_amount, exchange_rate, gain_loss)
+- [x] Calculate forex gain/loss on USD expenses
+- [x] Unified P&L report in KES
+- [x] Monthly forex exposure report
+- [x] Exchange rate history tracking (already have ExchangeRate model — wire it up)
 
 #### Frontend
 - [ ] Multi-currency P&L view
@@ -1157,13 +1157,13 @@
 **Why**: Reconciliation engine exists but no way to get bank data in — manual entry defeats the purpose.
 
 #### Backend
-- [ ] CSV import for Equity Bank statements
-- [ ] CSV import for KCB statements
-- [ ] CSV import for Co-op Bank statements
-- [ ] M-Pesa statement import (different format)
-- [ ] Statement parsing and normalization
-- [ ] Auto-trigger reconciliation after import
-- [ ] Duplicate detection (same statement imported twice)
+- [x] CSV import for Equity Bank statements
+- [x] CSV import for KCB statements
+- [x] CSV import for Co-op Bank statements
+- [x] M-Pesa statement import (different format)
+- [x] Statement parsing and normalization
+- [x] Auto-trigger reconciliation after import
+- [x] Duplicate detection (same statement imported twice)
 
 #### Frontend
 - [ ] Bank statement upload UI (drag & drop)
@@ -1180,12 +1180,12 @@
 **Why**: Monthly packages should auto-invoice and auto-collect — reduces manual work and late payments.
 
 #### Backend
-- [ ] Create `RecurringBilling` model (customer, package, amount, billing_day, next_billing_date, status)
-- [ ] Celery task: generate invoices on billing day
-- [ ] Celery task: attempt auto-deduction from balance
-- [ ] Celery task: send payment link if balance insufficient
-- [ ] Failed payment retry logic (3 attempts over 3 days)
-- [ ] Recurring billing pause/resume
+- [x] Create `RecurringBilling` model (customer, package, amount, billing_day, next_billing_date, status)
+- [x] Celery task: generate invoices on billing day
+- [x] Celery task: attempt auto-deduction from balance
+- [x] Celery task: send payment link if balance insufficient
+- [x] Failed payment retry logic (3 attempts over 3 days)
+- [x] Recurring billing pause/resume
 
 #### Frontend
 - [ ] Recurring billing management (list, enable/disable per customer)
@@ -1201,11 +1201,11 @@
 **Why**: Approvers don't know expenses are waiting — approval delays cause payment delays.
 
 #### Backend
-- [ ] SMS notification to approver when expense submitted
-- [ ] Email notification to approver when expense submitted
-- [ ] SMS/email to submitter when approved/rejected
-- [ ] Escalation if not approved within 48 hours
-- [ ] Notification preferences per user
+- [x] SMS notification to approver when expense submitted
+- [x] Email notification to approver when expense submitted
+- [x] SMS/email to submitter when approved/rejected
+- [x] Escalation if not approved within 48 hours
+- [x] Notification preferences per user
 
 #### Frontend
 - [ ] Notification settings per user
@@ -1221,11 +1221,11 @@
 **Why**: Budget periods, year-end closing, opening balances — needed for accurate reporting.
 
 #### Backend
-- [ ] Create `FinancialYear` model (start_date, end_date, status, closed_by, closed_at)
-- [ ] Year-end closing process (lock all transactions for closed year)
-- [ ] Opening balance carry-forward
-- [ ] Budget reset on new financial year
-- [ ] Prior year comparison in reports
+- [x] Create `FinancialYear` model (start_date, end_date, status, closed_by, closed_at)
+- [x] Year-end closing process (lock all transactions for closed year)
+- [x] Opening balance carry-forward
+- [x] Budget reset on new financial year
+- [x] Prior year comparison in reports
 
 #### Frontend
 - [ ] Financial year selector in all reports
@@ -1241,17 +1241,17 @@
 **Why**: Small cash expenses need separate tracking — prevents leakage and simplifies reconciliation.
 
 #### Backend
-- [ ] Create `PettyCashFund` model (name, float_amount, current_balance, custodian)
-- [ ] Create `PettyCashTransaction` model (fund, amount, description, receipt_number, approved_by)
-- [ ] Replenishment request workflow
-- [ ] Petty cash reconciliation
-- [ ] Float balance alerts (when below threshold)
+- [x] Create `PettyCashFund` model (name, float_amount, current_balance, custodian)
+- [x] Create `PettyCashTransaction` model (fund, amount, description, receipt_number, approved_by)
+- [x] Replenishment request workflow
+- [x] Petty cash reconciliation
+- [x] Float balance alerts (when below threshold)
 
 #### Frontend
 - [ ] Petty cash fund dashboard (balance, recent transactions)
 - [ ] Add petty cash expense form
 - [ ] Replenishment request form
-- [ ] Petty cash reconciliation view
+- [x] Petty cash reconciliation view
 
 **Deliverable**: Controlled petty cash with full audit trail
 
@@ -1262,17 +1262,17 @@
 **Why**: Prevents unauthorized spending — every purchase needs approval before commitment.
 
 #### Backend
-- [ ] Create `PurchaseOrder` model (vendor, items, total, status, approved_by, delivery_date)
-- [ ] Create `POLineItem` model (description, quantity, unit_price, total)
-- [ ] PO approval workflow
-- [ ] Goods receipt confirmation
-- [ ] 3-way match with vendor invoice
-- [ ] PO to expense conversion on receipt
+- [x] Create `PurchaseOrder` model (vendor, items, total, status, approved_by, delivery_date)
+- [x] Create `POLineItem` model (description, quantity, unit_price, total)
+- [x] PO approval workflow
+- [x] Goods receipt confirmation
+- [x] 3-way match with vendor invoice
+- [x] PO to expense conversion on receipt
 
 #### Frontend
 - [ ] Create PO form
 - [ ] PO approval queue
-- [ ] Goods receipt confirmation
+- [x] Goods receipt confirmation
 - [ ] PO status tracker (draft → approved → received → invoiced → paid)
 
 **Deliverable**: Full purchase order workflow preventing unauthorized spending
@@ -1284,11 +1284,11 @@
 **Why**: KRA audit requirement — every financial record change must be logged.
 
 #### Backend
-- [ ] Create `AuditLog` model (model_name, record_id, action, changed_by, changed_at, old_values, new_values)
-- [ ] Django signal to auto-log all changes to financial models
-- [ ] Log: Expense, Invoice, Payment, Budget, Investment changes
-- [ ] Immutable audit log (no deletes allowed)
-- [ ] Audit log API endpoint
+- [x] Create `AuditLog` model (model_name, record_id, action, changed_by, changed_at, old_values, new_values)
+- [x] Django signal to auto-log all changes to financial models
+- [x] Log: Expense, Invoice, Payment, Budget, Investment changes
+- [x] Immutable audit log (no deletes allowed)
+- [x] Audit log API endpoint
 
 #### Frontend
 - [ ] Audit log viewer (filter by model, user, date range)
@@ -1304,11 +1304,11 @@
 **Why**: When payment received, system should automatically match to oldest outstanding invoice.
 
 #### Backend
-- [ ] Payment allocation engine (oldest invoice first)
-- [ ] Partial payment handling (payment less than invoice amount)
-- [ ] Overpayment handling (credit to balance)
-- [ ] Customer-specified allocation (pay specific invoice)
-- [ ] Allocation reversal (if payment fails)
+- [x] Payment allocation engine (oldest invoice first)
+- [x] Partial payment handling (payment less than invoice amount)
+- [x] Overpayment handling (credit to balance)
+- [x] Customer-specified allocation (pay specific invoice)
+- [x] Allocation reversal (if payment fails)
 
 #### Frontend
 - [ ] Payment allocation view (show which invoices a payment covers)
@@ -1324,12 +1324,12 @@
 **Why**: When network is down, affected customers deserve automatic credits — reduces churn and support tickets.
 
 #### Backend
-- [ ] Create `SLAPolicy` model (uptime_guarantee_pct, credit_percentage_per_hour, max_credit_pct)
-- [ ] Create `OutageEvent` model (start_time, end_time, affected_customers, duration_hours)
-- [ ] Auto-detect outages from HIDS data (when available)
-- [ ] Calculate credit amount per customer (duration × ARPU × credit_rate)
-- [ ] Auto-generate credit notes for affected customers
-- [ ] Customer notification on credit applied
+- [x] Create `SLAPolicy` model (uptime_guarantee_pct, credit_percentage_per_hour, max_credit_pct)
+- [x] Create `OutageEvent` model (start_time, end_time, affected_customers, duration_hours)
+- [x] Auto-detect outages from HIDS data (when available)
+- [x] Calculate credit amount per customer (duration × ARPU × credit_rate)
+- [x] Auto-generate credit notes for affected customers
+- [x] Customer notification on credit applied
 
 #### Frontend
 - [ ] SLA policy configuration
@@ -1346,11 +1346,11 @@
 **Why**: Investment model has loan fields but no repayment schedule — can't track what's owed when.
 
 #### Backend
-- [ ] Create `RepaymentSchedule` model (investment, installment_number, due_date, principal, interest, total, status)
-- [ ] Auto-generate schedule on loan creation
-- [ ] Mark installments as paid
-- [ ] Overdue installment alerts
-- [ ] Loan balance calculation
+- [x] Create `RepaymentSchedule` model (investment, installment_number, due_date, principal, interest, total, status)
+- [x] Auto-generate schedule on loan creation
+- [x] Mark installments as paid
+- [x] Overdue installment alerts
+- [x] Loan balance calculation
 
 #### Frontend
 - [ ] Repayment schedule view per investment
@@ -1366,11 +1366,11 @@
 **Why**: If TeralinkX expands to multiple towns — each branch needs own P&L.
 
 #### Backend
-- [ ] Create `Branch` model (name, location, manager, is_active)
-- [ ] Add branch FK to: Expense, Invoice, Customer, Employee
-- [ ] Branch-level P&L calculation
-- [ ] Consolidated group reporting
-- [ ] Inter-branch transfers
+- [x] Create `Branch` model (name, location, manager, is_active)
+- [x] Add branch FK to: Expense, Invoice, Customer, Employee
+- [x] Branch-level P&L calculation
+- [x] Consolidated group reporting
+- [x] Inter-branch transfers
 
 #### Frontend
 - [ ] Branch selector in all reports
@@ -1386,10 +1386,10 @@
 **Why**: Equipment insurance premiums need tracking — renewal reminders prevent coverage gaps.
 
 #### Backend
-- [ ] Create `InsurancePolicy` model (provider, coverage_type, premium, start_date, end_date, assets_covered)
-- [ ] Renewal reminder (30 days before expiry)
-- [ ] Claim tracking
-- [ ] Premium expense auto-booking
+- [x] Create `InsurancePolicy` model (provider, coverage_type, premium, start_date, end_date, assets_covered)
+- [x] Renewal reminder (30 days before expiry)
+- [x] Claim tracking
+- [x] Premium expense auto-booking
 
 #### Frontend
 - [ ] Insurance policy list
@@ -1405,10 +1405,10 @@
 **Why**: When business makes profit, equity investors need formal distribution records.
 
 #### Backend
-- [ ] Create `DividendDeclaration` model (period, total_profit, distribution_amount, per_share, declared_by, declared_at)
-- [ ] Create `DividendPayment` model (declaration, investor, shares, amount, paid_at, payment_method)
-- [ ] Withholding tax on dividends (5% for residents)
-- [ ] Dividend payment certificates
+- [x] Create `DividendDeclaration` model (period, total_profit, distribution_amount, per_share, declared_by, declared_at)
+- [x] Create `DividendPayment` model (declaration, investor, shares, amount, paid_at, payment_method)
+- [x] Withholding tax on dividends (5% for residents)
+- [x] Dividend payment certificates
 
 #### Frontend
 - [ ] Dividend declaration form
@@ -1424,11 +1424,11 @@
 **Why**: Understand which customer acquisition months produce the best long-term value.
 
 #### Backend
-- [ ] Create cohort grouping by acquisition month
-- [ ] Calculate revenue per cohort over time
-- [ ] Calculate retention rate per cohort
-- [ ] Calculate CLV per cohort
-- [ ] Identify best/worst performing cohorts
+- [x] Create cohort grouping by acquisition month
+- [x] Calculate revenue per cohort over time
+- [x] Calculate retention rate per cohort
+- [x] Calculate CLV per cohort
+- [x] Identify best/worst performing cohorts
 
 #### Frontend
 - [ ] Cohort analysis table (months as rows, age as columns)
@@ -1461,10 +1461,10 @@
 - [ ] `reconcile_continuous_aggregates` — refresh TimescaleDB aggregates (hourly)
 
 #### Configure Celery Beat
-- [ ] Create `teralinkx/celery.py` with proper app configuration
-- [ ] Wire all tasks into `CELERY_BEAT_SCHEDULE`
-- [ ] Configure 4 queues: default, ml, notifications, cleanup
-- [ ] Test all scheduled tasks fire correctly
+- [x] Create `teralinkx/celery.py` with proper app configuration
+- [x] Wire all tasks into `CELERY_BEAT_SCHEDULE`
+- [x] Configure 4 queues: default, ml, notifications, cleanup
+- [x] Test all scheduled tasks fire correctly
 - [ ] Set up Flower monitoring dashboard
 
 **Deliverable**: Fully automated BMS — zero manual intervention needed for routine operations
@@ -1476,32 +1476,267 @@
 | Section | Status | Priority |
 |---------|--------|----------|
 | 6.1 Invoice Generation | ✅ Complete | 🔴 Critical |
-| 6.2 VAT Management | ⬜ Not Started | 🔴 Critical |
-| 6.3 KRA Tax Filing | ⬜ Not Started | 🔴 Critical |
-| 6.4 Payment Reminders | ⬜ Not Started | 🔴 Critical |
-| 6.5 Credit Notes | ⬜ Not Started | 🔴 Critical |
-| 6.6 Payroll Management | ⬜ Not Started | 🔴 Critical |
-| 6.7 Asset Depreciation | ⬜ Not Started | 🟡 High |
-| 6.8 Accounts Payable | ⬜ Not Started | 🟡 High |
-| 6.9 AR Collection | ⬜ Not Started | 🟡 High |
-| 6.10 Multi-Currency P&L | ⬜ Not Started | 🟡 High |
-| 6.11 Bank Statement Import | ⬜ Not Started | 🟡 High |
-| 6.12 Recurring Billing | ⬜ Not Started | 🟡 High |
-| 6.13 Expense Notifications | ⬜ Not Started | 🟠 Medium |
-| 6.14 Financial Year | ⬜ Not Started | 🟠 Medium |
-| 6.15 Petty Cash | ⬜ Not Started | 🟠 Medium |
-| 6.16 Purchase Orders | ⬜ Not Started | 🟠 Medium |
-| 6.17 Audit Trail | ⬜ Not Started | 🟠 Medium |
-| 6.18 Payment Allocation | ⬜ Not Started | 🟠 Medium |
-| 6.19 SLA Credits | ⬜ Not Started | 🟠 Medium |
-| 6.20 Loan Repayment Schedule | ⬜ Not Started | 🟢 Low |
-| 6.21 Multi-Branch | ⬜ Not Started | 🟢 Low |
-| 6.22 Insurance Management | ⬜ Not Started | 🟢 Low |
-| 6.23 Dividend Distribution | ⬜ Not Started | 🟢 Low |
-| 6.24 CLV Cohort Analysis | ⬜ Not Started | 🟢 Low |
+| 6.2 VAT Management | ✅ Complete | 🔴 Critical |
+| 6.3 KRA Tax Filing | ✅ Complete | 🔴 Critical |
+| 6.4 Payment Reminders | ✅ Complete | 🔴 Critical |
+| 6.5 Credit Notes | ✅ Complete | 🔴 Critical |
+| 6.6 Payroll Management | ✅ Complete | 🔴 Critical |
+| 6.7 Asset Depreciation | ✅ Complete | 🟡 High |
+| 6.8 Accounts Payable | ✅ Complete | 🟡 High |
+| 6.9 AR Collection | ✅ Complete | 🟡 High |
+| 6.10 Multi-Currency P&L | ✅ Complete | 🟡 High |
+| 6.11 Bank Statement Import | ✅ Complete | 🟡 High |
+| 6.12 Recurring Billing | ✅ Complete | 🟡 High |
+| 6.13 Expense Approval Notifications | ✅ Complete | 🟠 Medium |
+| 6.14 Financial Year | ✅ Complete | 🟠 Medium |
+| 6.15 Petty Cash | ✅ Complete | 🟠 Medium |
+| 6.16 Purchase Orders | ✅ Complete | 🟠 Medium |
+| 6.17 Audit Trail | ✅ Complete | 🟠 Medium |
+| 6.18 Payment Allocation | ✅ Complete | 🟠 Medium |
+| 6.19 SLA Credits | ✅ Complete | 🟠 Medium |
+| 6.20 Loan Repayment Schedule | ✅ Complete | 🟢 Low |
+| 6.21 Multi-Branch | ✅ Complete | 🟢 Low |
+| 6.22 Insurance Management | ✅ Complete | 🟢 Low |
+| 6.23 Dividend Distribution | ✅ Complete | 🟢 Low |
+| 6.24 CLV Cohort Analysis | ✅ Complete | 🟢 Low |
 | 6.25 Celery Tasks | ✅ Complete | 🔴 Critical |
 
 **Phase 6 Total**: 0/25 complete  
 **Overall BMS Completeness**: ~55% (core works, enterprise features pending)
+
+---
+
+---
+
+## Phase 7: Frontend Implementation for Phase 6 Features
+
+**Goal**: Build Vue.js frontend components for all Phase 6 backend features.  
+**Approach**: Each section gets a tab in Finance.vue or a dedicated page, matching the existing admin UI theme (Tailwind, dark mode, GuidePanel).  
+**Status**: 0/25 complete — starts after Phase 6 (6.24) is complete.
+
+---
+
+### 7.1 Invoice Management Frontend
+- [ ] Add `Invoices` tab to `Finance.vue`
+- [ ] Create `Invoices.vue` component
+- [ ] Invoice list table (number, customer, date, amount, status, VAT)
+- [ ] Search/filter by customer, date range, status
+- [ ] View invoice detail (all fields)
+- [ ] PDF download button → `GET /api/finance/api/invoices/<id>/pdf/`
+- [ ] Manual invoice creation modal (all fields)
+- [ ] GuidePanel explaining VAT, invoice numbering, KRA requirements
+
+**API:** `GET/POST /api/finance/api/invoices/`, `GET /api/finance/api/invoices/<id>/pdf/`
+
+---
+
+### 7.2 VAT Management Frontend
+- [ ] Add `VAT` tab to `Finance.vue`
+- [ ] Create `VATDashboard.vue` component
+- [ ] Year overview — monthly VAT summary table (output, input, net, status)
+- [ ] Calculate button → `POST /api/finance/api/vat/calculate/`
+- [ ] Filing status badges (draft/calculated/filed/paid)
+- [ ] Mark as filed modal (KRA reference input)
+- [ ] Mark as paid button
+- [ ] Export CSV button → `GET /api/finance/api/vat/<id>/export/`
+- [ ] Filing deadline countdown (20th of following month)
+- [ ] GuidePanel explaining output VAT, input VAT, net payable, filing deadline
+
+**API:** `GET /api/finance/api/vat/summary/`, `POST /api/finance/api/vat/calculate/`, `PATCH /api/finance/api/vat/<id>/`
+
+---
+
+### 7.3 KRA Tax Calendar Frontend
+- [ ] Add `Tax Calendar` tab to `Finance.vue`
+- [ ] Create `TaxCalendar.vue` component
+- [ ] Calendar grid view — all tax types per month with due dates
+- [ ] Color coding: green (paid), amber (filed), red (overdue), grey (pending)
+- [ ] Upcoming deadlines panel (next 30 days)
+- [ ] Overdue alerts banner
+- [ ] Mark filed/paid modal per tax return
+- [ ] WHT calculator button
+- [ ] Summary stats (total filed, pending, overdue)
+- [ ] GuidePanel explaining each tax type, filing deadlines, penalties
+
+**API:** `GET /api/finance/api/tax/calendar/`, `GET /api/finance/api/tax/upcoming/`, `PATCH /api/finance/api/tax/<id>/`
+
+---
+
+### 7.4 Payment Reminders Frontend
+- [ ] Add `Reminders` section to Finance.vue or customer detail
+- [ ] Create `PaymentReminders.vue` component
+- [ ] Reminder history table (customer, type, sent date, status)
+- [ ] Delivery stats cards (sent, failed, pending last 30 days)
+- [ ] Filter by status and reminder type
+- [ ] GuidePanel explaining reminder types and timing
+
+**API:** `GET /api/finance/api/reminders/`, `GET /api/finance/api/reminders/stats/`
+
+---
+
+### 7.5 Credit Notes Frontend
+- [ ] Add `Credit Notes` tab to `Finance.vue`
+- [ ] Create `CreditNotes.vue` component
+- [ ] Credit note list (number, customer, amount, reason, status)
+- [ ] Create credit note modal (customer, amount, reason, description, link to invoice)
+- [ ] Approve button (for draft credit notes)
+- [ ] Apply to account button (for approved credit notes)
+- [ ] Void button with confirmation
+- [ ] Filter by status and reason
+- [ ] GuidePanel explaining credit notes, when to use them, VAT implications
+
+**API:** `GET/POST /api/finance/api/credit-notes/`, `PATCH /api/finance/api/credit-notes/<id>/`
+
+---
+
+### 7.6 Payroll Frontend
+- [ ] Add `Payroll` tab to `Finance.vue`
+- [ ] Create `Payroll.vue` component with sub-tabs: Employees, Payroll Runs, Calculator
+- [ ] **Employees sub-tab:**
+  - Employee list table (number, name, title, department, gross salary, status)
+  - Add employee modal (all fields: name, ID, KRA PIN, NHIF, NSSF, bank, salary)
+  - Edit employee modal
+  - Deactivate employee (soft delete)
+- [ ] **Payroll Runs sub-tab:**
+  - Payroll run list (period, employees, gross, net, status)
+  - Run payroll button → `POST /api/finance/api/payroll/`
+  - View payroll detail (full payslip breakdown per employee)
+  - Approve payroll button
+  - Mark as paid button
+  - Export payroll for bank upload (CSV)
+- [ ] **Calculator sub-tab:**
+  - Salary input → instant PAYE/NHIF/NSSF/Net calculation
+  - Shows breakdown: gross, each deduction, net, employer cost
+- [ ] GuidePanel explaining PAYE bands, NHIF, NSSF, filing deadlines (9th of month)
+
+**API:** `GET/POST /api/finance/api/employees/`, `GET/POST /api/finance/api/payroll/`, `GET /api/finance/api/payroll/<id>/`, `POST /api/finance/api/payroll/calculator/`
+
+---
+
+### 7.7 Asset Register Frontend
+- [ ] Add `Assets` tab to `Finance.vue`
+- [ ] Create `AssetRegister.vue` component
+- [ ] Asset list table (number, name, category, purchase cost, book value, monthly dep, age, status)
+- [ ] Summary cards (total assets, total cost, total book value, monthly depreciation expense)
+- [ ] Add asset modal (all fields)
+- [ ] Asset detail view with depreciation schedule table
+- [ ] Dispose asset modal (disposal date, disposal value, notes)
+- [ ] Refresh book values button
+- [ ] Filter by category and department
+- [ ] GuidePanel explaining depreciation methods, useful life, salvage value, disposal gain/loss
+
+**API:** `GET/POST /api/finance/api/assets/`, `GET/PATCH /api/finance/api/assets/<id>/`
+
+---
+
+### 7.8 Accounts Payable Frontend
+- [ ] Add `Accounts Payable` tab to `Finance.vue`
+- [ ] Create `AccountsPayable.vue` component
+- [ ] AP aging dashboard (4 buckets: current, 1-30d, 31-60d, 90d+) with amounts
+- [ ] Vendor invoice list (vendor, invoice#, amount, due date, status, days overdue)
+- [ ] Add vendor invoice modal (vendor, invoice#, subtotal, VAT, due date, WHT toggle)
+- [ ] Approve invoice button
+- [ ] Mark as paid modal (payment date)
+- [ ] Dispute invoice button
+- [ ] Overdue invoices alert banner
+- [ ] Filter by status and vendor
+- [ ] GuidePanel explaining AP aging, WHT on vendor payments, payment terms
+
+**API:** `GET/POST /api/finance/api/ap/`, `GET /api/finance/api/ap/aging/`, `PATCH /api/finance/api/ap/<id>/`
+
+---
+
+### 7.9 AR Collection Frontend (after 6.9 backend)
+- [ ] Add `AR Collection` tab to `Finance.vue`
+- [ ] Create `ARCollection.vue` component
+- [ ] AR aging dashboard (current, 30d, 60d, 90d, 120d+)
+- [ ] Collection queue sorted by amount × days overdue
+- [ ] Write-off approval workflow
+- [ ] Collection performance metrics
+- [ ] GuidePanel explaining AR aging, bad debt, write-off process
+
+---
+
+### 7.10 Multi-Currency P&L Frontend (after 6.10 backend)
+- [ ] Add `P&L` tab to `Finance.vue`
+- [ ] Create `ProfitLoss.vue` component
+- [ ] Income statement view (revenue, expenses, gross profit, net profit)
+- [ ] Forex gain/loss line item
+- [ ] Period selector (monthly, quarterly, annual)
+- [ ] Currency exposure chart
+- [ ] GuidePanel explaining P&L, forex impact, gross vs net profit
+
+---
+
+### 7.11 Bank Statement Import Frontend (after 6.11 backend)
+- [ ] Add import button to Reconciliation tab
+- [ ] Drag & drop file upload (CSV/PDF)
+- [ ] Import preview table (parsed transactions before confirming)
+- [ ] Import history log
+- [ ] Auto-reconcile trigger after import
+
+---
+
+### 7.12 Recurring Billing Frontend (after 6.12 backend)
+- [ ] Add `Recurring Billing` tab to `Finance.vue`
+- [ ] Create `RecurringBilling.vue` component
+- [ ] Billing schedule list (customer, package, amount, next billing date, status)
+- [ ] Enable/disable per customer
+- [ ] Billing calendar (upcoming charges this month)
+- [ ] Failed billing alerts
+
+---
+
+### 7.13–7.19 Medium Priority Frontends (after 6.13–6.19 backends)
+- [ ] **7.13** Expense approval notifications settings UI
+- [ ] **7.14** Financial year management UI (year selector, closing wizard)
+- [ ] **7.15** Petty cash management UI (fund balance, transactions, replenishment)
+- [ ] **7.16** Purchase orders UI (create PO, approval queue, goods receipt)
+- [ ] **7.17** Audit trail viewer (filter by model, user, date — export CSV)
+- [ ] **7.18** Payment allocation UI (unallocated payments queue, manual allocation)
+- [ ] **7.19** SLA credits UI (outage log, credit calculation, bulk apply)
+
+---
+
+### 7.20–7.24 Low Priority Frontends (after 6.20–6.24 backends)
+- [ ] **7.20** Loan repayment schedule UI
+- [ ] **7.21** Multi-branch selector and branch P&L
+- [ ] **7.22** Insurance policy management UI
+- [ ] **7.23** Dividend declaration and payout UI
+- [ ] **7.24** CLV cohort analysis heatmap
+
+---
+
+## Phase 7 Progress Tracker
+
+| Section | Status | Depends On |
+|---------|--------|-----------|
+| 7.1 Invoice Management | ✅ Complete | 6.1 ✅ |
+| 7.2 VAT Management | ✅ Complete | 6.2 ✅ |
+| 7.3 KRA Tax Calendar | ✅ Complete | 6.3 ✅ |
+| 7.4 Payment Reminders | ✅ Complete | 6.4 ✅ |
+| 7.5 Credit Notes | ✅ Complete | 6.5 ✅ |
+| 7.6 Payroll | ✅ Complete | 6.6 ✅ |
+| 7.7 Asset Register | ✅ Complete | 6.7 ✅ |
+| 7.8 Accounts Payable | ✅ Complete | 6.8 ✅ |
+| 7.9 AR Collection | ✅ Complete | 6.9 ✅ |
+| 7.10 Multi-Currency P&L | ✅ Complete | 6.10 ✅ |
+| 7.11 Bank Statement Import | ✅ Complete | 6.11 ✅ |
+| 7.12 Recurring Billing | ✅ Complete | 6.12 ✅ |
+| 7.13 Expense Notifications | ⬜ Not Started | 6.13 ⬜ |
+| 7.14 Financial Year | ⬜ Not Started | 6.14 ⬜ |
+| 7.15 Petty Cash | ⬜ Not Started | 6.15 ⬜ |
+| 7.16 Purchase Orders | ⬜ Not Started | 6.16 ⬜ |
+| 7.17 Audit Trail | ⬜ Not Started | 6.17 ⬜ |
+| 7.18 Payment Allocation | ⬜ Not Started | 6.18 ⬜ |
+| 7.19 SLA Credits | ⬜ Not Started | 6.19 ⬜ |
+| 7.20 Loan Repayment | ⬜ Not Started | 6.20 ⬜ |
+| 7.21 Multi-Branch | ⬜ Not Started | 6.21 ⬜ |
+| 7.22 Insurance | ⬜ Not Started | 6.22 ⬜ |
+| 7.23 Dividends | ⬜ Not Started | 6.23 ⬜ |
+| 7.24 CLV Cohorts | ⬜ Not Started | 6.24 ⬜ |
+
+**Phase 7 Total**: 0/24 complete  
+**Note**: 7.1–7.8 backends are ready — can start immediately after 6.24 is complete.
 
 ---

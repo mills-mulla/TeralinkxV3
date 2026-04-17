@@ -42,6 +42,33 @@ urlpatterns = [
     # Invoice endpoints
     path('finance/api/', include('finance.urls_invoice')),
     
+    # VAT endpoints
+    path('finance/api/', include('finance.urls_vat')),
+    
+    # Tax & Reminder endpoints
+    path('finance/api/', include('finance.urls_tax')),
+    
+    # Credit Notes & Payroll endpoints
+    path('finance/api/', include('finance.urls_payroll')),
+    
+    # Assets & AP endpoints
+    path('finance/api/', include('finance.urls_asset_ap')),
+    
+    # AR Collection endpoints
+    path('finance/api/', include('finance.urls_ar')),
+    
+    # P&L endpoints
+    path('finance/api/', include('finance.urls_pl')),
+    
+    # Bank Import & Recurring Billing endpoints
+    path('finance/api/', include('finance.urls_bank_billing')),
+    
+    # Medium priority endpoints (6.13-6.17)
+    path('finance/api/', include('finance.urls_medium')),
+    
+    # Low priority endpoints (6.18-6.24)
+    path('finance/api/', include('finance.urls_low')),
+    
     # Board report endpoints
     path('finance/api/board-report/', include('finance.urls_board_report')),
     
