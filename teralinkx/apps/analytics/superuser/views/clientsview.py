@@ -205,19 +205,18 @@ class ClientViewSet(viewsets.ModelViewSet):
     def bulk_action(self, request):
         """Perform bulk actions on clients"""
         try:
-            client_ids = request.data.get('client_ids', [])
+            client_ids = request.data.get('ids', request.data.get('client_ids', []))
             action_type = request.data.get('action')
-            
             clients = ClientH.objects.filter(id__in=client_ids)
-            
             if action_type == 'suspend':
                 clients.update(status='suspended')
             elif action_type == 'activate':
                 clients.update(status='active')
+            elif action_type == 'reset_logins':
+                clients.update(failed_login_attempts=0)
             elif action_type == 'upgrade_tier':
                 tier = request.data.get('tier')
                 clients.update(account_tier=tier)
-            
             return Response({'message': f'{clients.count()} clients updated'})
         except Exception as e:
             return Response({'error': str(e)}, status=500)

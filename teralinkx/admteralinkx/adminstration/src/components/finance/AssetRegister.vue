@@ -72,7 +72,10 @@
               <td class="px-4 py-3 text-right text-amber-600 dark:text-amber-400">KES {{ fmt(a.monthly_depreciation) }}</td>
               <td class="px-4 py-3 text-slate-600 dark:text-slate-400 text-xs">{{ a.remaining_life_months }} months</td>
               <td class="px-4 py-3 text-center">
-                <button @click="dispose(a)" class="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded text-xs hover:bg-red-200">Dispose</button>
+                <div class="flex items-center justify-center gap-1">
+                  <button @click="viewSchedule(a)" class="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded text-xs hover:bg-blue-200">Schedule</button>
+                  <button @click="dispose(a)" class="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded text-xs hover:bg-red-200">Dispose</button>
+                </div>
               </td>
             </tr>
             <tr v-if="!assets.length">
@@ -145,6 +148,46 @@
         </div>
       </div>
     </div>
+
+    <!-- Depreciation Schedule Modal -->
+    <div v-if="scheduleAsset" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" @click.self="scheduleAsset=null">
+      <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+        <div class="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-700">
+          <div>
+            <h3 class="text-lg font-semibold text-slate-900 dark:text-white">{{ scheduleAsset.name }}</h3>
+            <p class="text-xs text-slate-500">{{ scheduleAsset.asset_number }} · {{ scheduleAsset.depreciation_method_display }} · {{ scheduleAsset.useful_life_years }}yr life</p>
+          </div>
+          <button @click="scheduleAsset=null" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">
+            <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="grid grid-cols-3 gap-4 p-4 border-b border-slate-200 dark:border-slate-700">
+          <div class="text-center"><p class="text-xs text-slate-500">Purchase Cost</p><p class="font-bold text-slate-900 dark:text-white">KES {{ fmt(scheduleAsset.purchase_cost) }}</p></div>
+          <div class="text-center"><p class="text-xs text-slate-500">Book Value</p><p class="font-bold text-emerald-600">KES {{ fmt(scheduleAsset.current_book_value) }}</p></div>
+          <div class="text-center"><p class="text-xs text-slate-500">Monthly Dep.</p><p class="font-bold text-amber-600">KES {{ fmt(scheduleAsset.monthly_depreciation) }}</p></div>
+        </div>
+        <div class="overflow-y-auto flex-1">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 dark:bg-slate-900 sticky top-0">
+              <tr>
+                <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Month</th>
+                <th class="px-4 py-2 text-right text-xs font-medium text-slate-500 uppercase">Depreciation</th>
+                <th class="px-4 py-2 text-right text-xs font-medium text-slate-500 uppercase">Accumulated</th>
+                <th class="px-4 py-2 text-right text-xs font-medium text-slate-500 uppercase">Book Value</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+              <tr v-for="row in depSchedule" :key="row.month" class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                <td class="px-4 py-2 text-slate-600 dark:text-slate-400">{{ row.month }}</td>
+                <td class="px-4 py-2 text-right text-amber-600">{{ fmt(row.depreciation) }}</td>
+                <td class="px-4 py-2 text-right text-slate-600 dark:text-slate-400">{{ fmt(row.accumulated) }}</td>
+                <td class="px-4 py-2 text-right font-medium text-emerald-600">{{ fmt(row.book_value) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -159,11 +202,44 @@ export default {
     return {
       assets: [], summary: null, loading: false, filters: { category: '' },
       showAdd: false, saving: false, err: '',
+      scheduleAsset: null, depSchedule: [],
       form: { name: '', category: 'network_equipment', depreciation_method: 'straight_line', purchase_cost: '', purchase_date: new Date().toISOString().split('T')[0], useful_life_years: 5, salvage_value: 0 }
     }
   },
   methods: {
     fmt(n) { return new Intl.NumberFormat('en-KE').format(Math.round(n || 0)) },
+    viewSchedule(asset) {
+      this.scheduleAsset = asset
+      // Generate schedule client-side from asset data (no extra API call needed)
+      const months = (asset.useful_life_years || 5) * 12
+      const cost = parseFloat(asset.purchase_cost || 0)
+      const salvage = parseFloat(asset.salvage_value || 0)
+      const method = asset.depreciation_method
+      const startDate = new Date(asset.purchase_date || Date.now())
+      let bookValue = cost
+      let accumulated = 0
+      this.depSchedule = []
+      for (let i = 1; i <= months; i++) {
+        const d = new Date(startDate)
+        d.setMonth(d.getMonth() + i)
+        let dep
+        if (method === 'straight_line') {
+          dep = (cost - salvage) / months
+        } else {
+          dep = bookValue * 0.20 / 12
+        }
+        dep = Math.max(0, Math.min(dep, bookValue - salvage))
+        accumulated += dep
+        bookValue -= dep
+        this.depSchedule.push({
+          month: d.toLocaleDateString('en-KE', { month: 'short', year: 'numeric' }),
+          depreciation: dep,
+          accumulated,
+          book_value: bookValue
+        })
+        if (bookValue <= salvage) break
+      }
+    },
     async load() {
       try {
         const url = this.filters.category ? `api/finance/api/assets/?category=${this.filters.category}` : 'api/finance/api/assets/'

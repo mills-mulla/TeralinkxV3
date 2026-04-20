@@ -405,15 +405,416 @@ def update_exchange_rates():
 
 @shared_task(name='finance.cleanup_expired_transactions')
 def cleanup_expired_transactions():
-    """Clean up expired TransactionQueue items. Runs daily at 3am."""
+    """
+    3am safety net cleanup.
+    Before marking anything failed or deleting, query M-Pesa first.
+    Only mark failed if M-Pesa confirms failure or transaction is too old to query (>24hrs).
+    """
     try:
+        import time
         from finance.models import TransactionQueue
-        result = TransactionQueue.cleanup_expired_items()
+        from finance.queryDaraja import query_stk_status
+        from django.db.models import Q
+
+        now = timezone.now()
+        queried = 0
+        recovered = 0
+        timed_out = 0
+        deleted = 0
+
+        # ── Step 1: Query M-Pesa for anything still pending/processing ──────────
+        # These are transactions the 3-minute task missed (e.g. server was down)
+        # Only query if checkout_request_id exists and created within 24hrs
+        queryable_cutoff = now - timedelta(hours=24)
+        stuck = TransactionQueue.objects.filter(
+            status__in=['pending', 'processing', 'Pending...'],
+            checkout_request_id__isnull=False,
+            created_at__gte=queryable_cutoff
+        ).exclude(checkout_request_id='')
+
+        for txn in stuck:
+            try:
+                result = query_stk_status(txn.checkout_request_id)
+                if hasattr(result, 'content'):
+                    import json
+                    result = json.loads(result.content.decode())
+
+                result_code = str(result.get('ResultCode', ''))
+
+                if result_code == '0':
+                    # M-Pesa confirmed payment — attempt full processing
+                    _process_confirmed_payment(txn, result)
+                    recovered += 1
+                    logger.info(f"[cleanup] Recovered confirmed payment {txn.checkout_request_id}")
+
+                elif result_code not in ('', '4999'):
+                    # Definitive failure from M-Pesa
+                    txn.mark_failed(
+                        reason=result.get('ResultDesc', 'Payment failed — confirmed by M-Pesa at cleanup'),
+                        error_code=f'MPESA_{result_code}',
+                        failure_category='payment_gateway',
+                        increment_retry=False
+                    )
+                    _refund_credit_if_needed(txn)
+                    timed_out += 1
+
+                # result_code 4999 = still processing — leave it, will be caught next run
+                queried += 1
+                time.sleep(1)  # 1s between queries — respect Safaricom rate limits
+
+            except Exception as e:
+                logger.error(f"[cleanup] Error querying {txn.checkout_request_id}: {e}")
+
+        # ── Step 2: Mark as failed anything pending >24hrs that we couldn't query ──
+        timeout_threshold = now - timedelta(hours=24)
+        old_pending = TransactionQueue.objects.filter(
+            status__in=['pending', 'processing', 'Pending...'],
+            created_at__lt=timeout_threshold
+        )
+        for txn in old_pending:
+            txn.mark_pending_timeout_failure()
+            _refund_credit_if_needed(txn)
+            timed_out += 1
+
+        # ── Step 3: Delete expired pending items that are now failed ─────────────
+        deleted_result = TransactionQueue.objects.filter(
+            status='failed',
+            expires_at__lt=now - timedelta(hours=24),
+            failure_category='system_error',
+            error_code='PENDING_TIMEOUT'
+        ).delete()
+        deleted = deleted_result[0]
+
+        result = {
+            'queried': queried,
+            'recovered': recovered,
+            'timed_out': timed_out,
+            'deleted': deleted
+        }
         logger.info(f"Transaction cleanup: {result}")
         return {'status': 'success', **result}
+
     except Exception as e:
         logger.error(f"Transaction cleanup failed: {e}")
         return {'status': 'error', 'error': str(e)}
+
+
+@shared_task(name='finance.query_stuck_pending_transactions')
+def query_stuck_pending_transactions():
+    """
+    Runs every 3 minutes.
+    Finds transactions pending > 3 minutes (callback clearly missed)
+    and queries M-Pesa for their real status.
+    Processes confirmed payments immediately — customer gets internet access.
+    """
+    try:
+        import time
+        from finance.models import TransactionQueue
+        from finance.queryDaraja import query_stk_status
+
+        now = timezone.now()
+        stuck_threshold = now - timedelta(minutes=3)   # pending > 3 min = stuck
+        query_window = now - timedelta(minutes=30)     # only query within 30min window
+        # (expires_at is set to T+30min on creation — beyond that Safaricom won't have it)
+
+        stuck_txns = TransactionQueue.objects.filter(
+            status__in=['pending', 'processing', 'Pending...'],
+            created_at__lte=stuck_threshold,
+            created_at__gte=query_window,
+            checkout_request_id__isnull=False,
+        ).exclude(checkout_request_id='').order_by('created_at')  # oldest first
+
+        if not stuck_txns.exists():
+            return {'status': 'success', 'stuck': 0, 'queried': 0}
+
+        queried = 0
+        recovered = 0
+        confirmed_failed = 0
+        still_processing = 0
+
+        for txn in stuck_txns:
+            try:
+                result = query_stk_status(txn.checkout_request_id)
+
+                # Handle JsonResponse error returns
+                if hasattr(result, 'content'):
+                    import json
+                    result = json.loads(result.content.decode())
+
+                result_code = str(result.get('ResultCode', ''))
+
+                if result_code == '0':
+                    # ✅ M-Pesa confirmed payment — process it now
+                    success = _process_confirmed_payment(txn, result)
+                    if success:
+                        recovered += 1
+                        logger.info(
+                            f"[stuck_query] Recovered payment {txn.checkout_request_id} "
+                            f"for {txn.initiator} KES {txn.price}"
+                        )
+                    else:
+                        # Payment confirmed but voucher activation failed — refunded
+                        logger.warning(
+                            f"[stuck_query] Payment confirmed but activation failed "
+                            f"{txn.checkout_request_id} — balance refunded"
+                        )
+
+                elif result_code == '4999':
+                    # Still processing on Safaricom's end — leave it
+                    still_processing += 1
+
+                elif result_code != '':
+                    # Definitive failure — mark failed and refund any credit used
+                    FAILURE_REASONS = {
+                        '1':    'Insufficient M-Pesa balance',
+                        '1032': 'Cancelled by customer',
+                        '1037': 'Customer phone unreachable — timed out',
+                        '2001': 'Wrong M-Pesa PIN entered',
+                        '1019': 'Transaction expired',
+                        '17':   'Duplicate transaction',
+                    }
+                    reason = FAILURE_REASONS.get(
+                        result_code,
+                        result.get('ResultDesc', f'Payment failed (code {result_code})')
+                    )
+                    txn.mark_failed(
+                        reason=reason,
+                        error_code=f'MPESA_{result_code}',
+                        failure_category='payment_gateway',
+                        increment_retry=False
+                    )
+                    _refund_credit_if_needed(txn)
+                    confirmed_failed += 1
+                    logger.info(
+                        f"[stuck_query] Confirmed failure {txn.checkout_request_id}: {reason}"
+                    )
+
+                queried += 1
+                time.sleep(1)  # 1s between queries — Safaricom rate limit protection
+
+            except Exception as e:
+                logger.error(
+                    f"[stuck_query] Error processing {txn.checkout_request_id}: {e}"
+                )
+
+        result = {
+            'stuck_found': stuck_txns.count(),
+            'queried': queried,
+            'recovered': recovered,
+            'confirmed_failed': confirmed_failed,
+            'still_processing': still_processing,
+        }
+        logger.info(f"Stuck transaction query: {result}")
+        return {'status': 'success', **result}
+
+    except Exception as e:
+        logger.error(f"query_stuck_pending_transactions failed: {e}")
+        return {'status': 'error', 'error': str(e)}
+
+
+def _credit_balance_for_payment(txn, mpesa_result, actioned_by='system'):
+    """
+    M-Pesa confirmed (ResultCode=0) — credit the payment amount to customer balance.
+    Used by admin query_mpesa action instead of voucher activation.
+    """
+    from users.models import ClientH
+    from finance.models import BalanceTransaction
+    from decimal import Decimal
+
+    if not txn.mark_processing():
+        logger.info(f"[_credit_balance] {txn.checkout_request_id} already claimed")
+        return 0
+
+    txn.gateway_result_data = mpesa_result
+    txn.save(update_fields=['gateway_result_data'])
+
+    client = txn.user
+    amount = Decimal(str(txn.price))
+
+    balance_before = client.balance
+    client.balance += amount
+    client.save(update_fields=['balance'])
+
+    BalanceTransaction.objects.create(
+        user=client,
+        transaction_type='topup',
+        credit=amount,
+        debit=0,
+        balance_before=balance_before,
+        balance_after=client.balance,
+        description=f'M-Pesa payment credited to balance by {actioned_by}. '
+                    f'Checkout: {txn.checkout_request_id}',
+        reference=txn.checkout_request_id or '',
+    )
+
+    txn.mark_processed()
+
+    try:
+        from finance.models_medium import AuditLog
+        AuditLog.objects.create(
+            model_name='TransactionQueue',
+            record_id=txn.id,
+            action='update',
+            changed_by=actioned_by,
+            description=f'KES {amount} credited to balance for {client.account} via admin M-Pesa query'
+        )
+    except Exception:
+        pass
+
+    try:
+        from core.services.notification_service import create_and_notify
+        create_and_notify(
+            client.user,
+            f'KES {amount} has been credited to your account balance.',
+            'success'
+        )
+    except Exception:
+        pass
+
+    logger.info(f"[_credit_balance] KES {amount} credited to {client.account}")
+    return float(amount)
+
+
+def _process_confirmed_payment(txn, mpesa_result):
+    """
+    Shared helper: M-Pesa confirmed payment (ResultCode=0).
+    Activates voucher, updates client, marks processed.
+    Returns True on full success, False if voucher activation failed (balance refunded).
+    """
+    try:
+        from finance.querycheckout import PaymentProcessor, VoucherManager, JWTUserDataExtractor
+        from finance.models import TransactionQueue
+        from users.models import ClientH
+        from decimal import Decimal
+        import django.contrib.auth
+
+        # Claim the transaction atomically — prevents double processing
+        if not txn.mark_processing():
+            logger.info(f"[_process_confirmed] {txn.checkout_request_id} already claimed")
+            return True  # Another worker got it — not an error
+
+        txn.gateway_result_data = mpesa_result
+        txn.save(update_fields=['gateway_result_data'])
+
+        # Get package
+        from finance.querycheckout import JWTUserDataExtractor
+        package_type = JWTUserDataExtractor.get_package_by_code(txn.package_code.strip())
+        if not package_type:
+            raise ValueError(f"Package not found: {txn.package_code}")
+
+        # Build minimal user_context from the transaction record
+        client = txn.user  # TransactionQueue.user is FK to ClientH
+        django_user = client.user
+
+        user_context = {
+            'user': django_user,
+            'client': client,
+            'location': client.current_location or client.home_location,
+            'jwt_payload': {},
+            'account': client.account,
+            'phone': txn.initiator,
+            'account_tier': client.account_tier,
+            'balance': client.balance,
+            'home_location_id': client.home_location_id,
+            'current_location_id': (client.current_location or client.home_location).id,
+            'active_voucher_code': None,
+            'voucher_expires_at': None,
+            'voucher_package': None,
+            'is_active': client.status == 'active',
+            'auto_renew': client.auto_renew,
+            'two_factor_enabled': client.two_factor_enabled,
+        }
+
+        # Activate voucher using existing production logic
+        dispatch_voucher = VoucherManager.activate_and_create_voucher(
+            user_context=user_context,
+            package_type=package_type,
+            package_code=txn.package_code.strip(),
+            transaction_record=txn,
+            hotspot_ip=None  # No hotspot IP in background task — customer will login manually
+        )
+
+        txn.mark_processed()
+
+        # Log to AuditLog
+        try:
+            from finance.models_medium import AuditLog
+            AuditLog.objects.create(
+                model_name='TransactionQueue',
+                record_id=txn.id,
+                action='update',
+                changed_by='celery:query_stuck_pending',
+                description=(
+                    f'Auto-recovered via M-Pesa query. '
+                    f'Voucher {dispatch_voucher.voucher_code} activated. '
+                    f'KES {txn.price} for {client.account}'
+                )
+            )
+        except Exception:
+            pass  # Audit log failure must never block payment processing
+
+        # Notify customer
+        try:
+            from core.services.notification_service import create_and_notify
+            create_and_notify(
+                django_user,
+                f'✅ Payment confirmed! Voucher {dispatch_voucher.voucher_code} activated. '
+                f'Package: {package_type.name}',
+                'success'
+            )
+        except Exception:
+            pass
+
+        return True
+
+    except Exception as e:
+        logger.error(f"[_process_confirmed] Voucher activation failed for {txn.checkout_request_id}: {e}")
+        # Payment confirmed but activation failed — refund the M-Pesa amount to balance
+        try:
+            _refund_mpesa_to_balance(txn)
+            txn.status = 'refunded'
+            txn.failure_reason = f'Payment confirmed but activation failed: {e}'
+            txn.save(update_fields=['status', 'failure_reason'])
+        except Exception as refund_err:
+            logger.error(f"[_process_confirmed] Refund also failed: {refund_err}")
+        return False
+
+
+def _refund_credit_if_needed(txn):
+    """Refund used_credit back to customer balance if a mixed payment failed."""
+    try:
+        if txn.used_credit and txn.used_credit > 0:
+            from users.models import ClientH
+            from django.db import transaction as db_transaction
+            with db_transaction.atomic():
+                client = ClientH.objects.select_for_update().get(pk=txn.user_id)
+                client.balance += Decimal(str(txn.used_credit))
+                client.save(update_fields=['balance'])
+            logger.info(
+                f"[refund_credit] Refunded KES {txn.used_credit} credit to {txn.user.account}"
+            )
+    except Exception as e:
+        logger.error(f"[refund_credit] Failed for {txn.checkout_request_id}: {e}")
+
+
+def _refund_mpesa_to_balance(txn):
+    """Refund the M-Pesa portion (price - used_credit) to customer balance."""
+    try:
+        from users.models import ClientH
+        from django.db import transaction as db_transaction
+        refund_amount = Decimal(str(txn.price)) - Decimal(str(txn.used_credit or 0))
+        if refund_amount <= 0:
+            return
+        with db_transaction.atomic():
+            client = ClientH.objects.select_for_update().get(pk=txn.user_id)
+            client.balance += refund_amount
+            client.save(update_fields=['balance'])
+        logger.info(
+            f"[refund_mpesa] Refunded KES {refund_amount} to {txn.user.account} "
+            f"(price={txn.price} used_credit={txn.used_credit})"
+        )
+    except Exception as e:
+        logger.error(f"[refund_mpesa] Failed for {txn.checkout_request_id}: {e}")
 
 
 @shared_task(name='finance.refresh_timescale_aggregates')

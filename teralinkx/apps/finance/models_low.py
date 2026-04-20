@@ -127,19 +127,30 @@ class OutageEvent(TimeStampedModel):
         self.save()
 
     def generate_credits(self, policy=None):
-        """Generate SLA credit notes for all affected customers."""
+        """Generate SLA credit notes AND refund logs for all affected customers."""
         from finance.models_credit_note import CreditNote
+        from analytics.models import RefundLog, DowntimeRecord
         policy = policy or self.sla_policy or SLAPolicy.objects.filter(is_active=True).first()
         if not policy:
             return 0
 
         hours = self.duration_hours
+        downtime_minutes = int(hours * 60)
         credit_rate = float(policy.credit_pct_per_hour) / 100
         max_rate = float(policy.max_credit_pct) / 100
         created = 0
 
+        # Create a DowntimeRecord linked to this outage
+        downtime_record, _ = DowntimeRecord.objects.get_or_create(
+            outage_event_id=self.id,
+            defaults={
+                'start_time': self.start_time,
+                'end_time': self.end_time or timezone.now(),
+                'description': self.description,
+            }
+        )
+
         for customer in self.affected_customers.all():
-            # Get customer's monthly bill (last payment)
             from finance.models import TransactionQueue
             last_payment = TransactionQueue.objects.filter(
                 user=customer, status__in=['completed', 'processed']
@@ -154,12 +165,32 @@ class OutageEvent(TimeStampedModel):
             if credit_amount < 1:
                 continue
 
+            credit_amount = round(credit_amount, 2)
+
+            # 1. Create finance CreditNote
             CreditNote.create(
                 customer=customer,
-                amount=Decimal(str(round(credit_amount, 2))),
+                amount=Decimal(str(credit_amount)),
                 reason='sla_breach',
                 description=f'SLA credit for {hours:.1f}h outage on {self.start_time.date()}',
             )
+
+            # 2. Credit customer balance directly
+            customer.balance = (customer.balance or 0) + Decimal(str(credit_amount))
+            customer.save(update_fields=['balance'])
+
+            # 3. Log in RefundLog for the Refunds page
+            RefundLog.objects.create(
+                account=customer.account,
+                client_username=customer.user.username if customer.user else customer.account,
+                refund_amount=Decimal(str(credit_amount)),
+                downtime_minutes=downtime_minutes,
+                refund_type='sla',
+                status='completed',
+                downtime_record=downtime_record,
+                notes=f'Auto-generated from SLA outage #{self.id}',
+            )
+
             created += 1
 
         self.credits_generated = created

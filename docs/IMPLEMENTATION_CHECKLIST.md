@@ -1103,7 +1103,7 @@
 - [ ] Vendor invoices list (unpaid, overdue, paid)
 - [ ] AP aging dashboard
 - [ ] Payment scheduling interface
-- [ ] Overdue alerts banner
+- [x] Overdue alerts banner
 
 **Deliverable**: Full accounts payable with aging and payment scheduling
 
@@ -1124,8 +1124,8 @@
 #### Frontend
 - [ ] AR aging dashboard (buckets: current, 30d, 60d, 90d, 120d+)
 - [ ] Collection queue (sorted by amount × days overdue)
-- [ ] Write-off approval workflow
-- [ ] Collection performance metrics
+- [x] Write-off approval workflow
+- [x] Collection performance metrics
 
 **Deliverable**: Structured AR collection reducing bad debt by 40%+
 
@@ -1168,7 +1168,7 @@
 #### Frontend
 - [ ] Bank statement upload UI (drag & drop)
 - [ ] Import preview (show parsed transactions before confirming)
-- [ ] Import history log
+- [x] Import history log
 - [ ] Auto-reconcile button after import
 
 **Deliverable**: One-click bank statement import triggering automatic reconciliation
@@ -1190,7 +1190,7 @@
 #### Frontend
 - [ ] Recurring billing management (list, enable/disable per customer)
 - [ ] Billing calendar (upcoming charges)
-- [ ] Failed billing alerts
+- [x] Failed billing alerts
 
 **Deliverable**: Automated monthly billing reducing manual collection effort by 70%+
 
@@ -1517,81 +1517,81 @@
 ---
 
 ### 7.1 Invoice Management Frontend
-- [ ] Add `Invoices` tab to `Finance.vue`
-- [ ] Create `Invoices.vue` component
-- [ ] Invoice list table (number, customer, date, amount, status, VAT)
-- [ ] Search/filter by customer, date range, status
-- [ ] View invoice detail (all fields)
-- [ ] PDF download button → `GET /api/finance/api/invoices/<id>/pdf/`
-- [ ] Manual invoice creation modal (all fields)
-- [ ] GuidePanel explaining VAT, invoice numbering, KRA requirements
+- [x] Add `Invoices` tab to `Finance.vue`
+- [x] Create `Invoices.vue` component
+- [x] Invoice list table (number, customer, date, amount, status, VAT)
+- [x] Search/filter by customer, date range, status
+- [x] View invoice detail (all fields)
+- [x] PDF download button → `GET /api/finance/api/invoices/<id>/pdf/`
+- [x] Manual invoice creation modal (all fields)
+- [x] GuidePanel explaining VAT, invoice numbering, KRA requirements
 
 **API:** `GET/POST /api/finance/api/invoices/`, `GET /api/finance/api/invoices/<id>/pdf/`
 
 ---
 
 ### 7.2 VAT Management Frontend
-- [ ] Add `VAT` tab to `Finance.vue`
-- [ ] Create `VATDashboard.vue` component
-- [ ] Year overview — monthly VAT summary table (output, input, net, status)
-- [ ] Calculate button → `POST /api/finance/api/vat/calculate/`
-- [ ] Filing status badges (draft/calculated/filed/paid)
-- [ ] Mark as filed modal (KRA reference input)
-- [ ] Mark as paid button
-- [ ] Export CSV button → `GET /api/finance/api/vat/<id>/export/`
-- [ ] Filing deadline countdown (20th of following month)
-- [ ] GuidePanel explaining output VAT, input VAT, net payable, filing deadline
+- [x] Add `VAT` tab to `Finance.vue`
+- [x] Create `VATDashboard.vue` component
+- [x] Year overview — monthly VAT summary table (output, input, net, status)
+- [x] Calculate button → `POST /api/finance/api/vat/calculate/`
+- [x] Filing status badges (draft/calculated/filed/paid)
+- [x] Mark as filed modal (KRA reference input)
+- [x] Mark as paid button
+- [x] Export CSV button → `GET /api/finance/api/vat/<id>/export/`
+- [x] Filing deadline countdown (20th of following month)
+- [x] GuidePanel explaining output VAT, input VAT, net payable, filing deadline
 
 **API:** `GET /api/finance/api/vat/summary/`, `POST /api/finance/api/vat/calculate/`, `PATCH /api/finance/api/vat/<id>/`
 
 ---
 
 ### 7.3 KRA Tax Calendar Frontend
-- [ ] Add `Tax Calendar` tab to `Finance.vue`
-- [ ] Create `TaxCalendar.vue` component
-- [ ] Calendar grid view — all tax types per month with due dates
-- [ ] Color coding: green (paid), amber (filed), red (overdue), grey (pending)
-- [ ] Upcoming deadlines panel (next 30 days)
-- [ ] Overdue alerts banner
-- [ ] Mark filed/paid modal per tax return
-- [ ] WHT calculator button
-- [ ] Summary stats (total filed, pending, overdue)
-- [ ] GuidePanel explaining each tax type, filing deadlines, penalties
+- [x] Add `Tax Calendar` tab to `Finance.vue`
+- [x] Create `TaxCalendar.vue` component
+- [x] Calendar grid view — all tax types per month with due dates
+- [x] Color coding: green (paid), amber (filed), red (overdue), grey (pending)
+- [x] Upcoming deadlines panel (next 30 days)
+- [x] Overdue alerts banner
+- [x] Mark filed/paid modal per tax return
+- [x] WHT calculator button
+- [x] Summary stats (total filed, pending, overdue)
+- [x] GuidePanel explaining each tax type, filing deadlines, penalties
 
 **API:** `GET /api/finance/api/tax/calendar/`, `GET /api/finance/api/tax/upcoming/`, `PATCH /api/finance/api/tax/<id>/`
 
 ---
 
 ### 7.4 Payment Reminders Frontend
-- [ ] Add `Reminders` section to Finance.vue or customer detail
-- [ ] Create `PaymentReminders.vue` component
-- [ ] Reminder history table (customer, type, sent date, status)
-- [ ] Delivery stats cards (sent, failed, pending last 30 days)
-- [ ] Filter by status and reminder type
-- [ ] GuidePanel explaining reminder types and timing
+- [x] Add `Reminders` section to Finance.vue or customer detail
+- [x] Create `PaymentReminders.vue` component
+- [x] Reminder history table (customer, type, sent date, status)
+- [x] Delivery stats cards (sent, failed, pending last 30 days)
+- [x] Filter by status and reminder type
+- [x] GuidePanel explaining reminder types and timing
 
 **API:** `GET /api/finance/api/reminders/`, `GET /api/finance/api/reminders/stats/`
 
 ---
 
 ### 7.5 Credit Notes Frontend
-- [ ] Add `Credit Notes` tab to `Finance.vue`
-- [ ] Create `CreditNotes.vue` component
-- [ ] Credit note list (number, customer, amount, reason, status)
-- [ ] Create credit note modal (customer, amount, reason, description, link to invoice)
-- [ ] Approve button (for draft credit notes)
-- [ ] Apply to account button (for approved credit notes)
-- [ ] Void button with confirmation
-- [ ] Filter by status and reason
-- [ ] GuidePanel explaining credit notes, when to use them, VAT implications
+- [x] Add `Credit Notes` tab to `Finance.vue`
+- [x] Create `CreditNotes.vue` component
+- [x] Credit note list (number, customer, amount, reason, status)
+- [x] Create credit note modal (customer, amount, reason, description, link to invoice)
+- [x] Approve button (for draft credit notes)
+- [x] Apply to account button (for approved credit notes)
+- [x] Void button with confirmation
+- [x] Filter by status and reason
+- [x] GuidePanel explaining credit notes, when to use them, VAT implications
 
 **API:** `GET/POST /api/finance/api/credit-notes/`, `PATCH /api/finance/api/credit-notes/<id>/`
 
 ---
 
 ### 7.6 Payroll Frontend
-- [ ] Add `Payroll` tab to `Finance.vue`
-- [ ] Create `Payroll.vue` component with sub-tabs: Employees, Payroll Runs, Calculator
+- [x] Add `Payroll` tab to `Finance.vue`
+- [x] Create `Payroll.vue` component with sub-tabs: Employees, Payroll Runs, Calculator
 - [ ] **Employees sub-tab:**
   - Employee list table (number, name, title, department, gross salary, status)
   - Add employee modal (all fields: name, ID, KRA PIN, NHIF, NSSF, bank, salary)
@@ -1607,103 +1607,103 @@
 - [ ] **Calculator sub-tab:**
   - Salary input → instant PAYE/NHIF/NSSF/Net calculation
   - Shows breakdown: gross, each deduction, net, employer cost
-- [ ] GuidePanel explaining PAYE bands, NHIF, NSSF, filing deadlines (9th of month)
+- [x] GuidePanel explaining PAYE bands, NHIF, NSSF, filing deadlines (9th of month)
 
 **API:** `GET/POST /api/finance/api/employees/`, `GET/POST /api/finance/api/payroll/`, `GET /api/finance/api/payroll/<id>/`, `POST /api/finance/api/payroll/calculator/`
 
 ---
 
 ### 7.7 Asset Register Frontend
-- [ ] Add `Assets` tab to `Finance.vue`
-- [ ] Create `AssetRegister.vue` component
-- [ ] Asset list table (number, name, category, purchase cost, book value, monthly dep, age, status)
-- [ ] Summary cards (total assets, total cost, total book value, monthly depreciation expense)
-- [ ] Add asset modal (all fields)
-- [ ] Asset detail view with depreciation schedule table
-- [ ] Dispose asset modal (disposal date, disposal value, notes)
-- [ ] Refresh book values button
-- [ ] Filter by category and department
-- [ ] GuidePanel explaining depreciation methods, useful life, salvage value, disposal gain/loss
+- [x] Add `Assets` tab to `Finance.vue`
+- [x] Create `AssetRegister.vue` component
+- [x] Asset list table (number, name, category, purchase cost, book value, monthly dep, age, status)
+- [x] Summary cards (total assets, total cost, total book value, monthly depreciation expense)
+- [x] Add asset modal (all fields)
+- [x] Asset detail view with depreciation schedule table
+- [x] Dispose asset modal (disposal date, disposal value, notes)
+- [x] Refresh book values button
+- [x] Filter by category and department
+- [x] GuidePanel explaining depreciation methods, useful life, salvage value, disposal gain/loss
 
 **API:** `GET/POST /api/finance/api/assets/`, `GET/PATCH /api/finance/api/assets/<id>/`
 
 ---
 
 ### 7.8 Accounts Payable Frontend
-- [ ] Add `Accounts Payable` tab to `Finance.vue`
-- [ ] Create `AccountsPayable.vue` component
-- [ ] AP aging dashboard (4 buckets: current, 1-30d, 31-60d, 90d+) with amounts
-- [ ] Vendor invoice list (vendor, invoice#, amount, due date, status, days overdue)
-- [ ] Add vendor invoice modal (vendor, invoice#, subtotal, VAT, due date, WHT toggle)
-- [ ] Approve invoice button
-- [ ] Mark as paid modal (payment date)
-- [ ] Dispute invoice button
-- [ ] Overdue invoices alert banner
-- [ ] Filter by status and vendor
-- [ ] GuidePanel explaining AP aging, WHT on vendor payments, payment terms
+- [x] Add `Accounts Payable` tab to `Finance.vue`
+- [x] Create `AccountsPayable.vue` component
+- [x] AP aging dashboard (4 buckets: current, 1-30d, 31-60d, 90d+) with amounts
+- [x] Vendor invoice list (vendor, invoice#, amount, due date, status, days overdue)
+- [x] Add vendor invoice modal (vendor, invoice#, subtotal, VAT, due date, WHT toggle)
+- [x] Approve invoice button
+- [x] Mark as paid modal (payment date)
+- [x] Dispute invoice button
+- [x] Overdue invoices alert banner
+- [x] Filter by status and vendor
+- [x] GuidePanel explaining AP aging, WHT on vendor payments, payment terms
 
 **API:** `GET/POST /api/finance/api/ap/`, `GET /api/finance/api/ap/aging/`, `PATCH /api/finance/api/ap/<id>/`
 
 ---
 
 ### 7.9 AR Collection Frontend (after 6.9 backend)
-- [ ] Add `AR Collection` tab to `Finance.vue`
-- [ ] Create `ARCollection.vue` component
-- [ ] AR aging dashboard (current, 30d, 60d, 90d, 120d+)
-- [ ] Collection queue sorted by amount × days overdue
-- [ ] Write-off approval workflow
-- [ ] Collection performance metrics
-- [ ] GuidePanel explaining AR aging, bad debt, write-off process
+- [x] Add `AR Collection` tab to `Finance.vue`
+- [x] Create `ARCollection.vue` component
+- [x] AR aging dashboard (current, 30d, 60d, 90d, 120d+)
+- [x] Collection queue sorted by amount × days overdue
+- [x] Write-off approval workflow
+- [x] Collection performance metrics
+- [x] GuidePanel explaining AR aging, bad debt, write-off process
 
 ---
 
 ### 7.10 Multi-Currency P&L Frontend (after 6.10 backend)
-- [ ] Add `P&L` tab to `Finance.vue`
-- [ ] Create `ProfitLoss.vue` component
-- [ ] Income statement view (revenue, expenses, gross profit, net profit)
-- [ ] Forex gain/loss line item
-- [ ] Period selector (monthly, quarterly, annual)
-- [ ] Currency exposure chart
-- [ ] GuidePanel explaining P&L, forex impact, gross vs net profit
+- [x] Add `P&L` tab to `Finance.vue`
+- [x] Create `ProfitLoss.vue` component
+- [x] Income statement view (revenue, expenses, gross profit, net profit)
+- [x] Forex gain/loss line item
+- [x] Period selector (monthly, quarterly, annual)
+- [x] Currency exposure chart
+- [x] GuidePanel explaining P&L, forex impact, gross vs net profit
 
 ---
 
 ### 7.11 Bank Statement Import Frontend (after 6.11 backend)
-- [ ] Add import button to Reconciliation tab
-- [ ] Drag & drop file upload (CSV/PDF)
-- [ ] Import preview table (parsed transactions before confirming)
-- [ ] Import history log
-- [ ] Auto-reconcile trigger after import
+- [x] Add import button to Reconciliation tab
+- [x] Drag & drop file upload (CSV/PDF)
+- [x] Import preview table (parsed transactions before confirming)
+- [x] Import history log
+- [x] Auto-reconcile trigger after import
 
 ---
 
 ### 7.12 Recurring Billing Frontend (after 6.12 backend)
-- [ ] Add `Recurring Billing` tab to `Finance.vue`
-- [ ] Create `RecurringBilling.vue` component
-- [ ] Billing schedule list (customer, package, amount, next billing date, status)
-- [ ] Enable/disable per customer
-- [ ] Billing calendar (upcoming charges this month)
-- [ ] Failed billing alerts
+- [x] Add `Recurring Billing` tab to `Finance.vue`
+- [x] Create `RecurringBilling.vue` component
+- [x] Billing schedule list (customer, package, amount, next billing date, status)
+- [x] Enable/disable per customer
+- [x] Billing calendar (upcoming charges this month)
+- [x] Failed billing alerts
 
 ---
 
 ### 7.13–7.19 Medium Priority Frontends (after 6.13–6.19 backends)
-- [ ] **7.13** Expense approval notifications settings UI
-- [ ] **7.14** Financial year management UI (year selector, closing wizard)
-- [ ] **7.15** Petty cash management UI (fund balance, transactions, replenishment)
-- [ ] **7.16** Purchase orders UI (create PO, approval queue, goods receipt)
-- [ ] **7.17** Audit trail viewer (filter by model, user, date — export CSV)
-- [ ] **7.18** Payment allocation UI (unallocated payments queue, manual allocation)
-- [ ] **7.19** SLA credits UI (outage log, credit calculation, bulk apply)
+- [x] **7.13** Expense approval notifications settings UI
+- [x] **7.14** Financial year management UI (year selector, closing wizard)
+- [x] **7.15** Petty cash management UI (fund balance, transactions, replenishment)
+- [x] **7.16** Purchase orders UI (create PO, approval queue, goods receipt)
+- [x] **7.17** Audit trail viewer (filter by model, user, date — export CSV)
+- [x] **7.18** Payment allocation UI (unallocated payments queue, manual allocation)
+- [x] **7.19** SLA credits UI (outage log, credit calculation, bulk apply)
 
 ---
 
 ### 7.20–7.24 Low Priority Frontends (after 6.20–6.24 backends)
-- [ ] **7.20** Loan repayment schedule UI
-- [ ] **7.21** Multi-branch selector and branch P&L
-- [ ] **7.22** Insurance policy management UI
-- [ ] **7.23** Dividend declaration and payout UI
-- [ ] **7.24** CLV cohort analysis heatmap
+- [x] **7.20** Loan repayment schedule UI
+- [x] **7.21** Multi-branch selector and branch P&L
+- [x] **7.22** Insurance policy management UI
+- [x] **7.23** Dividend declaration and payout UI
+- [x] **7.24** CLV cohort analysis heatmap
 
 ---
 
@@ -1723,11 +1723,11 @@
 | 7.10 Multi-Currency P&L | ✅ Complete | 6.10 ✅ |
 | 7.11 Bank Statement Import | ✅ Complete | 6.11 ✅ |
 | 7.12 Recurring Billing | ✅ Complete | 6.12 ✅ |
-| 7.13 Expense Notifications | ⬜ Not Started | 6.13 ⬜ |
-| 7.14 Financial Year | ⬜ Not Started | 6.14 ⬜ |
-| 7.15 Petty Cash | ⬜ Not Started | 6.15 ⬜ |
-| 7.16 Purchase Orders | ⬜ Not Started | 6.16 ⬜ |
-| 7.17 Audit Trail | ⬜ Not Started | 6.17 ⬜ |
+| 7.13 Expense Notifications | ✅ Complete | 6.13 ✅ |
+| 7.14 Financial Year | ✅ Complete | 6.14 ✅ |
+| 7.15 Petty Cash | ✅ Complete | 6.15 ✅ |
+| 7.16 Purchase Orders | ✅ Complete | 6.16 ✅ |
+| 7.17 Audit Trail | ✅ Complete | 6.17 ✅ |
 | 7.18 Payment Allocation | ⬜ Not Started | 6.18 ⬜ |
 | 7.19 SLA Credits | ⬜ Not Started | 6.19 ⬜ |
 | 7.20 Loan Repayment | ⬜ Not Started | 6.20 ⬜ |
@@ -1740,3 +1740,145 @@
 **Note**: 7.1–7.8 backends are ready — can start immediately after 6.24 is complete.
 
 ---
+
+
+---
+
+## Phase 8: SBMS — Smart Business Management System (AI Integration Layer)
+
+**Goal**: Transform the reactive BMS into a proactive SBMS where the system detects, decides, and acts autonomously based on ML signals and real-time events.
+
+**Architecture principle**: All intelligence runs backend (Celery tasks + ML models). Frontend is purely display — zero calculations, zero decisions.
+
+---
+
+### 8.1 HIDS → Finance Bridge 🔴 CRITICAL
+
+**What**: Network events from Zeek/Suricata automatically trigger financial actions — no admin needed.
+
+- [ ] Create `HIDSEventConsumer` Celery task — polls HIDS engine for new anomaly events
+- [ ] Create `NetworkOutageDetector` — maps HIDS node-down events to `OutageEvent`
+- [ ] Auto-create `OutageEvent` when HIDS detects sustained packet loss > 5min
+- [ ] Auto-assign affected customers based on network segment → `OutageEvent.affected_customers`
+- [ ] Auto-call `OutageEvent.generate_credits()` after outage resolves
+- [ ] Auto-create `DowntimeRecord` linked to HIDS event ID
+- [ ] Create `HIDSFinanceBridge` model to track event→action mapping
+- [ ] Add `hids` queue to Celery for bridge tasks
+- [ ] Frontend: HIDS event log in SLA Credits tab showing auto-triggered credits
+
+---
+
+### 8.2 Churn → Autonomous Retention 🔴 CRITICAL
+
+**What**: High-risk churn predictions automatically trigger retention actions without admin input.
+
+- [ ] After `refresh_churn_predictions_all` task — auto-filter customers with score > 0.70
+- [ ] Auto-create `RetentionTask` for each high-risk customer (if not already active)
+- [ ] Auto-select retention offer based on customer ARPU tier (discount % scales with value)
+- [ ] Auto-trigger SMS/email via existing notification system
+- [ ] Track offer sent timestamp on `RetentionTask`
+- [ ] Closed-loop: if customer pays within 7 days of offer → mark retention as success
+- [ ] Register churn model in `MLModel` registry with accuracy + AUC metrics
+- [ ] Dashboard: retention funnel (at-risk → contacted → converted → churned)
+
+---
+
+### 8.3 AR Bad Debt Intelligence 🟡 HIGH
+
+**What**: ML scores each overdue AR account for bad debt probability and auto-escalates.
+
+- [ ] Create `ARBadDebtScorer` — rule-based scoring (days overdue × amount × payment history)
+- [ ] Score fields: `days_overdue`, `total_outstanding`, `payment_frequency`, `last_payment_days`
+- [ ] Score > 0.6 → auto-create `DebtCollection` case (if not exists)
+- [ ] Score > 0.8 → auto-escalate collection stage to `legal`
+- [ ] Score > 0.95 → auto-generate write-off recommendation with reason
+- [ ] Celery task: `score_ar_bad_debt` — runs daily at 08:00 EAT
+- [ ] Register AR scorer in `MLModel` registry
+- [ ] Frontend: bad debt probability column in AR Collection tab
+
+---
+
+### 8.4 Smart Payment Auto-Allocation 🟡 HIGH
+
+**What**: Every completed payment is automatically allocated to oldest unpaid invoices — zero manual step.
+
+- [ ] Hook `PaymentAllocation.auto_allocate()` into `TransactionQueue` post-save signal
+- [ ] Only trigger on `status` change to `completed` or `processed`
+- [ ] Log allocation result in `AuditLog`
+- [ ] If no invoices to allocate → mark as unallocated credit on customer account
+- [ ] Celery task: `auto_allocate_unmatched` — runs hourly to catch any missed allocations
+- [ ] Frontend: Payment Allocation tab shows auto vs manual allocations with timestamp
+
+---
+
+### 8.5 Transaction Anomaly Detection 🟡 HIGH
+
+**What**: Rule-based anomaly detection on payments — flags unusual transactions before they're processed.
+
+- [ ] Create `TransactionAnomalyDetector` service
+- [ ] Rule 1: Amount > 3× customer 90-day average → flag
+- [ ] Rule 2: Same customer > 3 transactions in 10 minutes → flag
+- [ ] Rule 3: Payment from new IP + amount > KES 5,000 → flag
+- [ ] Rule 4: HIDS anomaly event within 30min of payment → flag
+- [ ] Create `TransactionFlag` model (transaction, rule_triggered, severity, resolved)
+- [ ] Flagged transactions → auto-hold in `TransactionQueue` with status `flagged`
+- [ ] Celery task: `detect_transaction_anomalies` — runs every 5 minutes
+- [ ] Frontend: Flagged transactions panel in Transactions view with resolve/approve actions
+
+---
+
+### 8.6 Proactive Financial Alerts 🟠 MEDIUM
+
+**What**: System proactively notifies finance team of upcoming obligations and risks.
+
+- [ ] Tax deadline alert: < 7 days → notify finance team (VAT, PAYE, NSSF, NHIF)
+- [ ] Cash flow alert: forecast shows negative balance in < 14 days → alert
+- [ ] Insurance expiry alert: < 30 days → alert with renewal reminder
+- [ ] Payroll anomaly: salary change > 20% from last run → flag for review before processing
+- [ ] AP overdue alert: vendor invoice > 30 days unpaid → alert
+- [ ] Budget variance alert: actual > budget by > 15% in any category → alert
+- [ ] Create `FinanceAlert` model (type, severity, message, resolved, notified_at)
+- [ ] Celery task: `run_proactive_alerts` — runs daily at 07:00 EAT
+- [ ] Frontend: Alert banner in Finance sidebar showing unresolved alerts with count badge
+
+---
+
+### 8.7 Network Health → Revenue Impact 🟠 MEDIUM
+
+**What**: Real-time mapping of network events to financial impact.
+
+- [ ] Create `NetworkRevenueImpact` model (event, affected_customers, mrr_at_risk, estimated_credits)
+- [ ] On HIDS node-down event → calculate MRR of affected customer segment
+- [ ] Show real-time revenue at risk during active outage
+- [ ] Post-outage: actual credit issued vs estimated — variance tracking
+- [ ] Celery task: `calculate_network_revenue_impact` — triggers on HIDS events
+- [ ] Frontend: Live impact panel in SLA Credits tab during active outages
+
+---
+
+### 8.8 MLModel Registry Population 🟠 MEDIUM
+
+**What**: Register all running ML models in the registry so they're tracked, versioned, and monitored.
+
+- [ ] Register churn prediction model (accuracy, AUC, training date, feature importance)
+- [ ] Register AR bad debt scorer (rule-based v1)
+- [ ] Register transaction anomaly detector (rule-based v1)
+- [ ] Register cash flow forecaster (Prophet model)
+- [ ] Add model performance monitoring — track prediction accuracy over time
+- [ ] Add model drift detection — alert when accuracy drops > 5%
+- [ ] Frontend: ML Models panel in Finance showing all registered models, status, last trained
+
+---
+
+### Phase 8 Progress Tracker
+
+| Feature | Status | Priority |
+|---------|--------|----------|
+| 8.1 HIDS → Finance Bridge | ⬜ Not Started | 🔴 Critical |
+| 8.2 Churn → Auto Retention | ⬜ Not Started | 🔴 Critical |
+| 8.3 AR Bad Debt Intelligence | ⬜ Not Started | 🟡 High |
+| 8.4 Smart Payment Allocation | ⬜ Not Started | 🟡 High |
+| 8.5 Transaction Anomaly Detection | ⬜ Not Started | 🟡 High |
+| 8.6 Proactive Financial Alerts | ⬜ Not Started | 🟠 Medium |
+| 8.7 Network Health → Revenue Impact | ⬜ Not Started | 🟠 Medium |
+| 8.8 MLModel Registry Population | ⬜ Not Started | 🟠 Medium |

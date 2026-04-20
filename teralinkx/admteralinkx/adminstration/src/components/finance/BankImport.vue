@@ -55,7 +55,15 @@
           </div>
           <div>
             <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">CSV Content *</label>
-            <textarea v-model="form.csv_content" rows="8" placeholder="Paste CSV content here..."
+            <!-- Drag & Drop Zone -->
+            <div class="border-2 border-dashed rounded-lg p-4 text-center mb-2 transition-colors cursor-pointer"
+              :class="dragging ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-slate-300 dark:border-slate-600 hover:border-blue-400'"
+              @dragover.prevent="dragging=true" @dragleave="dragging=false"
+              @drop.prevent="onDrop" @click="$refs.fileInput.click()">
+              <p class="text-sm text-slate-500">{{ dragging ? 'Drop file here' : '📂 Drag & drop CSV or click to browse' }}</p>
+              <input ref="fileInput" type="file" accept=".csv,.txt" class="hidden" @change="onFileSelect" />
+            </div>
+            <textarea v-model="form.csv_content" rows="6" placeholder="Or paste CSV content here..."
               class="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-xs font-mono resize-none"></textarea>
           </div>
           <div>
@@ -83,7 +91,7 @@ export default {
   components: { GuidePanel },
   setup() { const { makeRequest } = useApi(); return { makeRequest } },
   data() {
-    return { statements: [], loading: false, showUpload: false, uploading: false, err: '', result: '',
+    return { statements: [], loading: false, showUpload: false, uploading: false, err: '', result: '', dragging: false,
              form: { bank: 'equity', csv_content: '', filename: 'statement.csv' } }
   },
   methods: {
@@ -91,6 +99,21 @@ export default {
       return { uploaded: 'bg-slate-100 text-slate-700', parsed: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
                completed: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
                failed: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' }[s] || 'bg-slate-100 text-slate-800'
+    },
+    onDrop(e) {
+      this.dragging = false
+      const file = e.dataTransfer.files[0]
+      if (file) this.readFile(file)
+    },
+    onFileSelect(e) {
+      const file = e.target.files[0]
+      if (file) this.readFile(file)
+    },
+    readFile(file) {
+      this.form.filename = file.name
+      const reader = new FileReader()
+      reader.onload = (e) => { this.form.csv_content = e.target.result }
+      reader.readAsText(file)
     },
     async load() {
       try { const data = await this.makeRequest('get', 'api/finance/api/bank-statements/', null, false); this.statements = data.results || [] }

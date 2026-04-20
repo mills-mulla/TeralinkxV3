@@ -1,62 +1,55 @@
 <template>
-  <div class="p-6 space-y-6">
-    <div class="flex justify-between items-center">
-      <div>
-        <h1 class="text-3xl font-bold text-slate-900 dark:text-white">Finance Management</h1>
-        <p class="text-slate-600 dark:text-slate-400 mt-1">Complete enterprise finance — revenue, expenses, payroll, tax, and more</p>
-      </div>
-      <button @click="refreshData" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-        </svg>
-        Refresh
-      </button>
+  <div class="p-6">
+    <!-- Breadcrumb -->
+    <div class="mb-4 flex items-center gap-2 text-xs text-slate-500">
+      <span>Finance</span>
+      <span>›</span>
+      <span class="text-slate-900 dark:text-white font-medium">{{ activeTabLabel }}</span>
     </div>
 
-    <!-- Tab Groups -->
-    <div class="border-b border-slate-200 dark:border-slate-700 overflow-x-auto">
-      <nav class="-mb-px flex space-x-1 min-w-max">
-        <button v-for="tab in tabs" :key="tab.id" @click="activeTab = tab.id"
-          :class="['py-3 px-3 border-b-2 font-medium text-xs transition-colors whitespace-nowrap',
-            activeTab === tab.id
-              ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-              : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300 dark:text-slate-400']">
-          {{ tab.name }}
-        </button>
-      </nav>
+    <div v-if="activeTab === 'analytics'" class="space-y-6">
+      <FinancialAnalytics :metrics="metrics" :packages="packagePerformance" :loading="loading" />
+      <RevenueForecast />
     </div>
+    <div v-if="activeTab === 'kpi'"><KpiDashboard ref="kpiRef" /></div>
+    <div v-if="activeTab === 'pl'"><ProfitLoss ref="plRef" /></div>
+    <div v-if="activeTab === 'budget'"><BudgetDashboard ref="budgetRef" /></div>
+    <div v-if="activeTab === 'invoices'"><Invoices ref="invoicesRef" /></div>
+    <div v-if="activeTab === 'revenue-streams'"><RevenueStreams :data="revenueStreams" @refresh="fetchRevenueStreams" /></div>
+    <div v-if="activeTab === 'recurring-billing'"><RecurringBilling ref="billingRef" /></div>
+    <div v-if="activeTab === 'ar-collection'"><ARCollection ref="arRef" /></div>
+    <div v-if="activeTab === 'revenue-at-risk'"><RevenueAtRisk ref="rarRef" /></div>
+    <div v-if="activeTab === 'reminders'"><PaymentReminders ref="remRef" /></div>
+    <div v-if="activeTab === 'payment-allocation'"><PaymentAllocation ref="paRef" /></div>
+    <div v-if="activeTab === 'clv-cohorts'"><CLVCohorts ref="clvRef" /></div>
+    <div v-if="activeTab === 'expenses'"><Expenses :data="expenses" @refresh="fetchExpenses" /></div>
+    <div v-if="activeTab === 'payroll'"><Payroll ref="payrollRef" /></div>
+    <div v-if="activeTab === 'ap'"><AccountsPayable ref="apRef" /></div>
+    <div v-if="activeTab === 'assets'"><AssetRegister ref="assetRef" /></div>
+    <div v-if="activeTab === 'petty-cash'"><PettyCash ref="pcRef" /></div>
+    <div v-if="activeTab === 'purchase-orders'"><PurchaseOrders ref="poRef" /></div>
+    <div v-if="activeTab === 'loan-repayment'"><LoanRepayment ref="loanRef" /></div>
+    <div v-if="activeTab === 'vat'"><VATDashboard ref="vatRef" /></div>
+    <div v-if="activeTab === 'tax'"><TaxCalendar ref="taxRef" /></div>
+    <div v-if="activeTab === 'credit-notes'"><CreditNotes ref="cnRef" /></div>
+    <div v-if="activeTab === 'financial-year'"><FinancialYear ref="fyRef" /></div>
+    <div v-if="activeTab === 'audit-trail'"><AuditTrail ref="auditRef" /></div>
+    <div v-if="activeTab === 'dividends'"><DividendDistribution ref="dividendRef" /></div>
+    <div v-if="activeTab === 'bank-import'"><BankImport ref="bankRef" /></div>
+    <div v-if="activeTab === 'reconciliation'"><Reconciliation ref="reconRef" /></div>
+    <div v-if="activeTab === 'branches'"><MultiBranch ref="branchRef" /></div>
+    <div v-if="activeTab === 'insurance'"><InsuranceManagement ref="insuranceRef" /></div>
+    <div v-if="activeTab === 'sla-credits'"><SLACredits ref="slaRef" /></div>
+    <div v-if="activeTab === 'notifications'"><ExpenseNotifications ref="notifRef" /></div>
+    <div v-if="activeTab === 'transactions'"><Transactions /></div>
+    <div v-if="activeTab === 'refunds'"><Refunds /></div>
+    <div v-if="activeTab === 'customer-intelligence'"><CustomerIntelligence /></div>
 
-    <div>
-      <!-- Existing tabs -->
-      <div v-if="activeTab === 'analytics'" class="space-y-6">
-        <FinancialAnalytics :metrics="metrics" :packages="packagePerformance" :loading="loading" />
-        <RevenueForecast :data="forecastData" :loading="loading" />
-      </div>
-      <div v-if="activeTab === 'kpi'"><KpiDashboard ref="kpiRef" /></div>
-      <div v-if="activeTab === 'revenue-streams'"><RevenueStreams :data="revenueStreams" @refresh="fetchRevenueStreams" /></div>
-      <div v-if="activeTab === 'expenses'"><Expenses :data="expenses" @refresh="fetchExpenses" /></div>
-      <div v-if="activeTab === 'budget'"><BudgetDashboard ref="budgetRef" /></div>
-      <div v-if="activeTab === 'revenue-at-risk'"><RevenueAtRisk ref="rarRef" /></div>
-      <div v-if="activeTab === 'pricing'"><PricingIntelligence /></div>
-      <div v-if="activeTab === 'vendors'"><VendorIntelligence /></div>
-      <div v-if="activeTab === 'board-reports'"><BoardReports ref="boardRef" /></div>
-      <div v-if="activeTab === 'reconciliation'"><Reconciliation ref="reconRef" /></div>
-      <div v-if="activeTab === 'investments'"><Investments ref="invRef" /></div>
-      <div v-if="activeTab === 'departments'"><Departments :data="departments" @refresh="fetchDepartments" /></div>
-      <!-- Phase 7 new tabs -->
-      <div v-if="activeTab === 'invoices'"><Invoices ref="invoicesRef" /></div>
-      <div v-if="activeTab === 'vat'"><VATDashboard ref="vatRef" /></div>
-      <div v-if="activeTab === 'tax'"><TaxCalendar ref="taxRef" /></div>
-      <div v-if="activeTab === 'credit-notes'"><CreditNotes ref="cnRef" /></div>
-      <div v-if="activeTab === 'payroll'"><Payroll ref="payrollRef" /></div>
-      <div v-if="activeTab === 'assets'"><AssetRegister ref="assetRef" /></div>
-      <div v-if="activeTab === 'ap'"><AccountsPayable ref="apRef" /></div>
-      <div v-if="activeTab === 'reminders'"><PaymentReminders ref="remRef" /></div>
-      <div v-if="activeTab === 'ar-collection'"><ARCollection ref="arRef" /></div>
-      <div v-if="activeTab === 'pl'"><ProfitLoss ref="plRef" /></div>
-      <div v-if="activeTab === 'bank-import'"><BankImport ref="bankRef" /></div>
-      <div v-if="activeTab === 'recurring-billing'"><RecurringBilling ref="billingRef" /></div>
-    </div>
+    <div v-if="activeTab === 'board-reports'"><BoardReports ref="boardRef" /></div>
+    <div v-if="activeTab === 'pricing'"><PricingIntelligence /></div>
+    <div v-if="activeTab === 'vendors'"><VendorIntelligence /></div>
+    <div v-if="activeTab === 'investments'"><Investments ref="invRef" /></div>
+    <div v-if="activeTab === 'departments'"><Departments :data="departments" @refresh="fetchDepartments" /></div>
   </div>
 </template>
 
@@ -92,6 +85,16 @@ import FinancialYear from '../components/finance/FinancialYear.vue'
 import PettyCash from '../components/finance/PettyCash.vue'
 import PurchaseOrders from '../components/finance/PurchaseOrders.vue'
 import AuditTrail from '../components/finance/AuditTrail.vue'
+import Transactions from '../views/Transactions.vue'
+import Refunds from '../views/Refunds.vue'
+import CustomerIntelligence from '../views/CustomerIntelligence.vue'
+import PaymentAllocation from '../components/finance/PaymentAllocation.vue'
+import SLACredits from '../components/finance/SLACredits.vue'
+import LoanRepayment from '../components/finance/LoanRepayment.vue'
+import MultiBranch from '../components/finance/MultiBranch.vue'
+import InsuranceManagement from '../components/finance/InsuranceManagement.vue'
+import DividendDistribution from '../components/finance/DividendDistribution.vue'
+import CLVCohorts from '../components/finance/CLVCohorts.vue'
 
 export default {
   name: 'Finance',
@@ -103,46 +106,39 @@ export default {
     Invoices, VATDashboard, TaxCalendar, CreditNotes,
     Payroll, AssetRegister, AccountsPayable, PaymentReminders,
     ARCollection, ProfitLoss, BankImport, RecurringBilling,
+    ExpenseNotifications, FinancialYear, PettyCash, PurchaseOrders, AuditTrail,
+    PaymentAllocation, SLACredits, LoanRepayment, MultiBranch, InsuranceManagement, DividendDistribution, CLVCohorts,
+    Transactions, Refunds, CustomerIntelligence,
+  },
+  props: {
+    activeTab: { type: String, default: 'analytics' }
   },
   setup() {
     const { makeRequest } = useApi()
     return { makeRequest }
   },
+  computed: {
+    activeTabLabel() {
+      const allItems = [
+        { id: 'analytics', name: 'Analytics' }, { id: 'kpi', name: 'KPI' }, { id: 'pl', name: 'P&L' }, { id: 'budget', name: 'Budget' },
+        { id: 'invoices', name: 'Invoices' }, { id: 'revenue-streams', name: 'Revenue Streams' }, { id: 'recurring-billing', name: 'Recurring Billing' },
+        { id: 'ar-collection', name: 'AR Collection' }, { id: 'revenue-at-risk', name: 'At Risk' }, { id: 'reminders', name: 'Reminders' },
+        { id: 'payment-allocation', name: 'Allocations' }, { id: 'clv-cohorts', name: 'CLV Cohorts' },
+        { id: 'expenses', name: 'Expenses' }, { id: 'payroll', name: 'Payroll' }, { id: 'ap', name: 'Payables' },
+        { id: 'assets', name: 'Assets' }, { id: 'petty-cash', name: 'Petty Cash' }, { id: 'purchase-orders', name: 'Purchase Orders' }, { id: 'loan-repayment', name: 'Loan Schedule' },
+        { id: 'vat', name: 'VAT' }, { id: 'tax', name: 'Tax Calendar' }, { id: 'credit-notes', name: 'Credit Notes' },
+        { id: 'financial-year', name: 'Financial Year' }, { id: 'audit-trail', name: 'Audit Trail' }, { id: 'dividends', name: 'Dividends' },
+        { id: 'bank-import', name: 'Bank Import' }, { id: 'reconciliation', name: 'Reconciliation' }, { id: 'branches', name: 'Branches' },
+        { id: 'insurance', name: 'Insurance' }, { id: 'sla-credits', name: 'SLA Credits' }, { id: 'notifications', name: 'Notifications' },
+        { id: 'transactions', name: 'Transactions' }, { id: 'refunds', name: 'Refunds' }, { id: 'customer-intelligence', name: 'Intelligence' },
+        { id: 'board-reports', name: 'Board Reports' }, { id: 'pricing', name: 'Pricing' }, { id: 'vendors', name: 'Vendors' },
+        { id: 'investments', name: 'Investments' }, { id: 'departments', name: 'Departments' },
+      ]
+      return allItems.find(i => i.id === this.activeTab)?.name || ''
+    }
+  },
   data() {
     return {
-      activeTab: 'analytics',
-      tabs: [
-        // Core
-        { id: 'analytics',       name: '📊 Analytics' },
-        { id: 'kpi',             name: '🎯 KPI' },
-        // Revenue
-        { id: 'revenue-streams', name: '💰 Revenue' },
-        { id: 'invoices',        name: '🧾 Invoices' },
-        { id: 'revenue-at-risk', name: '⚠️ At Risk' },
-        // Expenses & Payroll
-        { id: 'expenses',        name: '💸 Expenses' },
-        { id: 'payroll',         name: '👥 Payroll' },
-        { id: 'ap',              name: '🏦 Payables' },
-        { id: 'assets',          name: '🏗️ Assets' },
-        // Tax & Compliance
-        { id: 'vat',             name: '📋 VAT' },
-        { id: 'tax',             name: '🗓️ Tax Calendar' },
-        { id: 'credit-notes',    name: '📝 Credit Notes' },
-        { id: 'reminders',       name: '🔔 Reminders' },
-        { id: 'ar-collection',   name: '📥 AR Collection' },
-        { id: 'pl',              name: '📉 P&L' },
-        { id: 'bank-import',     name: '🏦 Bank Import' },
-        { id: 'recurring-billing', name: '🔁 Recurring' },
-        // Planning & Reporting
-        { id: 'budget',          name: '📊 Budget' },
-        { id: 'board-reports',   name: '📑 Board Reports' },
-        { id: 'reconciliation',  name: '🔄 Reconciliation' },
-        // Other
-        { id: 'pricing',         name: '💡 Pricing' },
-        { id: 'vendors',         name: '🏭 Vendors' },
-        { id: 'investments',     name: '📈 Investments' },
-        { id: 'departments',     name: '🏢 Departments' },
-      ],
       loading: false,
       metrics: { mrr: 0, arr: 0, arpu: 0, ltv: 0, growth_rate: 0 },
       forecastData: { historical: [], forecast: [], avg_monthly_growth: 0, trend: 'upward' },
@@ -150,6 +146,26 @@ export default {
       revenueStreams: [],
       expenses: [],
       departments: []
+    }
+  },
+  computed: {
+    activeTabLabel() {
+      const allItems = [
+        { id: 'analytics', name: 'Analytics' }, { id: 'kpi', name: 'KPI' }, { id: 'pl', name: 'P&L' }, { id: 'budget', name: 'Budget' },
+        { id: 'invoices', name: 'Invoices' }, { id: 'revenue-streams', name: 'Revenue Streams' }, { id: 'recurring-billing', name: 'Recurring Billing' },
+        { id: 'ar-collection', name: 'AR Collection' }, { id: 'revenue-at-risk', name: 'At Risk' }, { id: 'reminders', name: 'Reminders' },
+        { id: 'payment-allocation', name: 'Allocations' }, { id: 'clv-cohorts', name: 'CLV Cohorts' },
+        { id: 'expenses', name: 'Expenses' }, { id: 'payroll', name: 'Payroll' }, { id: 'ap', name: 'Payables' },
+        { id: 'assets', name: 'Assets' }, { id: 'petty-cash', name: 'Petty Cash' }, { id: 'purchase-orders', name: 'Purchase Orders' }, { id: 'loan-repayment', name: 'Loan Schedule' },
+        { id: 'vat', name: 'VAT' }, { id: 'tax', name: 'Tax Calendar' }, { id: 'credit-notes', name: 'Credit Notes' },
+        { id: 'financial-year', name: 'Financial Year' }, { id: 'audit-trail', name: 'Audit Trail' }, { id: 'dividends', name: 'Dividends' },
+        { id: 'bank-import', name: 'Bank Import' }, { id: 'reconciliation', name: 'Reconciliation' }, { id: 'branches', name: 'Branches' },
+        { id: 'insurance', name: 'Insurance' }, { id: 'sla-credits', name: 'SLA Credits' }, { id: 'notifications', name: 'Notifications' },
+        { id: 'transactions', name: 'Transactions' }, { id: 'refunds', name: 'Refunds' }, { id: 'customer-intelligence', name: 'Intelligence' },
+        { id: 'board-reports', name: 'Board Reports' }, { id: 'pricing', name: 'Pricing' }, { id: 'vendors', name: 'Vendors' },
+        { id: 'investments', name: 'Investments' }, { id: 'departments', name: 'Departments' },
+      ]
+      return allItems.find(i => i.id === this.activeTab)?.name || ''
     }
   },
   methods: {

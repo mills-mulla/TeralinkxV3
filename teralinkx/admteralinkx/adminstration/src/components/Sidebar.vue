@@ -138,30 +138,47 @@
             <h3 class="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide">Financial</h3>
           </div>
           <div v-else class="border-t border-slate-200 dark:border-slate-700 my-2"></div>
+
+          <!-- Finance top-level button -->
           <button
-            v-for="item in financialItems"
-            :key="item.id"
-            @click="selectComponent(item.component)"
-            :title="isCollapsed ? item.name : ''"
-            class="w-full flex items-center rounded-xl transition-all duration-200 text-left group text-sm relative overflow-hidden"
+            @click="selectComponent('Finance')"
+            :title="isCollapsed ? 'Finance' : ''"
+            class="w-full flex items-center rounded-xl transition-all duration-200 text-left text-sm relative overflow-hidden"
             :class="[
               isCollapsed ? 'px-2 py-2.5 justify-center' : 'px-3 py-2.5',
-              activeComponent === item.component
-                ? 'font-medium shadow-sm'
-                : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+              activeComponent === 'Finance' ? 'font-medium shadow-sm' : 'hover:bg-slate-100 dark:hover:bg-slate-800'
             ]"
-            :style="activeComponent === item.component ? `background: ${item.color}; color: white;` : ''"
+            :style="activeComponent === 'Finance' ? 'background: #8b5cf6; color: white;' : ''"
           >
-            <span :class="isCollapsed ? '' : 'mr-3'" v-html="item.icon" :style="activeComponent === item.component ? 'color: white;' : `color: ${item.color}`"></span>
-            <span v-if="!isCollapsed" class="flex-1">{{ item.name }}</span>
-            <span 
-              v-if="!isCollapsed && getBadgeCount(item.component) > 0"
-              class="text-xs rounded-full px-2 py-0.5 min-w-5 text-center font-bold shadow-sm"
-              :style="activeComponent === item.component ? 'background-color: white; color: ' + item.color : `background-color: ${item.color}; color: white;`"
-            >
-              {{ getBadgeCount(item.component) }}
+            <span :class="isCollapsed ? '' : 'mr-3'" :style="activeComponent === 'Finance' ? 'color:white' : 'color:#8b5cf6'">
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
             </span>
+            <span v-if="!isCollapsed" class="flex-1">Finance</span>
           </button>
+
+          <!-- Finance sub-groups accordion (only when Finance is active and sidebar is open) -->
+          <template v-if="activeComponent === 'Finance' && !isCollapsed">
+            <div v-for="group in financeGroups" :key="group.id">
+              <button @click="toggleFinanceGroup(group.id)"
+                class="w-full flex items-center gap-2 pl-5 pr-3 py-1.5 text-xs font-semibold transition-colors"
+                :class="activeFinanceGroup === group.id ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'">
+                <span>{{ group.icon }}</span>
+                <span class="flex-1 text-left">{{ group.label }}</span>
+                <svg class="w-3 h-3 transition-transform" :class="activeFinanceGroup === group.id ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              <div v-if="activeFinanceGroup === group.id">
+                <button v-for="item in group.items" :key="item.id" @click="selectFinanceTab(item.id)"
+                  :class="['w-full text-left pl-9 pr-3 py-1.5 text-xs transition-colors border-l-2',
+                    activeFinanceTab === item.id
+                      ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 font-medium'
+                      : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800']">
+                  {{ item.name }}
+                </button>
+              </div>
+            </div>
+          </template>
 
           <!-- Network Section -->
           <div v-if="!isCollapsed" class="px-3 py-2 mt-4">
@@ -297,7 +314,7 @@ export default {
       default: false
     }
   },
-  emits: ['component-selected', 'refresh-data', 'close-mobile', 'sidebar-toggle'],
+  emits: ['component-selected', 'finance-tab-selected', 'refresh-data', 'close-mobile', 'sidebar-toggle'],
   setup() {
     const { isDark, isAuto, toggleTheme, setAutoTheme } = useTheme()
     
@@ -312,9 +329,66 @@ export default {
       activeComponent: 'Dashboard',
       isMobile: false,
       isCollapsed: false,
+      activeFinanceGroup: 'overview',
+      activeFinanceTab: 'analytics',
+      financeGroups: [
+        { id: 'overview', icon: '📊', label: 'Overview', items: [
+          { id: 'analytics',    name: 'Analytics' },
+          { id: 'kpi',          name: 'KPI' },
+          { id: 'pl',           name: 'P&L' },
+          { id: 'budget',       name: 'Budget' },
+        ]},
+        { id: 'revenue', icon: '💰', label: 'Revenue', items: [
+          { id: 'invoices',           name: 'Invoices' },
+          { id: 'revenue-streams',    name: 'Revenue Streams' },
+          { id: 'recurring-billing',  name: 'Recurring Billing' },
+          { id: 'ar-collection',      name: 'AR Collection' },
+          { id: 'revenue-at-risk',    name: 'At Risk' },
+          { id: 'reminders',          name: 'Reminders' },
+          { id: 'payment-allocation', name: 'Allocations' },
+          { id: 'clv-cohorts',        name: 'CLV Cohorts' },
+        ]},
+        { id: 'costs', icon: '💸', label: 'Costs', items: [
+          { id: 'expenses',        name: 'Expenses' },
+          { id: 'payroll',         name: 'Payroll' },
+          { id: 'ap',              name: 'Payables' },
+          { id: 'assets',          name: 'Assets' },
+          { id: 'petty-cash',      name: 'Petty Cash' },
+          { id: 'purchase-orders', name: 'Purchase Orders' },
+          { id: 'loan-repayment',  name: 'Loan Schedule' },
+        ]},
+        { id: 'compliance', icon: '📋', label: 'Compliance', items: [
+          { id: 'vat',            name: 'VAT' },
+          { id: 'tax',            name: 'Tax Calendar' },
+          { id: 'credit-notes',   name: 'Credit Notes' },
+          { id: 'financial-year', name: 'Financial Year' },
+          { id: 'audit-trail',    name: 'Audit Trail' },
+          { id: 'dividends',      name: 'Dividends' },
+        ]},
+        { id: 'operations', icon: '🏗️', label: 'Operations', items: [
+          { id: 'bank-import',    name: 'Bank Import' },
+          { id: 'reconciliation', name: 'Reconciliation' },
+          { id: 'branches',       name: 'Branches' },
+          { id: 'insurance',      name: 'Insurance' },
+          { id: 'sla-credits',    name: 'SLA Credits' },
+          { id: 'notifications',  name: 'Notifications' },
+        ]},
+        { id: 'customer', icon: '👥', label: 'Customer', items: [
+          { id: 'transactions',          name: 'Transactions' },
+          { id: 'refunds',               name: 'Refunds' },
+          { id: 'customer-intelligence', name: 'Intelligence' },
+          { id: 'churn',                 name: 'Churn' },
+        ]},
+        { id: 'reports', icon: '📑', label: 'Reports', items: [
+          { id: 'board-reports', name: 'Board Reports' },
+          { id: 'pricing',       name: 'Pricing' },
+          { id: 'vendors',       name: 'Vendors' },
+          { id: 'investments',   name: 'Investments' },
+          { id: 'departments',   name: 'Departments' },
+        ]},
+      ],
       overviewItems: [
         { id: 1, name: 'Dashboard', icon: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>', component: 'Dashboard', color: '#3b82f6' },
-        { id: 2, name: 'Analytics', icon: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>', component: 'Analytics', color: '#8b5cf6' },
       ],
       userManagementItems: [
         { id: 3, name: 'Clients', icon: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>', component: 'Clients', color: '#10b981' },
@@ -349,9 +423,18 @@ export default {
     selectComponent(componentName) {
       this.activeComponent = componentName;
       this.$emit('component-selected', componentName);
-      if (this.isMobile) {
-        this.$emit('close-mobile');
-      }
+      if (this.isMobile) this.$emit('close-mobile');
+    },
+    toggleFinanceGroup(id) {
+      this.activeFinanceGroup = this.activeFinanceGroup === id ? null : id
+    },
+    selectFinanceTab(tabId) {
+      this.activeFinanceTab = tabId
+      // auto-open the group containing this tab
+      const group = this.financeGroups.find(g => g.items.some(i => i.id === tabId))
+      if (group) this.activeFinanceGroup = group.id
+      this.$emit('finance-tab-selected', tabId)
+      if (this.isMobile) this.$emit('close-mobile')
     },
     
     toggleSidebar() {

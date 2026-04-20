@@ -98,6 +98,24 @@
       </div>
     </div>
 
+    <!-- Currency Exposure Chart -->
+    <div v-if="pl && pl.currency_exposure" class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
+      <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-4">Currency Exposure</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div v-for="(data, currency) in pl.currency_exposure" :key="currency"
+          class="bg-slate-50 dark:bg-slate-900 rounded-lg p-4">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-sm font-semibold text-slate-900 dark:text-white">{{ currency }}</span>
+            <span class="text-xs px-2 py-1 rounded-full" :class="data.gain_loss >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'">
+              {{ data.gain_loss >= 0 ? '+' : '' }}KES {{ fmt(data.gain_loss) }}
+            </span>
+          </div>
+          <p class="text-xs text-slate-500">Exposure: {{ data.foreign_amount }} {{ currency }}</p>
+          <p class="text-xs text-slate-500">Rate: {{ data.current_rate }} vs {{ data.original_rate }}</p>
+        </div>
+      </div>
+    </div>
+
     <div v-if="!pl && !loading" class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-12 text-center text-slate-400">
       Select a period to view P&L statement
     </div>

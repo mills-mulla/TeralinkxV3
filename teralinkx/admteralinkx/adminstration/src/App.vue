@@ -6,6 +6,7 @@
         <!-- Sidebar Component -->
         <Sidebar 
           @component-selected="setActiveComponent"
+          @finance-tab-selected="setFinanceTab"
           @refresh-data="refreshData"
           :is-mobile-open="isMobileSidebarOpen"
           @close-mobile="closeMobileSidebar"
@@ -189,7 +190,7 @@
           <!-- Main Content -->
           <div class="p-6">
             <transition name="component-fade" mode="out-in">
-              <component :is="activeComponent" :key="activeComponent" />
+              <component :is="activeComponent" :key="activeComponent" :active-tab="activeComponent === 'Finance' ? activeFinanceTab : undefined" />
             </transition>
           </div>
         </main>
@@ -226,7 +227,6 @@ import { useTheme } from './composables/useTheme'
 import Sidebar from './components/Sidebar.vue'
 import RealTimeNotifications from './components/RealTimeNotifications.vue'
 import Dashboard from './views/Dashboard.vue'
-import Analytics from './views/Analytics.vue'
 import Clients from './views/Clients.vue'
 import Users from './views/Users.vue'
 import Devices from './views/Devices.vue'
@@ -261,7 +261,7 @@ export default {
     Sidebar,
     RealTimeNotifications,
     Dashboard,
-    Analytics,
+    CustomerIntelligence,
     Clients,
     Users,
     Devices,
@@ -281,7 +281,9 @@ export default {
   data() {
     return {
       activeComponent: 'Dashboard',
+      activeFinanceTab: 'analytics',
       isMobileSidebarOpen: false,
+      hideValues: false,
       isSidebarCollapsed: false,
       showToast: false,
       toastMessage: '',
@@ -346,14 +348,14 @@ export default {
   methods: {
     setActiveComponent(componentName) {
       this.activeComponent = componentName;
-      // Close mobile sidebar when component changes on mobile
-      if (window.innerWidth < 1024) {
-        this.isMobileSidebarOpen = false;
-      }
-      // Close dropdowns
+      if (window.innerWidth < 1024) this.isMobileSidebarOpen = false;
       this.showNotifications = false
       this.showUserMenu = false
       this.showSearchResults = false
+    },
+    setFinanceTab(tabId) {
+      this.activeFinanceTab = tabId
+      this.activeComponent = 'Finance'
     },
     
     getUserInitials() {

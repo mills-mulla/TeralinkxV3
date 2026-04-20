@@ -1,50 +1,90 @@
 <template>
-  <div class="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl p-6 text-white shadow-lg">
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-lg font-semibold flex items-center gap-2">
-        <div class="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-        Real-Time Monitor
-      </h2>
-      <span class="text-xs opacity-75">Updates every 5s</span>
+  <div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+    <!-- Header bar -->
+    <div class="flex items-center justify-between px-4 py-2.5 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+      <div class="flex items-center gap-2">
+        <span class="relative flex h-2 w-2">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+        </span>
+        <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Live Monitor</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-[10px] text-slate-400">{{ lastUpdated }}</span>
+        <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400">5s</span>
+      </div>
     </div>
-    
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+    <!-- Metrics row -->
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 divide-x divide-y md:divide-y-0 divide-slate-200 dark:divide-slate-700">
+
       <!-- Today's Revenue -->
-      <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-        <div class="flex items-center gap-2 mb-2">
-          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
-          </svg>
-          <span class="text-sm opacity-90">Today's Revenue</span>
+      <div class="px-4 py-3">
+        <p class="text-[10px] text-slate-500 dark:text-slate-400 mb-1">Today's Revenue</p>
+        <div class="flex items-center gap-1.5">
+          <span class="text-sm font-bold text-slate-900 dark:text-white" :class="hideRevenue ? 'blur-sm select-none' : ''">
+            KSh {{ formatNumber(todayRevenue) }}
+          </span>
+          <button @click="hideRevenue = !hideRevenue" class="text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 transition-colors">
+            <svg v-if="hideRevenue" class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+            <svg v-else class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/></svg>
+          </button>
         </div>
-        <p class="text-3xl font-bold">KSh {{ formatNumber(todayRevenue) }}</p>
-        <p class="text-xs opacity-75 mt-1">{{ todayTransactions }} transactions</p>
+        <p class="text-[10px] text-slate-400 mt-0.5">{{ todayTransactions }} txns</p>
       </div>
 
       <!-- Online Users -->
-      <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-        <div class="flex items-center gap-2 mb-2">
-          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
-          </svg>
-          <span class="text-sm opacity-90">Online Users</span>
-        </div>
-        <p class="text-3xl font-bold">{{ onlineUsers }}</p>
-        <p class="text-xs opacity-75 mt-1">{{ activeSessions }} active sessions</p>
+      <div class="px-4 py-3">
+        <p class="text-[10px] text-slate-500 dark:text-slate-400 mb-1">Online Now</p>
+        <p class="text-sm font-bold text-slate-900 dark:text-white">{{ onlineUsers }}</p>
+        <p class="text-[10px] text-slate-400 mt-0.5">{{ activeSessions }} sessions</p>
       </div>
 
-      <!-- Avg Response Time -->
-      <div class="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-        <div class="flex items-center gap-2 mb-2">
-          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
-          </svg>
-          <span class="text-sm opacity-90">Avg Response</span>
-        </div>
-        <p class="text-3xl font-bold">{{ avgResponseTime }}ms</p>
-        <p class="text-xs opacity-75 mt-1" :class="responseStatus === 'good' ? 'text-emerald-200' : 'text-amber-200'">
-          {{ responseStatus === 'good' ? 'Excellent' : 'Normal' }}
+      <!-- Active Ratio -->
+      <div class="px-4 py-3">
+        <p class="text-[10px] text-slate-500 dark:text-slate-400 mb-1">Active Ratio</p>
+        <p class="text-sm font-bold" :class="activeRatio > 50 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'">{{ activeRatio }}%</p>
+        <p class="text-[10px] text-slate-400 mt-0.5">clients online</p>
+      </div>
+
+      <!-- New Today -->
+      <div class="px-4 py-3">
+        <p class="text-[10px] text-slate-500 dark:text-slate-400 mb-1">New Today</p>
+        <p class="text-sm font-bold text-slate-900 dark:text-white">{{ newClientsToday }}</p>
+        <p class="text-[10px] text-slate-400 mt-0.5">signups</p>
+      </div>
+
+      <!-- Response Time -->
+      <div class="px-4 py-3">
+        <p class="text-[10px] text-slate-500 dark:text-slate-400 mb-1">API Response</p>
+        <p class="text-sm font-bold" :class="avgResponseTime < 200 ? 'text-emerald-600 dark:text-emerald-400' : avgResponseTime < 500 ? 'text-amber-600 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400'">
+          {{ avgResponseTime }}ms
         </p>
+        <p class="text-[10px] mt-0.5" :class="avgResponseTime < 200 ? 'text-emerald-500' : avgResponseTime < 500 ? 'text-amber-500' : 'text-rose-500'">
+          {{ avgResponseTime < 200 ? 'Excellent' : avgResponseTime < 500 ? 'Normal' : 'Slow' }}
+        </p>
+      </div>
+
+      <!-- Packages Sold Today -->
+      <div class="px-4 py-3">
+        <p class="text-[10px] text-slate-500 dark:text-slate-400 mb-1">Packages Sold</p>
+        <p class="text-sm font-bold text-slate-900 dark:text-white">{{ todayTransactions }}</p>
+        <p class="text-[10px] text-slate-400 mt-0.5">today</p>
+      </div>
+
+    </div>
+
+    <!-- Activity ticker -->
+    <div v-if="recentActivity.length > 0" class="border-t border-slate-200 dark:border-slate-700 px-4 py-2 flex items-center gap-3 overflow-hidden">
+      <span class="text-[10px] font-medium text-slate-400 flex-shrink-0">LIVE</span>
+      <div class="flex-1 overflow-hidden">
+        <transition name="ticker" mode="out-in">
+          <p :key="tickerIndex" class="text-[10px] text-slate-600 dark:text-slate-400 truncate">
+            <span class="font-medium text-slate-900 dark:text-white">{{ recentActivity[tickerIndex]?.user }}</span>
+            {{ recentActivity[tickerIndex]?.description }}
+            <span class="text-slate-400 ml-1">{{ recentActivity[tickerIndex]?.time }}</span>
+          </p>
+        </transition>
       </div>
     </div>
   </div>
@@ -66,42 +106,50 @@ export default {
       onlineUsers: 0,
       activeSessions: 0,
       avgResponseTime: 0,
-      updateInterval: null
-    }
-  },
-  computed: {
-    responseStatus() {
-      return this.avgResponseTime < 200 ? 'good' : 'normal'
+      activeRatio: 0,
+      newClientsToday: 0,
+      recentActivity: [],
+      tickerIndex: 0,
+      hideRevenue: false,
+      lastUpdated: 'Loading...',
+      updateInterval: null,
+      tickerInterval: null
     }
   },
   mounted() {
     this.fetchRealTimeData()
-    // Update every 5 seconds
-    this.updateInterval = setInterval(() => {
-      this.fetchRealTimeData()
-    }, 5000)
+    this.updateInterval = setInterval(() => this.fetchRealTimeData(), 5000)
+    this.tickerInterval = setInterval(() => {
+      if (this.recentActivity.length > 1) {
+        this.tickerIndex = (this.tickerIndex + 1) % this.recentActivity.length
+      }
+    }, 3000)
   },
   beforeUnmount() {
-    if (this.updateInterval) {
-      clearInterval(this.updateInterval)
-    }
+    clearInterval(this.updateInterval)
+    clearInterval(this.tickerInterval)
   },
   methods: {
     async fetchRealTimeData() {
       try {
         const startTime = Date.now()
-        const metrics = await this.makeRequest('get', 'suapi/dashboard-metrics/', null, true)
-        
+        const [metrics, activity] = await Promise.all([
+          this.makeRequest('get', 'suapi/dashboard-metrics/', null, true),
+          this.makeRequest('get', 'suapi/dashboard-metrics/recent-activity/', null, false).catch(() => ({ data: [] }))
+        ])
+        this.avgResponseTime = Math.round(Date.now() - startTime)
         this.todayRevenue = metrics.totalRevenue || 0
         this.todayTransactions = metrics.totalPackagesSold || 0
         this.onlineUsers = metrics.activeUsers || 0
         this.activeSessions = metrics.activeUsers || 0
-        this.avgResponseTime = Math.round(Date.now() - startTime)
+        this.activeRatio = metrics.activeRatio || 0
+        this.newClientsToday = metrics.newClientsToday || 0
+        this.recentActivity = (activity.data || []).slice(0, 10)
+        this.lastUpdated = new Date().toLocaleTimeString()
       } catch (error) {
-        // Silent fail for real-time updates
+        this.lastUpdated = 'Error'
       }
     },
-    
     formatNumber(num) {
       return new Intl.NumberFormat().format(Math.round(num))
     }
@@ -110,12 +158,9 @@ export default {
 </script>
 
 <style scoped>
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-.animate-pulse {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
+.ticker-enter-active, .ticker-leave-active { transition: all 0.4s ease; }
+.ticker-enter-from { opacity: 0; transform: translateY(8px); }
+.ticker-leave-to { opacity: 0; transform: translateY(-8px); }
+@keyframes ping { 75%, 100% { transform: scale(2); opacity: 0; } }
+.animate-ping { animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite; }
 </style>

@@ -40,29 +40,19 @@
     <!-- Metrics -->
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 animate-slide-up">
       <ModernMetricCard title="Total Clients" :value="stats.total_clients" color="blue" :trend="stats.total_clients_trend?.direction" :trendValue="stats.total_clients_trend?.value">
-        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
-        </svg>
+        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
       </ModernMetricCard>
-      <ModernMetricCard title="Total Balance" :value="'KSh ' + formatNumber(stats.total_balance)" color="emerald" trend="stable" trendValue="0%">
-        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
-        </svg>
+      <ModernMetricCard title="At-Risk" :value="stats.at_risk_clients || 0" color="rose" trend="stable" trendValue="">
+        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
       </ModernMetricCard>
       <ModernMetricCard title="Active" :value="stats.active_clients" color="cyan" :trend="stats.active_clients_trend?.direction" :trendValue="stats.active_clients_trend?.value" class="col-span-2 md:col-span-1">
-        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-        </svg>
+        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
       </ModernMetricCard>
-      <ModernMetricCard title="Premium" :value="stats.premium_clients" color="purple" :trend="stats.premium_clients_trend?.direction" :trendValue="stats.premium_clients_trend?.value">
-        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-        </svg>
+      <ModernMetricCard title="Suspended" :value="stats.suspended_clients || 0" color="amber" trend="stable" trendValue="">
+        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
       </ModernMetricCard>
-      <ModernMetricCard title="New (7d)" :value="stats.new_clients_7d" color="amber" :trend="stats.new_clients_7d_trend?.direction" :trendValue="stats.new_clients_7d_trend?.value">
-        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-        </svg>
+      <ModernMetricCard title="New (7d)" :value="stats.new_clients_7d" color="emerald" :trend="stats.new_clients_7d_trend?.direction" :trendValue="stats.new_clients_7d_trend?.value">
+        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
       </ModernMetricCard>
     </div>
 
@@ -70,12 +60,7 @@
     <div class="space-y-3 animate-slide-up" style="animation-delay: 0.1s">
       <div class="flex items-center gap-2">
         <div class="flex-1">
-          <input
-            v-model="searchTerm"
-            type="text"
-            placeholder="Search by username, phone, or account..."
-            class="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs"
-          />
+          <input v-model="searchTerm" type="text" placeholder="Search by username, phone, or account..." class="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs" />
         </div>
         <select v-model="statusFilter" class="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs">
           <option value="">All Status</option>
@@ -90,6 +75,22 @@
           <option value="business">Business</option>
           <option value="enterprise">Enterprise</option>
         </select>
+        <select v-model="churnFilter" class="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs">
+          <option value="">All Risk</option>
+          <option value="high">High Risk (&gt;0.7)</option>
+          <option value="medium">Medium Risk</option>
+          <option value="low">Low Risk</option>
+        </select>
+      </div>
+
+      <!-- Bulk Actions -->
+      <div v-if="selectedIds.length > 0" class="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-lg">
+        <span class="text-xs font-medium text-blue-700 dark:text-blue-400">{{ selectedIds.length }} selected</span>
+        <button @click="bulkAction('suspend')" class="px-2 py-1 text-[10px] font-medium rounded bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 hover:bg-amber-200">Suspend</button>
+        <button @click="bulkAction('activate')" class="px-2 py-1 text-[10px] font-medium rounded bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-200">Activate</button>
+        <button @click="bulkAction('reset_logins')" class="px-2 py-1 text-[10px] font-medium rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200">Reset Logins</button>
+        <button @click="exportSelected" class="px-2 py-1 text-[10px] font-medium rounded bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 hover:bg-blue-200">Export CSV</button>
+        <button @click="selectedIds = []" class="ml-auto text-[10px] text-slate-500 hover:text-slate-700">Clear</button>
       </div>
 
       <!-- Table -->
@@ -98,30 +99,35 @@
           <table class="w-full">
             <thead class="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
               <tr>
+                <th class="px-3 py-2 w-6"><input type="checkbox" @change="toggleSelectAll" :checked="selectedIds.length === filteredClients.length && filteredClients.length > 0" class="rounded" /></th>
                 <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Client</th>
                 <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Contact</th>
                 <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Tier</th>
                 <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Balance</th>
-                <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Points</th>
+                <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Voucher</th>
                 <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Status</th>
-                <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Joined</th>
+                <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Last Seen</th>
                 <th class="px-3 py-2 text-right text-[10px] font-medium text-slate-600 dark:text-slate-400">Actions</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
               <tr v-for="client in filteredClients" :key="client.id" @click="viewClient(client)" class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer">
+                <td class="px-3 py-2" @click.stop>
+                  <input type="checkbox" :value="client.id" v-model="selectedIds" class="rounded" />
+                </td>
                 <td class="px-3 py-2">
                   <div class="flex items-center gap-2">
                     <div v-if="client.profile_image" class="w-7 h-7 rounded-full overflow-hidden flex-shrink-0">
                       <img :src="client.profile_image" alt="Profile" class="w-full h-full object-cover" @error="handleImageError" />
                     </div>
                     <div v-else class="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-                      <svg class="w-4 h-4 text-slate-400 dark:text-slate-500" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                      </svg>
+                      <svg class="w-4 h-4 text-slate-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
                     </div>
                     <div>
-                      <p class="text-xs font-medium text-slate-900 dark:text-white">{{ client.user_username }}</p>
+                      <div class="flex items-center gap-1">
+                        <p class="text-xs font-medium text-slate-900 dark:text-white">{{ client.user_username }}</p>
+                        <span v-if="client.churn_score" class="w-1.5 h-1.5 rounded-full flex-shrink-0" :class="client.churn_score > 0.7 ? 'bg-rose-500' : client.churn_score > 0.3 ? 'bg-amber-500' : 'bg-emerald-500'" :title="'Churn risk: ' + (client.churn_score * 100).toFixed(0) + '%'"></span>
+                      </div>
                       <p class="text-[10px] text-slate-500 dark:text-slate-400">{{ client.account }}</p>
                     </div>
                   </div>
@@ -131,46 +137,32 @@
                   <p class="text-[10px] text-slate-500 dark:text-slate-400">{{ client.user_email || 'No email' }}</p>
                 </td>
                 <td class="px-3 py-2">
-                  <span class="px-1.5 py-0.5 text-[10px] font-medium rounded-full" :class="getTierBadge(client.account_tier)">
-                    {{ client.account_tier }}
-                  </span>
+                  <span class="px-1.5 py-0.5 text-[10px] font-medium rounded-full" :class="getTierBadge(client.account_tier)">{{ client.account_tier }}</span>
                 </td>
                 <td class="px-3 py-2">
                   <p class="text-xs font-semibold text-slate-900 dark:text-white">KSh {{ formatNumber(client.balance) }}</p>
                 </td>
                 <td class="px-3 py-2">
-                  <div class="flex items-center gap-1">
-                    <svg class="w-3 h-3 text-amber-500" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
-                    </svg>
-                    <span class="text-xs text-slate-900 dark:text-white">{{ client.reward_points }}</span>
-                  </div>
+                  <span v-if="client.active_voucher" class="px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400" :title="client.active_voucher">Active</span>
+                  <span v-else class="text-[10px] text-slate-400">—</span>
                 </td>
                 <td class="px-3 py-2">
-                  <span class="px-1.5 py-0.5 text-[10px] font-medium rounded-full" :class="getStatusBadge(client.status)">
-                    {{ client.status }}
-                  </span>
+                  <span class="px-1.5 py-0.5 text-[10px] font-medium rounded-full" :class="getStatusBadge(client.status)">{{ client.status }}</span>
                 </td>
-                <td class="px-3 py-2 text-xs text-slate-600 dark:text-slate-400">
-                  {{ formatDate(client.created_at) }}
-                </td>
+                <td class="px-3 py-2 text-xs text-slate-600 dark:text-slate-400">{{ formatDate(client.last_seen) }}</td>
                 <td class="px-3 py-2 text-right">
                   <div class="flex items-center justify-end gap-0.5">
-                    <button @click.stop="viewClient(client)" class="p-1 hover:bg-slate-100 dark:hover:bg-slate-600 rounded transition-colors" title="View">
-                      <svg class="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
+                    <button @click.stop="viewClient(client)" class="p-1 hover:bg-slate-100 dark:hover:bg-slate-600 rounded" title="View">
+                      <svg class="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                     </button>
-                    <button @click.stop="editClient(client)" class="p-1 hover:bg-blue-100 dark:hover:bg-blue-600 rounded transition-colors" title="Edit">
-                      <svg class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
+                    <button @click.stop="editClient(client)" class="p-1 hover:bg-blue-100 dark:hover:bg-blue-600 rounded" title="Edit">
+                      <svg class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                     </button>
-                    <button @click.stop="deleteClient(client)" class="p-1 hover:bg-red-100 dark:hover:bg-red-600 rounded transition-colors" title="Delete">
-                      <svg class="w-3.5 h-3.5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
+                    <button @click.stop="quickToggleSuspend(client)" class="p-1 rounded" :class="client.status === 'suspended' ? 'hover:bg-emerald-100 dark:hover:bg-emerald-600' : 'hover:bg-amber-100 dark:hover:bg-amber-600'" :title="client.status === 'suspended' ? 'Activate' : 'Suspend'">
+                      <svg class="w-3.5 h-3.5" :class="client.status === 'suspended' ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+                    </button>
+                    <button @click.stop="deleteClient(client)" class="p-1 hover:bg-red-100 dark:hover:bg-red-600 rounded" title="Delete">
+                      <svg class="w-3.5 h-3.5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     </button>
                   </div>
                 </td>
@@ -265,6 +257,8 @@ export default {
     const searchTerm = ref('')
     const statusFilter = ref('')
     const tierFilter = ref('')
+    const churnFilter = ref('')
+    const selectedIds = ref([])
     const showAddModal = ref(false)
     const showEditModal = ref(false)
     const showDetailModal = ref(false)
@@ -296,6 +290,9 @@ export default {
       if (tierFilter.value) {
         result = result.filter(c => c.account_tier === tierFilter.value)
       }
+      if (churnFilter.value === 'high') result = result.filter(c => (c.churn_score || 0) > 0.7)
+      else if (churnFilter.value === 'medium') result = result.filter(c => (c.churn_score || 0) > 0.3 && (c.churn_score || 0) <= 0.7)
+      else if (churnFilter.value === 'low') result = result.filter(c => (c.churn_score || 0) <= 0.3)
       return result
     })
 
@@ -340,13 +337,13 @@ export default {
     }
 
     const deleteClient = async (client) => {
-      if (!confirm(`Delete client ${client.user_username}? This action cannot be undone.`)) return
+      if (!confirm(`Delete client ${client.user_username}? This cannot be undone.`)) return
       try {
         await makeRequest('delete', `suapi/clients/${client.id}/`)
         await refreshData()
       } catch (err) {
-        console.error('Error deleting client:', err)
-        alert('Failed to delete client')
+        const msg = err.response?.data?.detail || err.response?.data?.error || 'Delete failed — client may have active sessions or vouchers'
+        alert(msg)
       }
     }
 
@@ -422,13 +419,53 @@ export default {
       `
     }
 
+    const toggleSelectAll = () => {
+      if (selectedIds.value.length === filteredClients.value.length) {
+        selectedIds.value = []
+      } else {
+        selectedIds.value = filteredClients.value.map(c => c.id)
+      }
+    }
+
+    const quickToggleSuspend = async (client) => {
+      const action = client.status === 'suspended' ? 'activate' : 'suspend'
+      try {
+        await makeRequest('post', `suapi/clients/${client.id}/${action}/`, { reason: 'Admin quick action' }, false)
+        await refreshData()
+      } catch (err) {
+        alert(err.response?.data?.error || `${action} failed`)
+      }
+    }
+
+    const bulkAction = async (action) => {
+      if (!selectedIds.value.length) return
+      if (!confirm(`Apply '${action}' to ${selectedIds.value.length} clients?`)) return
+      try {
+        await makeRequest('post', 'suapi/clients/bulk_action/', { ids: selectedIds.value, action })
+        selectedIds.value = []
+        await refreshData()
+      } catch (err) { console.error(err) }
+    }
+
+    const exportSelected = () => {
+      const data = filteredClients.value.filter(c => selectedIds.value.includes(c.id))
+      const headers = ['Account', 'Username', 'Phone', 'Email', 'Tier', 'Status', 'Balance', 'Joined']
+      const rows = data.map(c => [c.account, c.user_username, c.phone_number, c.user_email, c.account_tier, c.status, c.balance, c.created_at])
+      const csv = [headers, ...rows].map(r => r.join(',')).join('\n')
+      const a = document.createElement('a')
+      a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
+      a.download = `clients_${new Date().toISOString().split('T')[0]}.csv`
+      a.click()
+    }
+
     onMounted(refreshData)
 
     return {
-      loading, error, clients, stats, searchTerm, statusFilter, tierFilter,
-      filteredClients, fetchClients, refreshData, 
+      loading, error, clients, stats, searchTerm, statusFilter, tierFilter, churnFilter, selectedIds,
+      filteredClients, fetchClients, refreshData,
       showAddModal, showEditModal, showDetailModal, selectedClient, formData,
       viewClient, editClient, deleteClient, saveClient, closeFormModal,
+      toggleSelectAll, quickToggleSuspend, bulkAction, exportSelected,
       getInitials, getTierBadge, getStatusBadge, formatNumber, formatDate, handleImageError
     }
   }

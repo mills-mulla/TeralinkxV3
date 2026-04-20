@@ -31,45 +31,72 @@
       </div>
     </div>
 
-    <!-- Real-Time Monitor -->
-    <RealTimeMonitor />
-
-    <!-- Divider with Dive Animation -->
-    <div class="relative my-8">
-      <div class="absolute inset-0 flex items-center" aria-hidden="true">
-        <div class="w-full border-t-2 border-slate-200 dark:border-slate-700"></div>
-      </div>
-      <div class="relative flex justify-center">
-        <button 
-          @click="toggleMetrics" 
-          class="bg-slate-50 dark:bg-slate-900 px-4 py-2 rounded-full border-2 border-slate-200 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-400 transition-all group"
-        >
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-medium text-slate-600 dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400">Performance Metrics</span>
-            <svg 
-              class="w-4 h-4 text-slate-400 group-hover:text-blue-500 transition-transform duration-300" 
-              :class="showMetrics ? 'rotate-180' : ''"
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-            >
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-            </svg>
+    <!-- System Health - Always visible at top -->
+    <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-3">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div :class="systemOverallStatus === 'healthy' ? 'bg-emerald-500' : systemOverallStatus === 'warning' ? 'bg-amber-500' : 'bg-rose-500'" class="w-2 h-2 rounded-full"></div>
+          <span class="text-xs font-semibold text-slate-900 dark:text-white">System Health</span>
+        </div>
+        <div class="flex items-center gap-4">
+          <div v-for="stat in systemStats" :key="stat.name" class="flex items-center gap-1.5">
+            <div :class="stat.statusColor" class="w-1.5 h-1.5 rounded-full"></div>
+            <span class="text-[10px] text-slate-500 dark:text-slate-400">{{ stat.name }}</span>
+            <span class="text-[10px] font-medium text-slate-900 dark:text-white">{{ stat.value }}</span>
           </div>
-        </button>
+          <select v-model="systemStatusInterval" @change="updateSystemStatusInterval" class="text-[10px] bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-1.5 py-0.5 text-slate-900 dark:text-white">
+            <option value="5000">5s</option>
+            <option value="10000">10s</option>
+            <option value="30000">30s</option>
+            <option value="60000">1m</option>
+            <option value="300000">5m</option>
+          </select>
+        </div>
       </div>
     </div>
 
-    <!-- Metrics Grid with Slide Animation -->
-    <transition
-      enter-active-class="transition-all duration-500 ease-out"
-      enter-from-class="opacity-0 -translate-y-4 max-h-0"
-      enter-to-class="opacity-100 translate-y-0 max-h-[5000px]"
-      leave-active-class="transition-all duration-300 ease-in"
-      leave-from-class="opacity-100 translate-y-0 max-h-[5000px]"
-      leave-to-class="opacity-0 -translate-y-4 max-h-0"
-    >
-      <div v-show="showMetrics" class="space-y-6">
+    <!-- Real-Time Monitor -->
+    <RealTimeMonitor />
+
+    <!-- KPI Banner -->
+    <div class="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs">
+      <router-link to="/finance" class="flex items-center gap-1 text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400">
+        <span class="text-slate-400">MRR</span>
+        <span class="font-semibold text-slate-900 dark:text-white" :class="hideKpi ? 'blur-sm select-none' : ''">KSh {{ formatNumber(kpi.mrr || 0) }}</span>
+        <button @click.prevent="hideKpi = !hideKpi" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+          <svg v-if="hideKpi" class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+          <svg v-else class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/></svg>
+        </button>
+      </router-link>
+      <span class="text-slate-300 dark:text-slate-600">|</span>
+      <router-link to="/finance" class="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400">
+        <span class="text-slate-400">Churn</span>
+        <span class="font-semibold" :class="[hideKpi ? 'blur-sm select-none' : '', (kpi.churn_rate || 0) > 5 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400']">{{ kpi.churn_rate || 0 }}%</span>
+      </router-link>
+      <span class="text-slate-300 dark:text-slate-600">|</span>
+      <router-link to="/finance" class="flex items-center gap-1 hover:text-blue-600 dark:hover:text-blue-400">
+        <span class="text-slate-400">Cash</span>
+        <span class="font-semibold text-slate-900 dark:text-white" :class="hideKpi ? 'blur-sm select-none' : ''">KSh {{ formatNumber(kpi.cash_position || 0) }}</span>
+      </router-link>
+      <span class="text-slate-300 dark:text-slate-600">|</span>
+      <router-link to="/transactions" class="flex items-center gap-1 hover:text-amber-600 dark:hover:text-amber-400">
+        <span class="text-slate-400">Pending</span>
+        <span class="font-semibold" :class="(kpi.pending_transactions || 0) > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-900 dark:text-white'">{{ kpi.pending_transactions || 0 }}</span>
+      </router-link>
+      <span class="text-slate-300 dark:text-slate-600">|</span>
+      <router-link to="/transactions" class="flex items-center gap-1 hover:text-rose-600 dark:hover:text-rose-400">
+        <span class="text-slate-400">Failed (24h)</span>
+        <span class="font-semibold" :class="(kpi.failed_transactions_24h || 0) > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-white'">{{ kpi.failed_transactions_24h || 0 }}</span>
+      </router-link>
+    </div>
+
+    <!-- Section: Performance Metrics -->
+    <div class="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+      <button @click="showMetrics = !showMetrics" class="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+        <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Performance Metrics</span>
+        <svg class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200" :class="showMetrics ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </button>
+      <div v-show="showMetrics" class="p-4 space-y-4 bg-white dark:bg-slate-900">
     <!-- Metrics Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-slide-up">
       <ModernMetricCard
@@ -106,16 +133,13 @@
         </svg>
       </ModernMetricCard>
       <ModernMetricCard
-        title="Revenue"
-        :value="`KSh ${formatNumber(metrics.totalRevenue || 0)}`"
-        :trend="metrics.revenueTrend || 'stable'"
-        :trendValue="metrics.revenueTrendValue || '0%'"
+        title="Active Sessions"
+        :value="metrics.activeUsers || 0"
+        :trend="metrics.activeUsersTrend || 'stable'"
+        :trendValue="metrics.activeUsersTrendValue || '0%'"
         color="amber"
-        :formatted="false"
       >
-        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/>
-        </svg>
+        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
       </ModernMetricCard>
     </div>
 
@@ -192,7 +216,7 @@
       </div>
     </div>
 
-    <!-- Charts Row 2: Package Sales & Payment Methods -->
+    <!-- Charts Row 2: Package Sales -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-slide-up" style="animation-delay: 0.15s">
       <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
         <div class="flex items-center gap-2 mb-4">
@@ -203,19 +227,6 @@
         </div>
         <div v-if="packageSales.length > 0" class="h-96">
           <apexchart type="pie" height="100%" :options="packageChartOptions" :series="packageChartSeries" />
-        </div>
-        <div v-else class="h-64 flex items-center justify-center text-slate-400 text-sm">Loading...</div>
-      </div>
-
-      <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
-        <div class="flex items-center gap-2 mb-4">
-          <svg class="w-5 h-5 text-cyan-500" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/>
-          </svg>
-          <h3 class="text-sm font-medium text-slate-900 dark:text-white">Payment Methods</h3>
-        </div>
-        <div v-if="paymentMethods.length > 0" class="h-64">
-          <apexchart type="pie" height="100%" :options="paymentChartOptions" :series="paymentChartSeries" />
         </div>
         <div v-else class="h-64 flex items-center justify-center text-slate-400 text-sm">Loading...</div>
       </div>
@@ -297,7 +308,7 @@
       </div>
     </div>
     <!-- Location Performance & Recent Activity -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-slide-up" style="animation-delay: 0.25s">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-slide-up" style="animation-delay: 0.25s">
       <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
         <div class="flex items-center gap-2 mb-4">
           <svg class="w-5 h-5 text-rose-500" fill="currentColor" viewBox="0 0 24 24">
@@ -345,10 +356,10 @@
           </div>
         </div>
       </div>
-    </div>
+      </div>
 
-    <!-- Additional Metrics Row -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 animate-slide-up" style="animation-delay: 0.3s">
+      <!-- Additional Metrics Row -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 animate-slide-up" style="animation-delay: 0.3s">
       <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
         <div class="flex items-center gap-2 mb-3">
           <svg class="w-5 h-5 text-teal-500" fill="currentColor" viewBox="0 0 24 24">
@@ -381,63 +392,10 @@
         <div v-else class="text-center text-slate-400 text-sm py-4">No data</div>
       </div>
 
-      <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
-        <div class="flex items-center gap-2 mb-3">
-          <svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M11 15h2v2h-2zm0-8h2v6h-2zm.99-5C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"/>
-          </svg>
-          <h3 class="text-sm font-medium text-slate-900 dark:text-white">Refund Metrics</h3>
-        </div>
-        <div class="space-y-3">
-          <div class="flex justify-between items-center">
-            <span class="text-sm text-slate-600 dark:text-slate-400">Total Refunds</span>
-            <span class="text-sm font-semibold text-slate-900 dark:text-white">{{ refundMetrics.total_refunds || 0 }}</span>
-          </div>
-          <div class="flex justify-between items-center">
-            <span class="text-sm text-slate-600 dark:text-slate-400">Amount</span>
-            <span class="text-sm font-semibold text-slate-900 dark:text-white">KSh {{ formatNumber(refundMetrics.total_amount || 0) }}</span>
-          </div>
-          <div class="flex justify-between items-center">
-            <span class="text-sm text-slate-600 dark:text-slate-400">Refund Rate</span>
-            <span class="text-sm font-semibold text-red-600 dark:text-red-400">{{ refundMetrics.refund_rate || 0 }}%</span>
-          </div>
-        </div>
       </div>
-    </div>
 
-    <!-- System Status -->
-    <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 transition-colors duration-300 animate-slide-up" style="animation-delay: 0.35s">
-      <div class="flex items-center justify-between mb-4">
-        <div class="flex items-center gap-2">
-          <svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-          </svg>
-          <h3 class="text-sm font-medium text-slate-900 dark:text-white">System Health</h3>
-        </div>
-        <select 
-          v-model="systemStatusInterval" 
-          @change="updateSystemStatusInterval"
-          class="text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-slate-900 dark:text-white"
-        >
-          <option value="5000">5 seconds</option>
-          <option value="10000">10 seconds</option>
-          <option value="30000">30 seconds</option>
-          <option value="60000">1 minute</option>
-          <option value="300000">5 minutes</option>
-        </select>
-      </div>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div v-for="stat in systemStats" :key="stat.name" class="flex items-center gap-3">
-          <div :class="`w-2 h-2 rounded-full ${stat.statusColor}`"></div>
-          <div>
-            <p class="text-xs text-slate-500 dark:text-slate-400">{{ stat.name }}</p>
-            <p class="text-sm font-medium text-slate-900 dark:text-white">{{ stat.value }}</p>
-          </div>
-        </div>
-        </div>
       </div>
     </div>
-    </transition>
   </div>
 </template>
 
@@ -467,6 +425,8 @@ export default {
   data() {
     return {
       showMetrics: true,
+      showActivity: true,
+      showExtras: false,
       revenuePeriod: '7d',
       growthPeriod: '30d',
       metrics: {},
@@ -485,6 +445,8 @@ export default {
       conversionFunnel: {},
       deviceBreakdown: [],
       rewardTiers: [],
+      kpi: {},
+      hideKpi: false,
       refundMetrics: {},
       
       // Filters
@@ -586,6 +548,12 @@ export default {
     }
   },
   computed: {
+    systemOverallStatus() {
+      if (!this.systemStats.length) return 'unknown'
+      if (this.systemStats.some(s => s.statusColor === 'bg-rose-500')) return 'critical'
+      if (this.systemStats.some(s => s.statusColor === 'bg-amber-500')) return 'warning'
+      return 'healthy'
+    },
     exportData() {
       return {
         metrics: this.metrics,
@@ -660,7 +628,7 @@ export default {
         this.fetchConversionFunnel(),
         this.fetchDeviceBreakdown(),
         this.fetchRewardTiers(),
-        this.fetchRefundMetrics()
+        this.fetchKpi()
       ])
     },
 
@@ -842,6 +810,12 @@ export default {
       } catch (error) {
         console.error('Error fetching reward tiers:', error)
       }
+    },
+
+    async fetchKpi() {
+      try {
+        this.kpi = await this.makeRequest('get', 'api/finance/api/kpi/summary/')
+      } catch (e) { console.error('KPI fetch failed', e) }
     },
 
     async fetchRefundMetrics() {

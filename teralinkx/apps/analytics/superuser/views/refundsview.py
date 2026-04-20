@@ -45,10 +45,10 @@ class RefundViewSet(viewsets.ModelViewSet):
             )['avg'] or 0
             
             return Response({
-                'eligibleClients': eligible_clients,
-                'totalRefunded': float(total_refunded),
-                'pendingRefunds': pending_refunds,
-                'averageRefund': float(avg_refund)
+                'eligible_clients': eligible_clients,
+                'total_refunded': float(total_refunded),
+                'pending_refunds': pending_refunds,
+                'average_refund': float(avg_refund)
             })
             
         except Exception as e:
@@ -157,6 +157,35 @@ class RefundViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
     
+    @action(detail=False, methods=['post'])
+    def preview(self, request):
+        """Preview refund amount without processing — keeps frontend fast."""
+        try:
+            account = request.data.get('account')
+            downtime_minutes = int(request.data.get('downtime_minutes', 0))
+            if not account or downtime_minutes <= 0:
+                return Response({'error': 'account and downtime_minutes required'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            client = DispatchVoucher.objects.filter(dispatch_account=account).first()
+            if not client:
+                return Response({'error': 'Client not found'}, status=status.HTTP_404_NOT_FOUND)
+            if not self.is_client_eligible(client):
+                return Response({'eligible': False, 'error': 'Client not eligible'},
+                                status=status.HTTP_400_BAD_REQUEST)
+            amount = self.calculate_refund_amount(client, downtime_minutes)
+            clienth = ClientH.objects.filter(account=account).first()
+            return Response({
+                'account': account,
+                'username': clienth.user.username if clienth and clienth.user else account,
+                'downtime_minutes': downtime_minutes,
+                'refund_amount': float(amount),
+                'package_price': float(client.dispatch_price),
+                'duration': client.dispatch_package_duration,
+                'eligible': True,
+            })
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
     @action(detail=False, methods=['post'])
     def process_individual(self, request):
         """Process individual refund"""

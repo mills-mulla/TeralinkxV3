@@ -27,6 +27,9 @@ app.conf.task_routes = {
     'finance.cleanup_expired_transactions': {'queue': 'cleanup'},
     'finance.refresh_timescale_aggregates': {'queue': 'cleanup'},
 
+    # Payment recovery → default queue (time-sensitive)
+    'finance.query_stuck_pending_transactions': {'queue': 'default'},
+
     # Everything else → default queue
     'finance.*':                            {'queue': 'default'},
     'sync.*':                               {'queue': 'default'},
@@ -34,6 +37,13 @@ app.conf.task_routes = {
 
 # ─── Beat schedule ────────────────────────────────────────────────────────────
 app.conf.beat_schedule = {
+
+    # ── Every 3 minutes ──────────────────────────────────────────────────────
+    'query-stuck-pending-transactions': {
+        'task': 'finance.query_stuck_pending_transactions',
+        'schedule': 180.0,   # 3 min — pending >3min = M-Pesa callback missed
+        'options': {'queue': 'default'}
+    },
 
     # ── Every 5 minutes ──────────────────────────────────────────────────────
     'refresh-kpi-snapshot': {

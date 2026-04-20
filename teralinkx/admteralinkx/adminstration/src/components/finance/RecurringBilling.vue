@@ -37,6 +37,29 @@
       </div>
     </div>
 
+    <!-- Billing Calendar -->
+    <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
+      <h3 class="text-sm font-semibold text-slate-900 dark:text-white mb-3">📅 Upcoming This Month</h3>
+      <div v-if="upcomingThisMonth.length" class="space-y-2">
+        <div v-for="b in upcomingThisMonth" :key="b.id"
+          class="flex items-center justify-between px-3 py-2 bg-slate-50 dark:bg-slate-900 rounded-lg">
+          <div class="flex items-center gap-3">
+            <span class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 flex items-center justify-center text-xs font-bold">{{ b.billing_day }}</span>
+            <div>
+              <p class="text-sm font-medium text-slate-900 dark:text-white">{{ b.customer }}</p>
+              <p class="text-xs text-slate-500">{{ b.package_name }}</p>
+            </div>
+          </div>
+          <span class="font-semibold text-slate-900 dark:text-white text-sm">KES {{ fmt(b.amount) }}</span>
+        </div>
+      </div>
+      <p v-else class="text-sm text-slate-400 text-center py-4">No upcoming billings this month</p>
+      <div v-if="failedBillings.length" class="mt-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+        <p class="text-sm font-semibold text-red-900 dark:text-red-100">⚠️ {{ failedBillings.length }} failed billings need attention</p>
+        <p class="text-xs text-red-600 mt-1">{{ failedBillings.map(b => b.customer).join(', ') }}</p>
+      </div>
+    </div>
+
     <!-- Billing Table -->
     <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
       <div class="overflow-x-auto">
@@ -134,6 +157,11 @@ export default {
     pausedCount() { return this.billings.filter(b => b.status === 'paused').length },
     failedCount() { return this.billings.filter(b => b.status === 'failed').length },
     monthlyRevenue() { return this.billings.filter(b => b.status === 'active').reduce((s, b) => s + parseFloat(b.amount || 0), 0) },
+    upcomingThisMonth() {
+      const today = new Date().getDate()
+      return this.billings.filter(b => b.status === 'active' && b.billing_day >= today).sort((a,b) => a.billing_day - b.billing_day)
+    },
+    failedBillings() { return this.billings.filter(b => b.status === 'failed') },
   },
   methods: {
     fmt(n) { return new Intl.NumberFormat('en-KE').format(Math.round(n || 0)) },

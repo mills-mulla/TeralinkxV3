@@ -263,3 +263,56 @@ class DHCPLease(TimeStampedModel):
     class Meta:
         verbose_name = "DHCP Lease"
         verbose_name_plural = "DHCP Leases"
+
+
+# ── Downtime & Refund Models ──────────────────────────────────────────────────
+
+class DowntimeRecord(TimeStampedModel):
+    """Records a network downtime incident."""
+    start_time      = models.DateTimeField()
+    end_time        = models.DateTimeField(null=True, blank=True)
+    description     = models.TextField(blank=True)
+    affected_area   = models.CharField(max_length=200, blank=True)
+    reported_by     = models.CharField(max_length=100, blank=True)
+    # Link to SLA outage if generated from finance module
+    outage_event_id = models.IntegerField(null=True, blank=True, db_index=True)
+
+    class Meta:
+        ordering = ['-start_time']
+
+    def __str__(self):
+        return f"Downtime {self.start_time.date()} — {self.duration_minutes}min"
+
+    @property
+    def duration_minutes(self):
+        end = self.end_time or timezone.now()
+        return int((end - self.start_time).total_seconds() / 60)
+
+
+class RefundLog(TimeStampedModel):
+    """Logs every refund issued to a customer."""
+    REFUND_TYPE_CHOICES = [
+        ('individual', 'Individual'),
+        ('batch',      'Batch'),
+        ('sla',        'SLA Credit'),
+    ]
+    STATUS_CHOICES = [
+        ('pending',   'Pending'),
+        ('completed', 'Completed'),
+        ('failed',    'Failed'),
+    ]
+    account          = models.CharField(max_length=100, db_index=True)
+    client_username  = models.CharField(max_length=150, blank=True)
+    refund_amount    = models.DecimalField(max_digits=12, decimal_places=2)
+    downtime_minutes = models.IntegerField(default=0)
+    refund_type      = models.CharField(max_length=20, choices=REFUND_TYPE_CHOICES, default='individual')
+    status           = models.CharField(max_length=20, choices=STATUS_CHOICES, default='completed')
+    downtime_record  = models.ForeignKey(DowntimeRecord, on_delete=models.SET_NULL,
+                                         null=True, blank=True, related_name='refunds')
+    notes            = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Refund {self.account} KES {self.refund_amount} ({self.refund_type})"

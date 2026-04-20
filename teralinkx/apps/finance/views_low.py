@@ -116,7 +116,11 @@ class OutageEventView(APIView):
                 return Response({'message': 'Outage resolved', 'duration_hours': round(event.duration_hours, 2)})
             elif action == 'generate_credits':
                 count = event.generate_credits()
-                return Response({'message': f'{count} credit notes generated', 'credits': count})
+                return Response({
+                    'message': f'{count} customers credited and refund logs created',
+                    'credits': count,
+                    'refunds_created': count,
+                })
             return Response({'error': 'action must be resolve or generate_credits'}, status=status.HTTP_400_BAD_REQUEST)
         except OutageEvent.DoesNotExist:
             return Response({'error': 'Not found'}, status=status.HTTP_404_NOT_FOUND)
@@ -277,26 +281,79 @@ class CLVCohortView(APIView):
 
     def get(self, request):
         from datetime import date
-        year = int(request.query_params.get('year', timezone.now().year))
-        cohorts = {}
-        for month in range(1, 13):
-            cohort_date = date(year, month, 1)
-            rows = CLVCohort.objects.filter(cohort_month=cohort_date).order_by('month_offset')
-            if rows.exists():
-                cohorts[cohort_date.strftime('%b %Y')] = [{
+        from users.models import ClientH
+        from django.db.models import Min
+
+        # Auto-calculate if no cohorts exist
+        if CLVCohort.objects.count() == 0:
+            self._auto_calculate()
+
+        # Get all cohorts flat — frontend needs a simple list
+        cohorts_qs = CLVCohort.objects.all().order_by('cohort_month', 'month_offset')
+
+        # Build summary per cohort_month (one row per cohort)
+        from collections import defaultdict
+        cohort_map = defaultdict(list)
+        for r in cohorts_qs:
+            cohort_map[r.cohort_month].append(r)
+
+        result = []
+        for cohort_month, rows in sorted(cohort_map.items()):
+            # Use offset=0 as the cohort summary row
+            base = rows[0]
+            # Total revenue across all offsets
+            total_rev = sum(float(r.revenue) for r in rows)
+            # Latest retention (last offset with data)
+            active_rows = [r for r in rows if r.active_customers > 0]
+            latest_retention = active_rows[-1].retention_rate if active_rows else 0
+            churn_rate = round(100 - latest_retention, 1)
+            avg_clv = total_rev / base.cohort_size if base.cohort_size > 0 else 0
+
+            result.append({
+                'id': base.id,
+                'cohort_name': cohort_month.strftime('%b %Y'),
+                'period_start': cohort_month.isoformat(),
+                'period_end': rows[-1].cohort_month.isoformat(),
+                'customer_count': base.cohort_size,
+                'avg_clv': round(avg_clv, 2),
+                'total_revenue': round(total_rev, 2),
+                'churn_rate': churn_rate,
+                'retention_rate': round(latest_retention, 1),
+                'months_tracked': len(rows),
+                'monthly_breakdown': [{
                     'month_offset': r.month_offset,
-                    'cohort_size': r.cohort_size,
                     'active_customers': r.active_customers,
                     'retention_rate': r.retention_rate,
                     'revenue': float(r.revenue),
                     'avg_revenue_per_customer': float(r.avg_revenue_per_customer),
                     'cumulative_clv': float(r.cumulative_clv),
                 } for r in rows]
-        return Response({'year': year, 'cohorts': cohorts})
+            })
+
+        return Response(result)
+
+    def _auto_calculate(self):
+        """Auto-calculate cohorts for all months that have client data."""
+        from users.models import ClientH
+        from django.db.models import Min
+        from datetime import date
+        import calendar
+
+        # Find all months with client acquisitions
+        months_with_clients = ClientH.objects.dates('created_at', 'month')
+        for cohort_date in months_with_clients:
+            try:
+                CLVCohort.calculate(date(cohort_date.year, cohort_date.month, 1))
+            except Exception:
+                pass
 
     def post(self, request):
         try:
             from datetime import date
+            action = request.data.get('action', 'calculate')
+            if action == 'recalculate_all':
+                self._auto_calculate()
+                return Response({'message': 'All cohorts recalculated', 'total': CLVCohort.objects.count()})
             year = int(request.data.get('year', timezone.now().year))
             month = int(request.data.get('month', timezone.now().month))
             cohort_date = date(year, month, 1)

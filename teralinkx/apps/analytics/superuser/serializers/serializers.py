@@ -33,3 +33,17 @@ class TransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = PaymentTransaction
         fields = '__all__'
+
+
+from analytics.models import RefundLog, DowntimeRecord
+
+class DowntimeRecordSerializer(serializers.ModelSerializer):
+    duration_minutes = serializers.ReadOnlyField()
+    class Meta:
+        model = DowntimeRecord
+        fields = '__all__'
+
+class RefundLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RefundLog
+        fields = '__all__'

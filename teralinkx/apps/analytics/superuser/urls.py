@@ -43,6 +43,8 @@ from .views.package_views import (
 )
 from .views.location_views import LocationViewSet
 
+from .views.refundsview import RefundViewSet
+
 router = DefaultRouter()
 
 router.register(r'clients', ClientViewSet, basename='clients')
@@ -61,6 +63,7 @@ router.register(r'coupons', CouponViewSet, basename='coupons')
 router.register(r'promotions', FeaturedPromotionViewSet, basename='promotions')
 router.register(r'point-transactions', PointTransactionViewSet, basename='point-transactions')
 router.register(r'locations', LocationViewSet, basename='locations')
+router.register(r'refunds', RefundViewSet, basename='refunds')
 
 # Create a simple stats view
 from rest_framework.views import APIView

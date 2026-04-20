@@ -154,6 +154,27 @@
     </div>
 
     <!-- Package Performance -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <!-- Package Revenue Bar Chart -->
+      <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
+        <h3 class="text-sm font-medium text-slate-900 dark:text-white mb-3">Package Revenue</h3>
+        <div v-if="packages.length" class="h-48">
+          <apexchart type="bar" height="100%" :options="barOptions" :series="barSeries" />
+        </div>
+        <div v-else class="h-48 flex items-center justify-center text-slate-400 text-sm">No package data</div>
+      </div>
+
+      <!-- Revenue vs Profit Donut -->
+      <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
+        <h3 class="text-sm font-medium text-slate-900 dark:text-white mb-3">Revenue Split by Package</h3>
+        <div v-if="packages.length" class="h-48">
+          <apexchart type="donut" height="100%" :options="donutOptions" :series="donutSeries" />
+        </div>
+        <div v-else class="h-48 flex items-center justify-center text-slate-400 text-sm">No package data</div>
+      </div>
+    </div>
+
+    <!-- Package Performance Table -->
     <div class="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5">
       <div class="flex items-center gap-2 mb-4">
         <svg class="w-5 h-5 text-cyan-500" fill="currentColor" viewBox="0 0 24 24">
@@ -202,13 +223,11 @@
 </template>
 
 <script>
+import VueApexCharts from 'vue3-apexcharts'
 export default {
   name: 'FinancialAnalytics',
-  data() {
-    return {
-      showGuide: false
-    }
-  },
+  components: { apexchart: VueApexCharts },
+  data() { return { showGuide: false } },
   props: {
     metrics: {
       type: Object,
@@ -229,10 +248,37 @@ export default {
       default: false
     }
   },
-  methods: {
-    formatNumber(num) {
-      return new Intl.NumberFormat().format(num)
+  computed: {
+    barSeries() {
+      return [{ name: 'Revenue', data: this.packages.map(p => Math.round(p.revenue)) }]
+    },
+    barOptions() {
+      return {
+        chart: { type: 'bar', toolbar: { show: false }, background: 'transparent' },
+        colors: ['#3b82f6'],
+        plotOptions: { bar: { borderRadius: 4, columnWidth: '60%' } },
+        dataLabels: { enabled: false },
+        xaxis: { categories: this.packages.map(p => p.name), labels: { style: { colors: '#94a3b8', fontSize: '10px' } }, axisBorder: { show: false } },
+        yaxis: { labels: { style: { colors: '#94a3b8', fontSize: '10px' }, formatter: v => 'KES ' + new Intl.NumberFormat('en-KE', { notation: 'compact' }).format(v) } },
+        grid: { borderColor: '#e2e8f0', strokeDashArray: 3 },
+        tooltip: { y: { formatter: v => 'KES ' + new Intl.NumberFormat('en-KE').format(v) } }
+      }
+    },
+    donutSeries() { return this.packages.map(p => Math.round(p.revenue)) },
+    donutOptions() {
+      return {
+        chart: { type: 'donut', background: 'transparent' },
+        labels: this.packages.map(p => p.name),
+        colors: ['#3b82f6','#10b981','#8b5cf6','#f59e0b','#ef4444','#06b6d4'],
+        dataLabels: { enabled: false },
+        legend: { position: 'bottom', fontSize: '10px', labels: { colors: '#94a3b8' } },
+        plotOptions: { pie: { donut: { size: '65%', labels: { show: true, total: { show: true, label: 'Total', color: '#94a3b8', fontSize: '11px', formatter: w => 'KES ' + new Intl.NumberFormat('en-KE', { notation: 'compact' }).format(w.globals.seriesTotals.reduce((a,b) => a+b, 0)) } } } } },
+        tooltip: { y: { formatter: v => 'KES ' + new Intl.NumberFormat('en-KE').format(v) } }
+      }
     }
+  },
+  methods: {
+    formatNumber(num) { return new Intl.NumberFormat().format(num) }
   }
 }
 </script>

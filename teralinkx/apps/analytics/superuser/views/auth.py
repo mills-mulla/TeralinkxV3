@@ -145,7 +145,11 @@ class VerifyTokenView(APIView):
 
     def get(self, request):
         logger.info(f"Token verification - user: {request.user}")
-        
+        groups = list(request.user.groups.values_list('name', flat=True))
+        role = 'superadmin' if request.user.is_superuser else \
+               'finance_manager' if 'finance_manager' in groups else \
+               'finance_viewer' if 'finance_viewer' in groups else \
+               'staff'
         return Response({
             'authenticated': True,
             'user': {
@@ -155,7 +159,9 @@ class VerifyTokenView(APIView):
                 'is_superuser': request.user.is_superuser,
                 'is_staff': request.user.is_staff,
                 'first_name': request.user.first_name,
-                'last_name': request.user.last_name
+                'last_name': request.user.last_name,
+                'role': role,
+                'groups': groups,
             }
         })
 
