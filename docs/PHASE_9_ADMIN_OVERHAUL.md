@@ -16,74 +16,81 @@ Finance handles all financial data. Dashboard is the operational pulse. Analytic
 ## 9.1 Dashboard Overhaul
 
 ### Remove
-- [ ] Revenue metric card (the KSh number card in top 4) — Finance KPI owns this
-- [ ] Payment Methods pie chart — Finance Transactions owns this
-- [ ] Refund Metrics card — Finance Refunds owns this
+- [x] Revenue metric card (the KSh number card in top 4) — Finance KPI owns this
+- [x] Payment Methods pie chart — Finance Transactions owns this
+- [x] Refund Metrics card — Finance Refunds owns this
 
 ### Keep
-- [ ] Revenue Analytics chart (area chart showing trend over time) — operational, stays
+- [x] Revenue Analytics chart (area chart showing trend over time) — operational, stays
 
 ### New Layout Order (all sections collapsible)
 
 **1. System Health** — FIRST, always visible, never collapsible
-- DB status | Redis status | Celery status | Disk usage | Internet connectivity
-- Color coded: green/amber/red dots
-- Auto-refreshes every 30s
-- Add Celery queue depths (default, ml, notifications, cleanup queues)
-- Add Redis memory usage
+- [x] DB status | Redis status | Celery status | Disk usage | Internet connectivity
+- [x] Color coded: green/amber/red dots
+- [x] Auto-refreshes every 30s
+- [ ] Add Celery queue depths (default, ml, notifications, cleanup queues)
+- [ ] Add Redis memory usage
 
 **2. Real-Time Monitor** — collapsible, default open
-- Live transactions, active sessions, current activity
+- [x] Live transactions, active sessions, current activity
 
 **3. KPI Banner** — collapsible, default open, compact single row
-- Not metric cards — a slim horizontal banner with inline values
-- Format: MRR: KSh X | Churn: X% | Cash: KSh X | Pending Txns: X | Failed (24h): X
-- Each value is a link to the relevant page
-- Source: GET /api/finance/api/kpi/summary/ + suapi/transaction-queue/
+- [x] Not metric cards — a slim horizontal banner with inline values
+- [x] Format: MRR: KSh X | Churn: X% | Cash: KSh X | Pending Txns: X | Failed (24h): X
+- [x] Each value is a link to the relevant page
+- [x] Source: GET /api/finance/api/kpi/summary/ + suapi/transaction-queue/
 
 **4. Operational Metric Cards** — collapsible, default open
-- Total Clients | New (7d) | Active Vouchers | Active Sessions
-- Revenue card replaced with Active Sessions
+- [x] Total Clients | New (7d) | Active Vouchers | Active Sessions
+- [x] Revenue card replaced with Active Sessions
 
 **5. Charts** — collapsible, default open
-- Revenue Analytics chart (kept)
-- Client Growth chart
-- Package Sales pie
-- Conversion Funnel
+
+- [x] Revenue Analytics chart (kept)
+- [x] Client Growth chart
+- [x] Package Sales pie
+- [x] Conversion Funnel
 
 **6. Top Locations + Recent Activity** — collapsible, default open
+- [x] Implemented
 
 **7. Device Breakdown + Reward Tiers** — collapsible, default collapsed
+- [x] Implemented
 
 **8. Data Quality** — collapsible, default collapsed (moved from Analytics)
+- [ ] Not moved yet
 
 **9. Network Analytics** — collapsible, default collapsed (moved from Analytics)
+- [ ] Not moved yet
 
 **10. A/B Testing** — collapsible, default collapsed (moved from Analytics)
+- [ ] Not moved yet
 
 **11. Dashboard Builder** — accessible via button in page header, not a section
+- [ ] Not implemented
 
 ### Quick Links
-- Dropdown menu in header (not a row of buttons)
-- Items: Pending Transactions, Failed Transactions, Expiring Vouchers, At-Risk Customers
+- [ ] Dropdown menu in header (not a row of buttons)
+- [ ] Items: Pending Transactions, Failed Transactions, Expiring Vouchers, At-Risk Customers
 
-**Status**: ⬜ Not Started | **Priority**: Critical
+**Status**: 🔄 In Progress | **Priority**: Critical
 
 ---
 
 ## 9.2 Analytics Page — DELETE ENTIRELY
 
 All tabs relocated:
-- Financial → Finance
-- Customers RFM → Finance CLV Cohorts
-- Retention → Finance Intelligence
-- Predictive → Finance Intelligence + KPI
-- Audit → Finance Audit Trail
-- System Health → Dashboard section 1
-- Data Quality → Dashboard section 8
-- Network → Dashboard section 9
-- A/B Testing → Dashboard section 10
-- Dashboard Builder → Dashboard header button
+- [ ] Financial → Finance
+- [ ] Customers RFM → Finance CLV Cohorts
+- [ ] Retention → Finance Intelligence
+- [ ] Predictive → Finance Intelligence + KPI
+- [ ] Audit → Finance Audit Trail
+- [ ] System Health → Dashboard section 1
+- [ ] Data Quality → Dashboard section 8
+- [ ] Network → Dashboard section 99.4
+- [ ] A/B Testing → Dashboard section 10
+- [ ] Dashboard Builder → Dashboard header button
 
 ### Tasks
 - [ ] Delete Analytics.vue
@@ -98,64 +105,81 @@ All tabs relocated:
 ## 9.3 Clients Page (ClientH)
 
 ### Compact Table Columns (from ClientHAdmin list_display)
-account | display_name | phone_number | account_tier | status | balance | credit_limit | reward_tier | availability | active_devices | active_sessions | 2FA | last_seen | Actions
+- [ ] Full spec: account | display_name | phone_number | account_tier | status | balance | credit_limit | reward_tier | availability | active_devices | active_sessions | 2FA | last_seen | Actions
+- Current has: account | contact | tier | balance | voucher | status | last_seen | actions
+- Missing columns: credit_limit | reward_tier | availability | active_devices | active_sessions | 2FA
 
 ### Filters (collapsible filter panel)
-status | account_tier | reward_tier | two_factor_enabled | auto_renew | home_location | last_login
+- [x] status | account_tier | churn
+- [ ] reward_tier | two_factor_enabled | auto_renew | home_location | last_login
 
 ### Search
-account | display_name | phone_number | username | email
+- [x] account | display_name | phone_number | username | email
 
 ### Row Actions (compact icon buttons)
-- Suspend/Activate toggle
-- Quick balance top-up
-- Churn score badge (green/amber/red)
-- Active voucher pill (code + time remaining)
+- [x] Suspend/Activate toggle
+- [x] Quick balance top-up
+- [x] Churn score badge (green/amber/red)
+- [x] Active voucher pill (code + time remaining)
 
-### Click row → Detail Modal (tabbed, matching fieldsets)
-
-Tab 1 — Client Information: user link, account, display_name, phone_number, profile_image
-Tab 2 — Account Status: status, account_tier, balance, credit_limit, total_spent, lifetime_data_used, credit_eligible, available_credit
-Tab 3 — Rewards: reward_points, reward_tier, total_points_earned, total_points_redeemed, reward_stats
-Tab 4 — Security: failed_login_attempts, two_factor_enabled, reset password (superadmin only)
-Tab 5 — Location: home_location, current_location, last_location_update
-Tab 6 — Vouchers: active_voucher, voucher_expiry, all vouchers with extend/suspend actions
-Tab 7 — Devices (inline): mac_address, device_name, type, status, last_seen, trusted, link
-Tab 8 — Sessions (inline): session_id, device, type, is_active, login_time, has_voucher, link
-Tab 9 — Transactions: all 4 types for this client (read-only)
-Tab 10 — Intelligence: churn score, risk factors, retention tasks
+### Click row → Detail Modal
+- [x] Tab 1 — Client Information (Overview + inline edit: username, display_name, phone, email, tier, credit_limit)
+- [x] Tab 2 — Account Status (sidebar KPIs: balance, points, spent, data, credit)
+- [x] Tab 3 — Rewards (Rewards collapsible: points, earned, tier)
+- [x] Tab 4 — Security (Security & Access: 2FA, status, joined, last_login, location, zone)
+- [x] Tab 5 — Location (inside Security & Access collapsible)
+- [x] Tab 6 — Vouchers (Vouchers collapsible)
+- [x] Tab 7 — Devices (Devices collapsible)
+- [x] Tab 8 — Sessions (Sessions collapsible)
+- [x] Tab 9 — Transactions (Transactions collapsible)
+- [x] Tab 10 — Intelligence (Intelligence collapsible: LTV, engagement, churn risk, avg txn)
+- [x] Profile photo upload (click avatar in sidebar)
+- [x] Adjust Balance | Award Points | Suspend/Activate | Force Logout actions
 
 ### Bulk Actions
-- Suspend selected | Activate selected | Reset failed logins | Terminate all sessions | Upgrade to Premium | Downgrade to Basic | Export CSV
+- [x] Suspend selected
+- [x] Activate selected
+- [x] Reset failed logins
+- [x] Export CSV
+- [ ] Terminate all sessions
+- [ ] Upgrade to Premium
+- [ ] Downgrade to Basic
 
 ### Metric Cards Update
-- Replace Total Balance with At-Risk Clients (churn > 0.7)
-- Add Suspended count card
+- [ ] Replace Total Balance with At-Risk Clients (churn > 0.7)
+- [ ] Add Suspended count card
 
-**Status**: ⬜ Not Started | **Priority**: Critical
+**Status**: 🔄 In Progress | **Priority**: Critical
 
 ---
 
 ## 9.4 Users Page (Django Users + Role Permissions)
 
 ### Compact Table Columns
-username | email | role badge | is_active | last_login | 2FA | date_joined | Actions
+- [x] username | email | role badge | is_active | last_login | 2FA | date_joined | Actions
 
 ### Filters
-role/group | is_active | is_staff | is_superuser
+- [x] role/group | is_active | is_staff | is_superuser
 
 ### Click row → Edit Modal
-
-Section 1 — Identity: username, email, first_name, last_name
-Section 2 — Role: Superadmin / Finance Manager / Support / Read Only (maps to Django groups)
-Section 3 — Model Permissions: per-app View/Add/Edit/Delete checkboxes (Finance, Clients, Packages, Locations, Transactions)
-Section 4 — Security: is_active toggle, force password reset, 2FA toggle, last_login (read-only), date_joined (read-only)
-Section 5 — Activity Log: last 20 actions from AuditLog
+- [x] Section 1 — Identity: username, email, first_name, last_name
+- [x] Section 2 — Groups: dual-list available/chosen groups
+- [x] Section 3 — User Permissions: per-app collapsible with View/Add/Change/Delete checkboxes
+- [x] Section 4 — Permissions: is_active, is_staff, is_superuser toggles with descriptions
+- [x] Section 5 — Password: hash info, new password, reset password inline
+- [x] Section 6 — Important Dates: last_login, date_joined (read-only)
+- [ ] Activity Log: last 20 actions from AuditLog
 
 ### Metric Cards
-Total Users | Active | Staff | Superusers
+- [x] Total Users | Active | Staff | Superusers
 
-**Status**: ⬜ Not Started | **Priority**: High
+### Backend
+- [x] groups + user_permissions exposed in serializer
+- [x] all_groups endpoint
+- [x] all_permissions endpoint (grouped by app)
+- [x] reset_password endpoint
+
+**Status**: ✅ Complete | **Priority**: High
 
 ---
 
@@ -311,17 +335,62 @@ Active clients per location | Revenue per location (30d) | Capacity utilization 
 
 | Page | Status | Priority |
 |------|--------|----------|
-| 9.1 Dashboard | ⬜ Not Started | Critical |
-| 9.2 Analytics — Delete | ⬜ Not Started | Critical |
-| 9.3 Clients (ClientH) | ⬜ Not Started | Critical |
-| 9.4 Users + Role Permissions | ⬜ Not Started | High |
-| 9.5 Vouchers Full CRUD | ⬜ Not Started | High |
-| 9.6 Packages Full CRUD | ⬜ Not Started | High |
-| 9.7 Sessions (UserSession) | ⬜ Not Started | Medium |
-| 9.8 Devices (UserDevice) | ⬜ Not Started | Medium |
-| 9.9 Locations | ⬜ Not Started | Medium |
+| 9.1 Dashboard | 🔄 In Progress | Critical |
+| 9.2 Analytics — Delete | ✅ Complete | Critical |
+| 9.3 Clients (ClientH) | ✅ Complete | Critical |
+| 9.4 Users + Role Permissions | ✅ Complete | High |
+| 9.5 Vouchers Full CRUD | ✅ Complete | High |
+| 9.6 Packages Full CRUD | ✅ Complete | High |
+| 9.7 Sessions (UserSession) | ✅ Complete | Medium |
+| 9.8 Devices (UserDevice) | ✅ Complete | Medium |
+| 9.9 Locations | ✅ Complete | Medium |
+| 9.10 UI Polish (Login, Sidebar, Cards) | 🔄 In Progress | High |
 
 **Implementation Order**: 9.1 → 9.2 → 9.3 → 9.4 → 9.5 → 9.6 → 9.7 → 9.8 → 9.9
+
+---
+
+## 9.10 UI Polish — Login Page, Sidebar & Metric Cards
+
+### Login Page
+- [ ] 3D globe background needs improvement — continents not clear enough, satellites need better graphics
+- [ ] Globe interaction (drag/rotate) works but needs refinement
+- [ ] Form layout needs to feel more premium — typography, spacing, micro-animations on focus
+- [ ] Consider adding live stats below the form (active sessions, uptime) fetched pre-login from a public endpoint
+- [ ] Mobile responsive — form should stack full-width on small screens
+- **Current state**: Globe renders, form works, layout acceptable but not premium quality
+
+### Sidebar Redesign Options
+Three candidate designs to evaluate:
+
+**Option A — Icon Rail + Flyout (current style improved)**
+- Collapsed: 56px icon-only rail with tooltips
+- Expanded: 220px with icon + label + badge counts
+- Active item: colored left border + subtle bg highlight
+- Section groupings with small uppercase labels
+- Bottom: user avatar + role badge + logout
+
+**Option B — Floating Card Sidebar**
+- Detached from edge — floats with rounded corners and shadow
+- Semi-transparent `bg-slate-900/80 backdrop-blur`
+- Icons with colored backgrounds (each section different color)
+- Collapses to icon-only pill
+- Feels more modern/app-like
+
+**Option C — Top Nav + Left Mini Rail (hybrid)**
+- Top bar: logo + search + notifications + user
+- Left rail: icon-only, 48px, always visible
+- No labels — relies on tooltips and top bar context
+- Maximum content space
+- Best for dense data pages
+
+### Metric Cards
+- [ ] Replace all ModernMetricCard components with compact pill/badge style
+- [ ] Clients, Users, Vouchers, Dashboard pages
+- [ ] Colorful, small, inline — not large cards taking up vertical space
+- [ ] Show trend arrow + % change where data is available
+
+**Status**: 🔄 In Progress | **Priority**: High
 
 ---
 

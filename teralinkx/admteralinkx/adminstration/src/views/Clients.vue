@@ -38,22 +38,28 @@
     </div>
 
     <!-- Metrics -->
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 animate-slide-up">
-      <ModernMetricCard title="Total Clients" :value="stats.total_clients" color="blue" :trend="stats.total_clients_trend?.direction" :trendValue="stats.total_clients_trend?.value">
-        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-      </ModernMetricCard>
-      <ModernMetricCard title="At-Risk" :value="stats.at_risk_clients || 0" color="rose" trend="stable" trendValue="">
-        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-      </ModernMetricCard>
-      <ModernMetricCard title="Active" :value="stats.active_clients" color="cyan" :trend="stats.active_clients_trend?.direction" :trendValue="stats.active_clients_trend?.value" class="col-span-2 md:col-span-1">
-        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-      </ModernMetricCard>
-      <ModernMetricCard title="Suspended" :value="stats.suspended_clients || 0" color="amber" trend="stable" trendValue="">
-        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-      </ModernMetricCard>
-      <ModernMetricCard title="New (7d)" :value="stats.new_clients_7d" color="emerald" :trend="stats.new_clients_7d_trend?.direction" :trendValue="stats.new_clients_7d_trend?.value">
-        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-      </ModernMetricCard>
+    <div class="flex items-center gap-2 flex-wrap">
+      <div class="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl">
+        <span class="text-[10px] text-blue-600 dark:text-blue-400 font-medium">Total</span>
+        <span class="text-sm font-bold text-blue-700 dark:text-blue-300">{{ stats.total_clients || 0 }}</span>
+      </div>
+      <div class="flex items-center gap-2 px-3 py-2 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 rounded-xl">
+        <span class="text-[10px] text-rose-600 dark:text-rose-400 font-medium">⚠️ At-Risk</span>
+        <span class="text-sm font-bold text-rose-700 dark:text-rose-300">{{ stats.at_risk_clients || 0 }}</span>
+      </div>
+      <div class="flex items-center gap-2 px-3 py-2 bg-cyan-50 dark:bg-cyan-500/10 border border-cyan-200 dark:border-cyan-500/20 rounded-xl">
+        <div class="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse"></div>
+        <span class="text-[10px] text-cyan-600 dark:text-cyan-400 font-medium">Active</span>
+        <span class="text-sm font-bold text-cyan-700 dark:text-cyan-300">{{ stats.active_clients || 0 }}</span>
+      </div>
+      <div class="flex items-center gap-2 px-3 py-2 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl">
+        <span class="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Suspended</span>
+        <span class="text-sm font-bold text-amber-700 dark:text-amber-300">{{ stats.suspended_clients || 0 }}</span>
+      </div>
+      <div class="flex items-center gap-2 px-3 py-2 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl">
+        <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">New (7d)</span>
+        <span class="text-sm font-bold text-emerald-700 dark:text-emerald-300">{{ stats.new_clients_7d || 0 }}</span>
+      </div>
     </div>
 
     <!-- Search & Filters -->
@@ -155,9 +161,6 @@
                     <button @click.stop="viewClient(client)" class="p-1 hover:bg-slate-100 dark:hover:bg-slate-600 rounded" title="View">
                       <svg class="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                     </button>
-                    <button @click.stop="editClient(client)" class="p-1 hover:bg-blue-100 dark:hover:bg-blue-600 rounded" title="Edit">
-                      <svg class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                    </button>
                     <button @click.stop="quickToggleSuspend(client)" class="p-1 rounded" :class="client.status === 'suspended' ? 'hover:bg-emerald-100 dark:hover:bg-emerald-600' : 'hover:bg-amber-100 dark:hover:bg-amber-600'" :title="client.status === 'suspended' ? 'Activate' : 'Suspend'">
                       <svg class="w-3.5 h-3.5" :class="client.status === 'suspended' ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
                     </button>
@@ -177,10 +180,10 @@
     <ClientDetailModal :show="showDetailModal" :client="selectedClient" @close="showDetailModal = false" @refresh="refreshData" />
 
     <!-- Add/Edit Client Modal -->
-    <div v-if="showAddModal || showEditModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" @click.self="closeFormModal">
+    <div v-if="showAddModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" @click.self="closeFormModal">
       <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
         <div class="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700">
-          <h2 class="text-xl font-semibold text-slate-900 dark:text-white">{{ showEditModal ? 'Edit Client' : 'Add New Client' }}</h2>
+          <h2 class="text-xl font-semibold text-slate-900 dark:text-white">Add New Client</h2>
           <button @click="closeFormModal" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -191,7 +194,7 @@
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Username</label>
-              <input v-model="formData.username" type="text" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-sm" :disabled="showEditModal" />
+              <input v-model="formData.username" type="text" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-sm" />
             </div>
             <div>
               <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Email</label>
@@ -234,7 +237,7 @@
         </div>
         <div class="flex items-center justify-end gap-2 p-6 border-t border-slate-200 dark:border-slate-700">
           <button @click="closeFormModal" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-900 dark:text-white rounded-lg text-sm">Cancel</button>
-          <button @click="saveClient" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm">{{ showEditModal ? 'Update' : 'Create' }}</button>
+          <button @click="saveClient" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm">Create</button>
         </div>
       </div>
     </div>
@@ -244,6 +247,7 @@
 <script>
 import { ref, computed, onMounted } from 'vue'
 import { useApi } from '../composables/useApi'
+import { useOptimistic } from '../composables/useOptimistic'
 import ModernMetricCard from '../components/MetricCard.vue'
 import ClientDetailModal from '../components/ClientDetailModal.vue'
 
@@ -251,7 +255,7 @@ export default {
   name: 'Clients',
   components: { ModernMetricCard, ClientDetailModal },
   setup() {
-    const { loading, error, makeRequest } = useApi()
+    const { loading, error, makeRequest, invalidateCache } = useApi()
     const clients = ref([])
     const stats = ref({ total_clients: 0, active_clients: 0, premium_clients: 0, new_clients_7d: 0, total_balance: 0 })
     const searchTerm = ref('')
@@ -260,7 +264,6 @@ export default {
     const churnFilter = ref('')
     const selectedIds = ref([])
     const showAddModal = ref(false)
-    const showEditModal = ref(false)
     const showDetailModal = ref(false)
     const selectedClient = ref(null)
     const formData = ref({
@@ -315,33 +318,20 @@ export default {
     }
 
     const refreshData = () => Promise.all([fetchClients(), fetchStats()])
+    const { optimisticRemove, optimisticUpdate } = useOptimistic(clients, fetchClients, invalidateCache, 'suapi/clients')
     
     const viewClient = (client) => {
       selectedClient.value = client
       showDetailModal.value = true
     }
 
-    const editClient = (client) => {
-      selectedClient.value = client
-      formData.value = {
-        username: client.user_username,
-        email: client.user_email || '',
-        phone_number: client.phone_number || '',
-        display_name: client.display_name || '',
-        account_tier: client.account_tier,
-        status: client.status,
-        balance: client.balance,
-        credit_limit: client.credit_limit
-      }
-      showEditModal.value = true
-    }
-
     const deleteClient = async (client) => {
       if (!confirm(`Delete client ${client.user_username}? This cannot be undone.`)) return
+      optimisticRemove(client.id)
       try {
         await makeRequest('delete', `suapi/clients/${client.id}/`)
-        await refreshData()
       } catch (err) {
+        await refreshData() // rollback
         const msg = err.response?.data?.detail || err.response?.data?.error || 'Delete failed — client may have active sessions or vouchers'
         alert(msg)
       }
@@ -349,11 +339,7 @@ export default {
 
     const saveClient = async () => {
       try {
-        if (showEditModal.value) {
-          await makeRequest('patch', `suapi/clients/${selectedClient.value.id}/`, formData.value)
-        } else {
-          await makeRequest('post', 'suapi/clients/', formData.value)
-        }
+        await makeRequest('post', 'suapi/clients/', formData.value)
         closeFormModal()
         await refreshData()
       } catch (err) {
@@ -364,7 +350,6 @@ export default {
 
     const closeFormModal = () => {
       showAddModal.value = false
-      showEditModal.value = false
       formData.value = {
         username: '',
         email: '',
@@ -429,10 +414,12 @@ export default {
 
     const quickToggleSuspend = async (client) => {
       const action = client.status === 'suspended' ? 'activate' : 'suspend'
+      const newStatus = action === 'suspend' ? 'suspended' : 'active'
+      optimisticUpdate(client.id, { status: newStatus })
       try {
         await makeRequest('post', `suapi/clients/${client.id}/${action}/`, { reason: 'Admin quick action' }, false)
-        await refreshData()
       } catch (err) {
+        await refreshData() // rollback
         alert(err.response?.data?.error || `${action} failed`)
       }
     }
@@ -463,8 +450,8 @@ export default {
     return {
       loading, error, clients, stats, searchTerm, statusFilter, tierFilter, churnFilter, selectedIds,
       filteredClients, fetchClients, refreshData,
-      showAddModal, showEditModal, showDetailModal, selectedClient, formData,
-      viewClient, editClient, deleteClient, saveClient, closeFormModal,
+      showAddModal, showDetailModal, selectedClient, formData,
+      viewClient, deleteClient, saveClient, closeFormModal,
       toggleSelectAll, quickToggleSuspend, bulkAction, exportSelected,
       getInitials, getTierBadge, getStatusBadge, formatNumber, formatDate, handleImageError
     }

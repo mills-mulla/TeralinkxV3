@@ -26,11 +26,23 @@
     </div>
 
     <!-- Metrics -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-slide-up">
-      <ModernMetricCard title="Total Transactions" :value="stats.total_transactions" icon="🏆" color="blue" />
-      <ModernMetricCard title="Points Earned" :value="stats.total_earned" icon="➕" color="emerald" />
-      <ModernMetricCard title="Points Redeemed" :value="stats.total_redeemed" icon="➖" color="rose" />
-      <ModernMetricCard title="Net Balance" :value="stats.net_balance" icon="💰" color="purple" />
+    <div class="flex items-center gap-2 flex-wrap">
+      <div class="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl">
+        <span class="text-[10px] text-blue-600 dark:text-blue-400 font-medium">🏆 Transactions</span>
+        <span class="text-sm font-bold text-blue-700 dark:text-blue-300">{{ stats.total_transactions || 0 }}</span>
+      </div>
+      <div class="flex items-center gap-2 px-3 py-2 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl">
+        <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">➕ Earned</span>
+        <span class="text-sm font-bold text-emerald-700 dark:text-emerald-300">{{ stats.total_earned || 0 }}</span>
+      </div>
+      <div class="flex items-center gap-2 px-3 py-2 bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 rounded-xl">
+        <span class="text-[10px] text-rose-600 dark:text-rose-400 font-medium">➖ Redeemed</span>
+        <span class="text-sm font-bold text-rose-700 dark:text-rose-300">{{ stats.total_redeemed || 0 }}</span>
+      </div>
+      <div class="flex items-center gap-2 px-3 py-2 bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/20 rounded-xl">
+        <span class="text-[10px] text-purple-600 dark:text-purple-400 font-medium">💰 Net Balance</span>
+        <span class="text-sm font-bold text-purple-700 dark:text-purple-300">{{ stats.net_balance || 0 }}</span>
+      </div>
     </div>
 
     <!-- Search & Table -->

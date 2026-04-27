@@ -37,6 +37,7 @@ export default defineConfig(({ mode }) => ({
         ]
       },
       workbox: {
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         // Cache static assets permanently (hashed = safe forever)
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         // Don't cache API calls in service worker — useApi.js handles that

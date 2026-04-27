@@ -1,19 +1,34 @@
 # serializers/user_serializers.py
 from rest_framework import serializers
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group, Permission
 from users.models import ClientH, UserDevice, UserSession
 
 class DjangoUserSerializer(serializers.ModelSerializer):
     """Serializer for Django User model"""
     client_profile = serializers.SerializerMethodField()
     password = serializers.CharField(write_only=True, required=False)
-    
+    groups = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=Group.objects.all(), required=False
+    )
+    user_permissions = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=Permission.objects.all(), required=False
+    )
+    group_names = serializers.SerializerMethodField()
+    permission_codenames = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 
-                  'is_staff', 'is_active', 'is_superuser', 'date_joined', 
-                  'last_login', 'client_profile', 'password']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name',
+                  'is_staff', 'is_active', 'is_superuser', 'date_joined',
+                  'last_login', 'client_profile', 'password',
+                  'groups', 'user_permissions', 'group_names', 'permission_codenames']
         read_only_fields = ['date_joined', 'last_login']
+
+    def get_group_names(self, obj):
+        return list(obj.groups.values('id', 'name'))
+
+    def get_permission_codenames(self, obj):
+        return list(obj.user_permissions.values('id', 'codename', 'content_type__app_label', 'content_type__model'))
     
     def create(self, validated_data):
         password = validated_data.pop('password', None)

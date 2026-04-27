@@ -1,128 +1,67 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center p-4">
-    <!-- Background Decoration (keep your existing styles) -->
-    <div class="absolute inset-0 overflow-hidden">
-      <div class="absolute -top-40 -right-40 w-80 h-80 bg-blue-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
-      <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
-      <div class="absolute top-40 left-40 w-80 h-80 bg-indigo-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
-    </div>
+  <div class="min-h-screen bg-slate-950 flex items-center justify-end relative overflow-hidden">
 
-    <!-- Main Login Card -->
-    <div class="relative w-full max-w-md">
-      <div class="bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 p-8">
-        <!-- Header (keep your existing header) -->
-        <div class="text-center mb-8">
-          <div class="w-20 h-20 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-            <ShieldCheckIcon class="w-10 h-10 text-white" />
-          </div>
-          <h1 class="text-3xl font-bold bg-gradient-to-r from-slate-800 to-blue-600 bg-clip-text text-transparent mb-2">
-            Admin Access
-          </h1>
-          <p class="text-slate-600 font-light">Authorized personnel only</p>
+    <!-- 3D Globe background -->
+    <GlobeBackground class="absolute inset-0 w-full h-full" />
+
+    <!-- Right side darkening behind card -->
+    <div class="absolute inset-y-0 right-0 w-80 pointer-events-none" style="background: linear-gradient(to left, rgba(2,6,23,0.92) 60%, transparent 100%);"></div>
+
+
+    <!-- Login card — pinned to right -->
+    <div class="relative z-10 w-full max-w-sm mr-12 login-card">
+      <div class="bg-slate-900/80 backdrop-blur-xl border border-slate-700/60 rounded-2xl shadow-2xl p-8">
+
+        <!-- Logo + brand -->
+        <div class="text-center mb-7">
+          <img src="../assets/logo/teralinkx2.png" alt="TeralinkX" class="w-16 h-16 mx-auto mb-3 drop-shadow-[0_0_12px_rgba(59,130,246,0.6)]" />
+          <h1 class="text-xl font-bold text-white tracking-wide">TeralinkX</h1>
+          <p class="text-cyan-400 text-xs font-medium tracking-widest uppercase mt-0.5">Admin Console</p>
         </div>
 
-        <!-- Login Form -->
-        <form @submit.prevent="handleLogin" class="space-y-6">
-          <!-- Username Field -->
-          <div>
-            <label class="block text-sm font-medium text-slate-700 mb-2 flex items-center">
-              <UserIcon class="w-4 h-4 mr-2" />
-              Admin Username
-            </label>
-            <div class="relative">
-              <input
-                v-model="loginForm.username"
-                type="text"
-                required
-                placeholder="Enter admin username"
-                :class="[
-                  'w-full px-4 py-3 pl-11 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white/50 backdrop-blur-sm',
-                  formErrors.username ? 'border-rose-500' : 'border-slate-300'
-                ]"
-                @input="clearError('username')"
-              />
-              <UserIcon class="w-5 h-5 text-slate-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-            </div>
-            <p v-if="formErrors.username" class="text-rose-600 text-xs mt-2 flex items-center">
-              <ExclamationCircleIcon class="w-4 h-4 mr-1" />
-              {{ formErrors.username }}
-            </p>
+        <!-- Form -->
+        <form @submit.prevent="handleLogin" class="space-y-4">
+          <div class="relative">
+            <UserIcon class="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input v-model="loginForm.username" type="text" required placeholder="Username"
+              :class="['w-full pl-9 pr-3 py-2.5 text-sm bg-slate-800/80 border rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all', formErrors.username ? 'border-red-500' : 'border-slate-700']"
+              @input="clearError('username')" />
+          </div>
+          <div class="relative">
+            <LockClosedIcon class="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input v-model="loginForm.password" :type="showPassword ? 'text' : 'password'" required placeholder="Password"
+              :class="['w-full pl-9 pr-9 py-2.5 text-sm bg-slate-800/80 border rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all', formErrors.password ? 'border-red-500' : 'border-slate-700']"
+              @input="clearError('password')" />
+            <button type="button" @click="showPassword=!showPassword" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors">
+              <EyeIcon v-if="showPassword" class="w-4 h-4" />
+              <EyeSlashIcon v-else class="w-4 h-4" />
+            </button>
           </div>
 
-          <!-- Password Field -->
-          <div>
-            <label class="block text-sm font-medium text-slate-700 mb-2 flex items-center">
-              <LockClosedIcon class="w-4 h-4 mr-2" />
-              Password
-            </label>
-            <div class="relative">
-              <input
-                v-model="loginForm.password"
-                :type="showPassword ? 'text' : 'password'"
-                required
-                placeholder="Enter your password"
-                :class="[
-                  'w-full px-4 py-3 pl-11 pr-11 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white/50 backdrop-blur-sm',
-                  formErrors.password ? 'border-rose-500' : 'border-slate-300'
-                ]"
-                @input="clearError('password')"
-              />
-              <LockClosedIcon class="w-5 h-5 text-slate-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
-              <button
-                type="button"
-                @click="showPassword = !showPassword"
-                class="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors duration-200"
-              >
-                <EyeIcon v-if="showPassword" class="w-5 h-5" />
-                <EyeSlashIcon v-else class="w-5 h-5" />
-              </button>
-            </div>
-            <p v-if="formErrors.password" class="text-rose-600 text-xs mt-2 flex items-center">
-              <ExclamationCircleIcon class="w-4 h-4 mr-1" />
-              {{ formErrors.password }}
-            </p>
+          <!-- Inline error -->
+          <div v-if="showError" class="flex items-center gap-2 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
+            <ExclamationTriangleIcon class="w-4 h-4 text-red-400 shrink-0" />
+            <p class="text-xs text-red-400">{{ errorMessage }}</p>
           </div>
 
-          <!-- Submit Button -->
-          <button
-            type="submit"
-            :disabled="loading"
-            :class="[
-              'w-full py-4 px-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transform transition-all duration-300 flex items-center justify-center space-x-2',
-              loading ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'
-            ]"
-          >
-            <div v-if="loading" class="flex items-center space-x-2">
-              <div class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-              <span>Authenticating...</span>
-            </div>
-            <div v-else class="flex items-center space-x-2">
-              <ArrowRightIcon class="w-5 h-5" />
-              <span>Access Dashboard</span>
-            </div>
+          <button type="submit" :disabled="loading"
+            class="w-full py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 mt-2">
+            <div v-if="loading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+            <span>{{ loading ? 'Authenticating...' : 'Sign In' }}</span>
+            <ArrowRightIcon v-if="!loading" class="w-4 h-4" />
           </button>
         </form>
+
+        <p class="text-center text-[10px] text-slate-600 mt-6">Authorized personnel only &bull; All access is logged</p>
       </div>
     </div>
 
-    <!-- Error Toast -->
-    <div v-if="showError" class="fixed top-4 right-4 z-50">
-      <div class="bg-rose-500 text-white px-6 py-4 rounded-xl shadow-lg flex items-center space-x-3 animate-fade-in">
-        <ExclamationTriangleIcon class="w-5 h-5" />
-        <div>
-          <p class="font-medium">Authentication Failed</p>
-          <p class="text-sm opacity-90">{{ errorMessage }}</p>
-        </div>
-        <button @click="showError = false" class="text-white/80 hover:text-white">
-          <XMarkIcon class="w-5 h-5" />
-        </button>
-      </div>
-    </div>
   </div>
 </template>
 
 <script>
 import { ref, reactive } from 'vue'
+import GlobeBackground from '../components/GlobeBackground.vue'
 import {
   ShieldCheckIcon,
   UserIcon,
@@ -138,6 +77,7 @@ import {
 export default {
   name: 'Auth',
   components: {
+    GlobeBackground,
     ShieldCheckIcon,
     UserIcon,
     LockClosedIcon,
@@ -310,6 +250,13 @@ export default {
       }
     }
 
+    const features = [
+      { icon: '📊', label: 'Real-time Analytics', desc: 'Live revenue, sessions and client metrics' },
+      { icon: '👥', label: 'Client Management', desc: 'Full CRUD with voucher and device tracking' },
+      { icon: '💰', label: 'Finance Intelligence', desc: 'MRR, churn, cash position and KPI trends' },
+      { icon: '🛡️', label: 'HIDS Security', desc: 'Suricata + Zeek threat detection' },
+    ]
+
     return {
       loading,
       showPassword,
@@ -317,6 +264,7 @@ export default {
       errorMessage,
       loginForm,
       formErrors,
+      features,
       clearError,
       handleLogin,
     }
@@ -325,38 +273,16 @@ export default {
 </script>
 
 <style scoped>
-/* Keep your existing styles */
-@keyframes blob {
-  0% { transform: translate(0px, 0px) scale(1); }
-  33% { transform: translate(30px, -50px) scale(1.1); }
-  66% { transform: translate(-20px, 20px) scale(0.9); }
-  100% { transform: translate(0px, 0px) scale(1); }
+.login-card {
+  animation: cardIn 0.6s ease-out forwards;
 }
-
-.animate-blob {
-  animation: blob 7s infinite;
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
-
-.animation-delay-2000 {
-  animation-delay: 2s;
-}
-
-.animation-delay-4000 {
-  animation-delay: 4s;
-}
-
 @keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
-
-.animate-fade-in {
-  animation: fade-in 0.3s ease-out;
-}
+.animate-fade-in { animation: fade-in 0.3s ease-out; }
 </style>

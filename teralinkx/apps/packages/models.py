@@ -205,9 +205,8 @@ class PackageType(TimeStampedModel):
 
     def increment_sales(self):
         """Increment sold quantity - thread-safe"""
-        if self.total_quantity:
-            self.sold_quantity = models.F('sold_quantity') + 1
-            self.save(update_fields=['sold_quantity'])
+        self.sold_quantity = models.F('sold_quantity') + 1
+        self.save(update_fields=['sold_quantity'])
 
 
 class DispatchVoucher(TimeStampedModel):

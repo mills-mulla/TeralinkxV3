@@ -27,6 +27,7 @@
     "chart.js": "^4.5.1",
     "pinia": "^3.0.3",
     "pusher-js": "^8.4.0",
+    "three": "^0.184.0",
     "vite-plugin-compression2": "^2.4.0",
     "vue": "^3.5.22",
     "vue-router": "^4.5.1",

@@ -37,41 +37,38 @@
       </div>
     </div>
 
-    <!-- Metrics -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 animate-slide-up">
-      <ModernMetricCard title="Total Devices" :value="stats.total_devices" color="blue">
-        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/>
-        </svg>
-      </ModernMetricCard>
-      <ModernMetricCard title="Active" :value="stats.active_devices" color="emerald">
-        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-        </svg>
-      </ModernMetricCard>
-      <ModernMetricCard title="Online" :value="stats.online_devices" color="cyan">
-        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-        </svg>
-      </ModernMetricCard>
-      <ModernMetricCard title="Trusted" :value="stats.trusted_devices" color="purple">
-        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
-        </svg>
-      </ModernMetricCard>
+    <!-- Metric Pills -->
+    <div class="flex items-center gap-2 flex-wrap">
+      <div class="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl">
+        <span class="text-[10px] text-blue-600 dark:text-blue-400 font-medium">Total</span>
+        <span class="text-sm font-bold text-blue-700 dark:text-blue-300">{{ stats.total_devices || 0 }}</span>
+      </div>
+      <div class="flex items-center gap-2 px-3 py-2 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl">
+        <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Active</span>
+        <span class="text-sm font-bold text-emerald-700 dark:text-emerald-300">{{ stats.active_devices || 0 }}</span>
+      </div>
+      <div class="flex items-center gap-2 px-3 py-2 bg-cyan-50 dark:bg-cyan-500/10 border border-cyan-200 dark:border-cyan-500/20 rounded-xl">
+        <div class="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse"></div>
+        <span class="text-[10px] text-cyan-600 dark:text-cyan-400 font-medium">Online</span>
+        <span class="text-sm font-bold text-cyan-700 dark:text-cyan-300">{{ stats.online_devices || 0 }}</span>
+      </div>
+      <div class="flex items-center gap-2 px-3 py-2 bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/20 rounded-xl">
+        <span class="text-[10px] text-purple-600 dark:text-purple-400 font-medium">Trusted</span>
+        <span class="text-sm font-bold text-purple-700 dark:text-purple-300">{{ stats.trusted_devices || 0 }}</span>
+      </div>
     </div>
 
     <!-- Search & Filters -->
     <div class="space-y-3 animate-slide-up" style="animation-delay: 0.1s">
-      <div class="flex items-center gap-2">
-        <div class="flex-1">
-          <input v-model="searchTerm" type="text" placeholder="Search devices..." class="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs" />
+      <div class="flex items-center gap-2 flex-wrap">
+        <div class="flex-1 min-w-48">
+          <input v-model="searchTerm" type="text" placeholder="Search MAC, name, model, account..." class="w-full px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs" />
         </div>
         <select v-model="statusFilter" class="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs">
           <option value="">All Status</option>
           <option value="active">Active</option>
           <option value="inactive">Inactive</option>
-          <option value="suspended">Suspended</option>
+          <option value="blocked">Blocked</option>
         </select>
         <select v-model="typeFilter" class="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs">
           <option value="">All Types</option>
@@ -80,6 +77,21 @@
           <option value="tablet">Tablet</option>
           <option value="desktop">Desktop</option>
         </select>
+        <select v-model="trustedFilter" class="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs">
+          <option value="">All Trust</option>
+          <option value="true">Trusted</option>
+          <option value="false">Untrusted</option>
+        </select>
+      </div>
+
+      <!-- Bulk Actions -->
+      <div v-if="selectedIds.length" class="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-500/10 rounded-lg">
+        <span class="text-xs text-blue-700 dark:text-blue-400 font-medium">{{ selectedIds.length }} selected</span>
+        <button @click="bulkAction('trust')" class="px-2 py-1 text-[10px] font-medium rounded bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-400 hover:bg-purple-200">✅ Trust</button>
+        <button @click="bulkAction('untrust')" class="px-2 py-1 text-[10px] font-medium rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200">❌ Untrust</button>
+        <button @click="bulkAction('block')" class="px-2 py-1 text-[10px] font-medium rounded bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400 hover:bg-red-200">🚫 Block</button>
+        <button @click="bulkAction('unblock')" class="px-2 py-1 text-[10px] font-medium rounded bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-200">✅ Unblock</button>
+        <button @click="selectedIds = []" class="ml-auto text-[10px] text-slate-500 hover:text-slate-700">Clear</button>
       </div>
 
       <!-- Table -->
@@ -88,69 +100,45 @@
           <table class="w-full">
             <thead class="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
               <tr>
-                <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Device</th>
-                <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">User</th>
+                <th class="px-3 py-2 w-6"><input type="checkbox" @change="toggleSelectAll" :checked="selectedIds.length === filteredDevices.length && filteredDevices.length > 0" class="rounded" /></th>
+                <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">MAC Address</th>
+                <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Device Name</th>
+                <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Owner</th>
                 <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Type</th>
+                <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Platform</th>
                 <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Status</th>
+                <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Trusted</th>
                 <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Online</th>
+                <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Voucher</th>
                 <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Connections</th>
+                <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Last Seen</th>
                 <th class="px-3 py-2 text-right text-[10px] font-medium text-slate-600 dark:text-slate-400">Actions</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
               <tr v-for="device in filteredDevices" :key="device.id" @click="openEditModal(device)" class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer">
-                <td class="px-3 py-2">
-                  <div class="flex items-center gap-2">
-                    <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center">
-                      <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/>
-                      </svg>
-                    </div>
-                    <div>
-                      <p class="text-xs font-medium text-slate-900 dark:text-white">{{ device.device_name || 'Unknown' }}</p>
-                      <p class="text-[10px] text-slate-500 dark:text-slate-400">{{ device.mac_address }}</p>
-                    </div>
-                  </div>
-                </td>
+                <td class="px-3 py-2" @click.stop><input type="checkbox" :value="device.id" v-model="selectedIds" class="rounded" /></td>
+                <td class="px-3 py-2 text-xs font-mono text-slate-900 dark:text-white">{{ device.mac_address }}</td>
+                <td class="px-3 py-2"><p class="text-xs font-medium text-slate-900 dark:text-white">{{ device.device_name || 'Unknown' }}</p><p class="text-[10px] text-slate-500">{{ device.device_model || '' }}</p></td>
                 <td class="px-3 py-2 text-xs text-slate-900 dark:text-white">{{ device.user_account || 'N/A' }}</td>
-                <td class="px-3 py-2">
-                  <span class="px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
-                    {{ device.device_type || 'unknown' }}
-                  </span>
-                </td>
-                <td class="px-3 py-2">
-                  <span class="px-1.5 py-0.5 text-[10px] font-medium rounded-full" :class="getStatusBadge(device.status)">
-                    {{ device.status }}
-                  </span>
-                </td>
-                <td class="px-3 py-2">
-                  <span class="flex items-center gap-1 text-xs" :class="device.is_online ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-600'">
-                    <span class="w-1.5 h-1.5 rounded-full" :class="device.is_online ? 'bg-emerald-500' : 'bg-slate-400'"></span>
-                    {{ device.is_online ? 'Online' : 'Offline' }}
-                  </span>
-                </td>
+                <td class="px-3 py-2"><span class="px-1.5 py-0.5 text-[10px] rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">{{ device.device_type || 'unknown' }}</span></td>
+                <td class="px-3 py-2"><span class="px-1.5 py-0.5 text-[10px] rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400">{{ device.device_platform || 'N/A' }}</span></td>
+                <td class="px-3 py-2"><span class="px-1.5 py-0.5 text-[10px] rounded-full" :class="getStatusBadge(device.status)">{{ device.status }}</span></td>
+                <td class="px-3 py-2"><span v-if="device.is_trusted" class="text-[10px] text-purple-600 dark:text-purple-400 font-medium">✓ Trusted</span><span v-else class="text-[10px] text-slate-400">-</span></td>
+                <td class="px-3 py-2"><span class="flex items-center gap-1 text-xs" :class="device.is_online ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'"><span class="w-1.5 h-1.5 rounded-full" :class="device.is_online ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'"></span>{{ device.is_online ? 'Online' : 'Offline' }}</span></td>
+                <td class="px-3 py-2"><span v-if="device.has_active_voucher" class="px-1.5 py-0.5 text-[10px] rounded-full bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-400">✓</span><span v-else class="text-[10px] text-slate-400">-</span></td>
                 <td class="px-3 py-2 text-xs text-slate-900 dark:text-white">{{ device.total_connections || 0 }}</td>
+                <td class="px-3 py-2 text-xs text-slate-500 dark:text-slate-400">{{ formatDate(device.last_seen) }}</td>
                 <td class="px-3 py-2 text-right">
                   <div class="flex items-center justify-end gap-0.5">
-                    <button @click.stop="openEditModal(device)" class="p-1 hover:bg-blue-100 dark:hover:bg-blue-600 rounded transition-colors" title="Edit">
-                      <svg class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
+                    <button v-if="device.status !== 'blocked'" @click.stop="blockDevice(device)" class="p-1 hover:bg-red-100 dark:hover:bg-red-600 rounded" title="Block">
+                      <svg class="w-3.5 h-3.5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
                     </button>
-                    <button v-if="device.status === 'active'" @click.stop="blockDevice(device)" class="p-1 hover:bg-amber-100 dark:hover:bg-amber-600 rounded transition-colors" title="Block">
-                      <svg class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                      </svg>
+                    <button v-else @click.stop="unblockDevice(device)" class="p-1 hover:bg-emerald-100 dark:hover:bg-emerald-600 rounded" title="Unblock">
+                      <svg class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     </button>
-                    <button v-else @click.stop="unblockDevice(device)" class="p-1 hover:bg-emerald-100 dark:hover:bg-emerald-600 rounded transition-colors" title="Unblock">
-                      <svg class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </button>
-                    <button @click.stop="openDeleteModal(device)" class="p-1 hover:bg-red-100 dark:hover:bg-red-600 rounded transition-colors" title="Delete">
-                      <svg class="w-3.5 h-3.5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
+                    <button @click.stop="openDeleteModal(device)" class="p-1 hover:bg-red-100 dark:hover:bg-red-600 rounded" title="Delete">
+                      <svg class="w-3.5 h-3.5 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                     </button>
                   </div>
                 </td>
@@ -163,63 +151,139 @@
 
     <!-- Edit Device Modal -->
     <div v-if="showFormModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" @click.self="closeFormModal">
-      <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
-        <div class="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-700">
-          <h2 class="text-base font-semibold text-slate-900 dark:text-white">{{ selectedDevice?.id ? 'Edit Device' : 'Add Device' }}</h2>
-          <button @click="closeFormModal" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-        <div class="p-5 overflow-y-auto max-h-[calc(90vh-140px)]">
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">MAC Address</label>
-              <input v-model="formData.mac_address" type="text" placeholder="00:11:22:33:44:55" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" />
-            </div>
-            <div>
-              <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Device Name</label>
-              <input v-model="formData.device_name" type="text" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" />
-            </div>
-            <div>
-              <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Device Type</label>
-              <select v-model="formData.device_type" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white">
-                <option value="phone">Phone</option>
-                <option value="laptop">Laptop</option>
-                <option value="tablet">Tablet</option>
-                <option value="desktop">Desktop</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Platform</label>
-              <select v-model="formData.device_platform" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white">
-                <option value="windows">Windows</option>
-                <option value="macos">macOS</option>
-                <option value="linux">Linux</option>
-                <option value="android">Android</option>
-                <option value="ios">iOS</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Status</label>
-              <select v-model="formData.status" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white">
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="suspended">Suspended</option>
-              </select>
-            </div>
-            <div class="flex items-center">
-              <label class="flex items-center gap-2 cursor-pointer">
-                <input v-model="formData.is_trusted" type="checkbox" class="w-4 h-4 text-blue-600 border-slate-300 dark:border-slate-600 rounded" />
-                <span class="text-xs text-slate-700 dark:text-slate-300">Trusted Device</span>
-              </label>
-            </div>
+      <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[88vh] overflow-hidden flex flex-col">
+        <!-- Header -->
+        <div class="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700 shrink-0">
+          <div>
+            <h2 class="text-sm font-semibold text-slate-900 dark:text-white">{{ selectedDevice?.device_name || formData.device_name || 'New Device' }}</h2>
+            <p class="text-[10px] text-slate-500 dark:text-slate-400 font-mono">{{ selectedDevice?.mac_address || formData.mac_address || '' }} · {{ selectedDevice?.user_account || '' }}</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span v-if="selectedDevice?.id" class="px-2 py-0.5 text-[10px] rounded-full" :class="getStatusBadge(selectedDevice.status)">{{ selectedDevice.status }}</span>
+            <button @click="closeFormModal" class="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"><svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
           </div>
         </div>
-        <div class="flex items-center justify-end gap-2 p-5 border-t border-slate-200 dark:border-slate-700">
+        <!-- Body -->
+        <div class="flex flex-1 overflow-hidden">
+          <!-- Sidebar -->
+          <div class="w-44 shrink-0 border-r border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 overflow-y-auto p-3 space-y-1">
+            <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide px-1 mb-1">Sections</p>
+            <button v-for="s in deviceSections" :key="s.id" @click="activeDeviceSection=s.id"
+              class="w-full text-left px-2.5 py-2 text-xs rounded-lg transition-colors"
+              :class="activeDeviceSection===s.id ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 font-medium' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'">
+              {{ s.label }}
+            </button>
+            <div v-if="selectedDevice?.id" class="pt-2 mt-2 border-t border-slate-200 dark:border-slate-700 space-y-1">
+              <button @click="blockDevice(selectedDevice)" v-if="selectedDevice.status!=='blocked'" class="w-full text-left px-2.5 py-2 text-xs rounded-lg bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 hover:bg-red-100">🚫 Block</button>
+              <button @click="unblockDevice(selectedDevice)" v-else class="w-full text-left px-2.5 py-2 text-xs rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100">✅ Unblock</button>
+            </div>
+          </div>
+          <!-- Right panel -->
+          <div class="flex-1 overflow-y-auto p-4 space-y-3">
+
+            <!-- 1. Device -->
+            <div v-show="activeDeviceSection==='device'" class="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+              <button @click="dOpen.device=!dOpen.device" class="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                <span class="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">Device</span>
+                <svg class="w-3.5 h-3.5 text-slate-400 transition-transform" :class="dOpen.device?'rotate-180':''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              </button>
+              <div v-show="dOpen.device" class="p-4 grid grid-cols-2 gap-3">
+                <div><label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">MAC Address</label><input v-model="formData.mac_address" type="text" placeholder="00:11:22:33:44:55" class="w-full px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-mono" /></div>
+                <div><label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Device Name</label><input v-model="formData.device_name" type="text" class="w-full px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" /></div>
+                <div><label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Type</label>
+                  <select v-model="formData.device_type" class="w-full px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white">
+                    <option value="phone">Phone</option><option value="laptop">Laptop</option><option value="tablet">Tablet</option><option value="desktop">Desktop</option><option value="router">Router</option>
+                  </select>
+                </div>
+                <div><label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Platform</label>
+                  <select v-model="formData.device_platform" class="w-full px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white">
+                    <option value="windows">Windows</option><option value="macos">macOS</option><option value="linux">Linux</option><option value="android">Android</option><option value="ios">iOS</option>
+                  </select>
+                </div>
+                <div><label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Model</label><input v-model="formData.device_model" type="text" class="w-full px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" /></div>
+                <div><label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Manufacturer</label><input v-model="formData.manufacturer" type="text" class="w-full px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" /></div>
+              </div>
+            </div>
+
+            <!-- 2. Config -->
+            <div v-show="activeDeviceSection==='config'" class="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+              <button @click="dOpen.config=!dOpen.config" class="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                <span class="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">Config</span>
+                <svg class="w-3.5 h-3.5 text-slate-400 transition-transform" :class="dOpen.config?'rotate-180':''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              </button>
+              <div v-show="dOpen.config" class="p-4 grid grid-cols-2 gap-3">
+                <div><label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Status</label>
+                  <select v-model="formData.status" class="w-full px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white">
+                    <option value="active">Active</option><option value="inactive">Inactive</option><option value="blocked">Blocked</option>
+                  </select>
+                </div>
+                <div><label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Max Sessions</label><input v-model="formData.max_concurrent_sessions" type="number" class="w-full px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" /></div>
+                <div><label class="flex items-center gap-2 cursor-pointer mt-1"><input v-model="formData.is_trusted" type="checkbox" class="w-4 h-4 text-blue-600 rounded" /><span class="text-xs text-slate-700 dark:text-slate-300">Trusted</span></label></div>
+                <div><label class="flex items-center gap-2 cursor-pointer mt-1"><input v-model="formData.auto_connect" type="checkbox" class="w-4 h-4 text-blue-600 rounded" /><span class="text-xs text-slate-700 dark:text-slate-300">Auto Connect</span></label></div>
+              </div>
+            </div>
+
+            <!-- 3. Location -->
+            <div v-show="activeDeviceSection==='location'" class="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+              <button @click="dOpen.location=!dOpen.location" class="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                <span class="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">Location</span>
+                <svg class="w-3.5 h-3.5 text-slate-400 transition-transform" :class="dOpen.location?'rotate-180':''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              </button>
+              <div v-show="dOpen.location" class="p-4 grid grid-cols-2 gap-3 text-xs">
+                <div><span class="text-slate-500">Last Seen Location</span><p class="font-medium text-slate-900 dark:text-white mt-0.5">{{ selectedDevice?.last_seen_location_name || 'N/A' }}</p></div>
+                <div><span class="text-slate-500">Favourite Location</span><p class="font-medium text-slate-900 dark:text-white mt-0.5">{{ selectedDevice?.favorite_location_name || 'N/A' }}</p></div>
+              </div>
+            </div>
+
+            <!-- 4. Activity -->
+            <div v-show="activeDeviceSection==='activity'" class="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+              <button @click="dOpen.activity=!dOpen.activity" class="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                <span class="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">Activity</span>
+                <svg class="w-3.5 h-3.5 text-slate-400 transition-transform" :class="dOpen.activity?'rotate-180':''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              </button>
+              <div v-show="dOpen.activity" class="p-4 grid grid-cols-2 gap-3 text-xs">
+                <div><span class="text-slate-500">Last Seen</span><p class="font-medium text-slate-900 dark:text-white mt-0.5">{{ formatDate(selectedDevice?.last_seen) }}</p></div>
+                <div><span class="text-slate-500">Total Connections</span><p class="font-bold text-blue-600 dark:text-blue-400 mt-0.5">{{ selectedDevice?.total_connections || 0 }}</p></div>
+                <div><span class="text-slate-500">Online Now</span><p class="font-medium mt-0.5" :class="selectedDevice?.is_online ? 'text-emerald-600' : 'text-slate-400'">{{ selectedDevice?.is_online ? '✓ Online' : 'Offline' }}</p></div>
+                <div><span class="text-slate-500">Session Limit</span><p class="font-medium text-slate-900 dark:text-white mt-0.5">{{ selectedDevice?.max_concurrent_sessions || 'N/A' }}</p></div>
+              </div>
+            </div>
+
+            <!-- 5. Vouchers -->
+            <div v-show="activeDeviceSection==='vouchers'" class="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+              <button @click="dOpen.vouchers=!dOpen.vouchers" class="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                <span class="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">Vouchers</span>
+                <svg class="w-3.5 h-3.5 text-slate-400 transition-transform" :class="dOpen.vouchers?'rotate-180':''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              </button>
+              <div v-show="dOpen.vouchers" class="p-4 text-xs">
+                <div v-if="selectedDevice?.has_active_voucher" class="p-3 bg-purple-50 dark:bg-purple-500/10 rounded-lg">
+                  <p class="text-purple-600 dark:text-purple-400 font-medium">✓ Active Voucher</p>
+                  <p class="text-slate-700 dark:text-slate-300 mt-1 font-mono">{{ selectedDevice?.active_voucher_session || 'N/A' }}</p>
+                </div>
+                <p v-else class="text-slate-400">No active voucher</p>
+              </div>
+            </div>
+
+            <!-- 6. History -->
+            <div v-show="activeDeviceSection==='history'" class="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+              <button @click="dOpen.history=!dOpen.history" class="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                <span class="text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">History</span>
+                <svg class="w-3.5 h-3.5 text-slate-400 transition-transform" :class="dOpen.history?'rotate-180':''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              </button>
+              <div v-show="dOpen.history" class="p-4 text-xs space-y-3">
+                <div><span class="text-slate-500">Previous Owners</span><p class="font-medium text-slate-900 dark:text-white mt-0.5">{{ selectedDevice?.previous_owners?.length ? selectedDevice.previous_owners.join(', ') : 'None' }}</p></div>
+                <div v-if="selectedDevice?.device_identification">
+                  <span class="text-slate-500">Device Identification</span>
+                  <pre class="text-[10px] bg-slate-50 dark:bg-slate-900 rounded-lg p-2 mt-1 overflow-x-auto text-slate-700 dark:text-slate-300">{{ JSON.stringify(selectedDevice.device_identification, null, 2) }}</pre>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+        <div class="flex items-center justify-end gap-2 px-5 py-3 border-t border-slate-200 dark:border-slate-700 shrink-0">
           <button @click="closeFormModal" class="px-3 py-2 text-xs bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-900 dark:text-white rounded-lg">Cancel</button>
-          <button @click="saveDevice" :disabled="saveLoading" class="px-3 py-2 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-lg" :class="{ 'opacity-50': saveLoading }">{{ saveLoading ? 'Saving...' : (selectedDevice?.id ? 'Update' : 'Create') }}</button>
+          <button @click="saveDevice" :disabled="saveLoading" class="px-3 py-2 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-lg" :class="{'opacity-50':saveLoading}">{{ saveLoading ? 'Saving...' : (selectedDevice?.id ? 'Update' : 'Create') }}</button>
         </div>
       </div>
     </div>
@@ -232,6 +296,7 @@
 <script>
 import { ref, computed, onMounted } from 'vue'
 import { useApi } from '../composables/useApi'
+import { useOptimistic } from '../composables/useOptimistic'
 import ModernMetricCard from '../components/MetricCard.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 
@@ -239,13 +304,47 @@ export default {
   name: 'Devices',
   components: { ModernMetricCard, ConfirmDialog },
   setup() {
-    const { loading, error, makeRequest } = useApi()
+    const { loading, error, makeRequest, invalidateCache } = useApi()
     const devices = ref([])
     const stats = ref({})
     const searchTerm = ref('')
     const statusFilter = ref('')
     const typeFilter = ref('')
+    const trustedFilter = ref('')
+    const selectedIds = ref([])
+
+    const toggleSelectAll = (e) => {
+      selectedIds.value = e.target.checked ? filteredDevices.value.map(d => d.id) : []
+    }
+
+    const bulkAction = async (action) => {
+      if (!selectedIds.value.length) return
+      try {
+        const endpoint = action === 'block' ? 'block' : action === 'unblock' ? 'unblock' : null
+        if (endpoint) {
+          await Promise.all(selectedIds.value.map(id => makeRequest('post', `suapi/devices/${id}/${endpoint}/`, { reason: 'Bulk admin action' })))
+        } else if (action === 'trust') {
+          await Promise.all(selectedIds.value.map(id => makeRequest('patch', `suapi/devices/${id}/`, { is_trusted: true })))
+        } else if (action === 'untrust') {
+          await Promise.all(selectedIds.value.map(id => makeRequest('patch', `suapi/devices/${id}/`, { is_trusted: false })))
+        }
+        selectedIds.value = []
+        await refreshData()
+      } catch (e) { console.error(e) }
+    }
+
+    const formatDate = (d) => d ? new Date(d).toLocaleDateString() : 'N/A'
     const showFormModal = ref(false)
+    const activeDeviceSection = ref('device')
+    const dOpen = { device: true, config: true, location: false, activity: false, vouchers: false, history: false }
+    const deviceSections = [
+      { id: 'device',   label: '📱 Device' },
+      { id: 'config',   label: '⚙️ Config' },
+      { id: 'location', label: '📍 Location' },
+      { id: 'activity', label: '📊 Activity' },
+      { id: 'vouchers', label: '🎫 Vouchers' },
+      { id: 'history',  label: '📜 History' },
+    ]
     const showDeleteModal = ref(false)
     const selectedDevice = ref(null)
     const deviceToDelete = ref(null)
@@ -264,14 +363,11 @@ export default {
       let result = devices.value
       if (searchTerm.value) {
         const term = searchTerm.value.toLowerCase()
-        result = result.filter(d => d.mac_address?.toLowerCase().includes(term) || d.device_name?.toLowerCase().includes(term) || d.user_account?.toLowerCase().includes(term))
+        result = result.filter(d => d.mac_address?.toLowerCase().includes(term) || d.device_name?.toLowerCase().includes(term) || d.user_account?.toLowerCase().includes(term) || d.device_model?.toLowerCase().includes(term))
       }
-      if (statusFilter.value) {
-        result = result.filter(d => d.status === statusFilter.value)
-      }
-      if (typeFilter.value) {
-        result = result.filter(d => d.device_type === typeFilter.value)
-      }
+      if (statusFilter.value) result = result.filter(d => d.status === statusFilter.value)
+      if (typeFilter.value) result = result.filter(d => d.device_type === typeFilter.value)
+      if (trustedFilter.value) result = result.filter(d => d.is_trusted === (trustedFilter.value === 'true'))
       return result
     })
 
@@ -293,6 +389,7 @@ export default {
     }
 
     const refreshData = () => Promise.all([fetchDevices(), fetchStats()])
+    const { optimisticRemove, optimisticUpdate } = useOptimistic(devices, fetchDevices, invalidateCache, 'suapi/devices')
     
     const openAddModal = () => {
       selectedDevice.value = null
@@ -309,28 +406,26 @@ export default {
     
     const openEditModal = (device) => {
       selectedDevice.value = device
+      activeDeviceSection.value = 'device'
       formData.value = {
         mac_address: device.mac_address || '',
         device_name: device.device_name || '',
         device_type: device.device_type || 'phone',
         device_platform: device.device_platform || 'android',
+        device_model: device.device_model || '',
+        manufacturer: device.manufacturer || '',
         status: device.status || 'active',
-        is_trusted: device.is_trusted || false
+        is_trusted: device.is_trusted || false,
+        auto_connect: device.auto_connect || false,
+        max_concurrent_sessions: device.max_concurrent_sessions || 1
       }
       showFormModal.value = true
     }
-    
+
     const closeFormModal = () => {
       showFormModal.value = false
       selectedDevice.value = null
-      formData.value = {
-        mac_address: '',
-        device_name: '',
-        device_type: 'phone',
-        device_platform: 'android',
-        status: 'active',
-        is_trusted: false
-      }
+      formData.value = { mac_address: '', device_name: '', device_type: 'phone', device_platform: 'android', device_model: '', manufacturer: '', status: 'active', is_trusted: false, auto_connect: false, max_concurrent_sessions: 1 }
     }
 
     const saveDevice = async () => {
@@ -351,19 +446,21 @@ export default {
     }
 
     const blockDevice = async (device) => {
+      optimisticUpdate(device.id, { status: 'blocked' })
       try {
         await makeRequest('post', `suapi/devices/${device.id}/block/`, { reason: 'Admin action' })
-        await refreshData()
       } catch (err) {
+        await refreshData() // rollback
         alert('Error: ' + (err.response?.data?.error || err.message))
       }
     }
 
     const unblockDevice = async (device) => {
+      optimisticUpdate(device.id, { status: 'active' })
       try {
         await makeRequest('post', `suapi/devices/${device.id}/unblock/`, { reason: 'Admin action' })
-        await refreshData()
       } catch (err) {
+        await refreshData() // rollback
         alert('Error: ' + (err.response?.data?.error || err.message))
       }
     }
@@ -373,11 +470,13 @@ export default {
 
     const confirmDelete = async () => {
       deleteLoading.value = true
+      const id = deviceToDelete.value.id
+      optimisticRemove(id)
+      closeDeleteModal()
       try {
-        await makeRequest('delete', `suapi/devices/${deviceToDelete.value.id}/`)
-        await refreshData()
-        closeDeleteModal()
+        await makeRequest('delete', `suapi/devices/${id}/`)
       } catch (err) {
+        await refreshData() // rollback
         alert('Error: ' + (err.response?.data?.error || err.message))
       } finally {
         deleteLoading.value = false
@@ -396,7 +495,10 @@ export default {
     onMounted(refreshData)
 
     return {
-      loading, error, devices, stats, searchTerm, statusFilter, typeFilter, showFormModal, showDeleteModal, selectedDevice, deviceToDelete,
+      loading, error, devices, stats, searchTerm, statusFilter, typeFilter, trustedFilter,
+      selectedIds, toggleSelectAll, bulkAction, formatDate,
+      activeDeviceSection, dOpen, deviceSections,
+      showFormModal, showDeleteModal, selectedDevice, deviceToDelete,
       saveLoading, deleteLoading, formData, filteredDevices, fetchDevices, refreshData,
       openAddModal, openEditModal, closeFormModal, saveDevice, blockDevice, unblockDevice, openDeleteModal, closeDeleteModal, confirmDelete, getStatusBadge
     }

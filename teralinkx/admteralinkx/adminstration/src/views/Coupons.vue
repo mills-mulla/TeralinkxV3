@@ -6,6 +6,12 @@
         <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Manage discount coupons</p>
       </div>
       <div class="flex items-center gap-2">
+        <template v-if="selectedIds.length">
+          <span class="text-xs text-slate-500 dark:text-slate-400">{{ selectedIds.length }} selected</span>
+          <button @click="bulkAction('activate')" class="px-2 py-1 text-[10px] font-medium rounded bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-200">Activate</button>
+          <button @click="bulkAction('deactivate')" class="px-2 py-1 text-[10px] font-medium rounded bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 hover:bg-amber-200">Deactivate</button>
+          <button @click="bulkAction('delete')" class="px-2 py-1 text-[10px] font-medium rounded bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400 hover:bg-red-200">Delete</button>
+        </template>
         <button @click="openAddModal" class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs flex items-center gap-1.5">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
           Add Coupon
@@ -29,19 +35,24 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 animate-slide-up">
-      <ModernMetricCard title="Total" :value="stats.total_coupons" color="blue">
-        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
-      </ModernMetricCard>
-      <ModernMetricCard title="Active" :value="stats.active_coupons" color="emerald">
-        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-      </ModernMetricCard>
-      <ModernMetricCard title="Reward" :value="stats.reward_coupons" color="purple">
-        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-      </ModernMetricCard>
-      <ModernMetricCard title="Valid" :value="stats.valid_coupons" color="amber">
-        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-      </ModernMetricCard>
+    <div class="flex items-center gap-2 flex-wrap">
+      <div class="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl">
+        <span class="text-[10px] text-blue-600 dark:text-blue-400 font-medium">Total</span>
+        <span class="text-sm font-bold text-blue-700 dark:text-blue-300">{{ stats.total_coupons || 0 }}</span>
+      </div>
+      <div class="flex items-center gap-2 px-3 py-2 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl">
+        <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
+        <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Active</span>
+        <span class="text-sm font-bold text-emerald-700 dark:text-emerald-300">{{ stats.active_coupons || 0 }}</span>
+      </div>
+      <div class="flex items-center gap-2 px-3 py-2 bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/20 rounded-xl">
+        <span class="text-[10px] text-purple-600 dark:text-purple-400 font-medium">Reward</span>
+        <span class="text-sm font-bold text-purple-700 dark:text-purple-300">{{ stats.reward_coupons || 0 }}</span>
+      </div>
+      <div class="flex items-center gap-2 px-3 py-2 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl">
+        <span class="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Valid</span>
+        <span class="text-sm font-bold text-amber-700 dark:text-amber-300">{{ stats.valid_coupons || 0 }}</span>
+      </div>
     </div>
 
     <div class="space-y-3 animate-slide-up" style="animation-delay: 0.1s">
@@ -61,6 +72,7 @@
           <table class="w-full">
             <thead class="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
               <tr>
+                <th class="px-3 py-2 w-6"><input type="checkbox" @change="toggleSelectAll" :checked="selectedIds.length === filteredCoupons.length && filteredCoupons.length > 0" class="rounded" /></th>
                 <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Code</th>
                 <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Name</th>
                 <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Type</th>
@@ -73,6 +85,7 @@
             </thead>
             <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
               <tr v-for="coupon in filteredCoupons" :key="coupon.id" @click="openEditModal(coupon)" class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer">
+                <td class="px-3 py-2" @click.stop><input type="checkbox" :value="coupon.id" v-model="selectedIds" class="rounded" /></td>
                 <td class="px-3 py-2">
                   <div class="flex items-center gap-2">
                     <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center">
@@ -104,30 +117,84 @@
       </div>
     </div>
 
-    <div v-if="showFormModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" @click.self="closeFormModal">
-      <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
-        <div class="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-700">
-          <h2 class="text-base font-semibold text-slate-900 dark:text-white">{{ selectedCoupon?.id ? 'Edit Coupon' : 'Add Coupon' }}</h2>
-          <button @click="closeFormModal" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+    <div v-if="showFormModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-end" @click.self="closeFormModal">
+      <div class="bg-white dark:bg-slate-900 w-full sm:w-[520px] h-full flex flex-col shadow-2xl">
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-700 shrink-0">
+          <div>
+            <h2 class="text-sm font-semibold text-slate-900 dark:text-white">{{ selectedCoupon?.id ? 'Edit Coupon' : 'New Coupon' }}</h2>
+            <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{{ selectedCoupon?.id ? selectedCoupon.code : 'Fill in coupon details' }}</p>
+          </div>
+          <button @click="closeFormModal" class="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
+            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
-        <div class="p-5 overflow-y-auto max-h-[calc(90vh-140px)]">
-          <div class="grid grid-cols-2 gap-4">
-            <div><label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Code *</label><input v-model="formData.code" type="text" required class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" /></div>
-            <div><label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Name *</label><input v-model="formData.name" type="text" required class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" /></div>
-            <div><label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Type *</label><select v-model="formData.coupon_type" required class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"><option value="percentage">Percentage</option><option value="fixed">Fixed Amount</option><option value="package">Package Upgrade</option></select></div>
-            <div><label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Discount Value *</label><input v-model="formData.discount_value" type="number" step="0.01" required class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" /></div>
-            <div><label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Max Uses</label><input v-model="formData.max_uses" type="number" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" /></div>
-            <div><label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Valid Until</label><input v-model="formData.valid_until" type="datetime-local" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" /></div>
-            <div class="flex items-center"><label class="flex items-center gap-2 cursor-pointer"><input v-model="formData.is_active" type="checkbox" class="w-4 h-4 text-blue-600 border-slate-300 dark:border-slate-600 rounded" /><span class="text-xs text-slate-700 dark:text-slate-300">Active</span></label></div>
-            <div class="flex items-center"><label class="flex items-center gap-2 cursor-pointer"><input v-model="formData.is_reward" type="checkbox" class="w-4 h-4 text-blue-600 border-slate-300 dark:border-slate-600 rounded" /><span class="text-xs text-slate-700 dark:text-slate-300">Reward Coupon</span></label></div>
-            <div class="col-span-2"><label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Description</label><textarea v-model="formData.description" rows="3" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"></textarea></div>
+        <!-- Sections -->
+        <div class="flex-1 overflow-y-auto">
+          <!-- Section: Core -->
+          <div class="border-b border-slate-200 dark:border-slate-700">
+            <button @click="toggleSection('core')" class="w-full flex items-center justify-between px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+              <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Core Details</span>
+              <svg class="w-3.5 h-3.5 text-slate-400 transition-transform" :class="openSection==='core'?'rotate-180':''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            <div v-show="openSection==='core'" class="px-5 pb-4 space-y-3">
+              <div class="grid grid-cols-2 gap-3">
+                <div><label class="block text-[10px] font-medium text-slate-600 dark:text-slate-400 mb-1">Code *</label><input v-model="formData.code" type="text" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-mono" /></div>
+                <div><label class="block text-[10px] font-medium text-slate-600 dark:text-slate-400 mb-1">Name *</label><input v-model="formData.name" type="text" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" /></div>
+              </div>
+              <div><label class="block text-[10px] font-medium text-slate-600 dark:text-slate-400 mb-1">Description</label><textarea v-model="formData.description" rows="2" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"></textarea></div>
+            </div>
+          </div>
+          <!-- Section: Discount -->
+          <div class="border-b border-slate-200 dark:border-slate-700">
+            <button @click="toggleSection('discount')" class="w-full flex items-center justify-between px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+              <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Discount</span>
+              <svg class="w-3.5 h-3.5 text-slate-400 transition-transform" :class="openSection==='discount'?'rotate-180':''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            <div v-show="openSection==='discount'" class="px-5 pb-4 space-y-3">
+              <div class="grid grid-cols-2 gap-3">
+                <div><label class="block text-[10px] font-medium text-slate-600 dark:text-slate-400 mb-1">Type *</label>
+                  <select v-model="formData.coupon_type" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white">
+                    <option value="percentage">Percentage</option>
+                    <option value="fixed">Fixed Amount</option>
+                    <option value="package">Package Upgrade</option>
+                  </select>
+                </div>
+                <div><label class="block text-[10px] font-medium text-slate-600 dark:text-slate-400 mb-1">Value *</label><input v-model="formData.discount_value" type="number" step="0.01" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" /></div>
+              </div>
+            </div>
+          </div>
+          <!-- Section: Limits -->
+          <div class="border-b border-slate-200 dark:border-slate-700">
+            <button @click="toggleSection('limits')" class="w-full flex items-center justify-between px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+              <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Usage Limits</span>
+              <svg class="w-3.5 h-3.5 text-slate-400 transition-transform" :class="openSection==='limits'?'rotate-180':''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            <div v-show="openSection==='limits'" class="px-5 pb-4 space-y-3">
+              <div class="grid grid-cols-2 gap-3">
+                <div><label class="block text-[10px] font-medium text-slate-600 dark:text-slate-400 mb-1">Max Uses</label><input v-model="formData.max_uses" type="number" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" /></div>
+                <div><label class="block text-[10px] font-medium text-slate-600 dark:text-slate-400 mb-1">Per User</label><input v-model="formData.max_uses_per_user" type="number" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" /></div>
+                <div><label class="block text-[10px] font-medium text-slate-600 dark:text-slate-400 mb-1">Valid From</label><input v-model="formData.valid_from" type="datetime-local" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" /></div>
+                <div><label class="block text-[10px] font-medium text-slate-600 dark:text-slate-400 mb-1">Valid Until</label><input v-model="formData.valid_until" type="datetime-local" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" /></div>
+              </div>
+            </div>
+          </div>
+          <!-- Section: Settings -->
+          <div class="border-b border-slate-200 dark:border-slate-700">
+            <button @click="toggleSection('settings')" class="w-full flex items-center justify-between px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+              <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Settings</span>
+              <svg class="w-3.5 h-3.5 text-slate-400 transition-transform" :class="openSection==='settings'?'rotate-180':''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            <div v-show="openSection==='settings'" class="px-5 pb-4 space-y-3">
+              <label class="flex items-center gap-2 cursor-pointer"><input v-model="formData.is_active" type="checkbox" class="w-4 h-4 rounded text-blue-600" /><span class="text-xs text-slate-700 dark:text-slate-300">Active</span></label>
+              <label class="flex items-center gap-2 cursor-pointer"><input v-model="formData.is_reward" type="checkbox" class="w-4 h-4 rounded text-blue-600" /><span class="text-xs text-slate-700 dark:text-slate-300">Reward Coupon</span></label>
+            </div>
           </div>
         </div>
-        <div class="flex items-center justify-end gap-2 p-5 border-t border-slate-200 dark:border-slate-700">
-          <button @click="closeFormModal" class="px-3 py-2 text-xs bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-900 dark:text-white rounded-lg">Cancel</button>
-          <button @click="saveCoupon" :disabled="saveLoading" class="px-3 py-2 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-lg" :class="{ 'opacity-50': saveLoading }">{{ saveLoading ? 'Saving...' : (selectedCoupon?.id ? 'Update' : 'Create') }}</button>
+        <!-- Footer -->
+        <div class="flex items-center justify-end gap-2 px-5 py-4 border-t border-slate-200 dark:border-slate-700 shrink-0">
+          <button @click="closeFormModal" class="px-3 py-2 text-xs bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg">Cancel</button>
+          <button @click="saveCoupon" :disabled="saveLoading" class="px-4 py-2 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-lg disabled:opacity-50">{{ saveLoading ? 'Saving...' : (selectedCoupon?.id ? 'Update' : 'Create') }}</button>
         </div>
       </div>
     </div>
@@ -139,6 +206,7 @@
 <script>
 import { ref, computed, onMounted } from 'vue'
 import { useApi } from '../composables/useApi'
+import { useOptimistic } from '../composables/useOptimistic'
 import ModernMetricCard from '../components/MetricCard.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 
@@ -146,7 +214,7 @@ export default {
   name: 'Coupons',
   components: { ModernMetricCard, ConfirmDialog },
   setup() {
-    const { loading, error, makeRequest } = useApi()
+    const { loading, error, makeRequest, invalidateCache } = useApi()
     const coupons = ref([])
     const stats = ref({})
     const searchTerm = ref('')
@@ -156,7 +224,9 @@ export default {
     const selectedCoupon = ref(null)
     const couponToDelete = ref(null)
     const saveLoading = ref(false)
-    const formData = ref({ code: '', name: '', coupon_type: 'percentage', discount_value: 0, max_uses: 100, valid_until: '', is_active: true, is_reward: false, description: '' })
+    const selectedIds = ref([])
+    const openSection = ref('core')
+    const formData = ref({ code: '', name: '', coupon_type: 'percentage', discount_value: 0, max_uses: 100, max_uses_per_user: 1, valid_from: '', valid_until: '', is_active: true, is_reward: false, description: '' })
 
     const filteredCoupons = computed(() => {
       let result = coupons.value
@@ -182,25 +252,30 @@ export default {
     }
 
     const refreshData = () => Promise.all([fetchCoupons(), fetchStats()])
+    const { optimisticRemove, optimisticUpdate } = useOptimistic(coupons, fetchCoupons, invalidateCache, 'suapi/coupons')
+    const toggleSection = (s) => { openSection.value = openSection.value === s ? '' : s }
+    const toggleSelectAll = (e) => { selectedIds.value = e.target.checked ? filteredCoupons.value.map(c => c.id) : [] }
     const formatDate = (date) => date ? new Date(date).toLocaleDateString() : 'N/A'
     const formatDiscount = (coupon) => coupon.coupon_type === 'percentage' ? `${coupon.discount_value}%` : `KSh ${coupon.discount_value}`
     
     const openAddModal = () => {
       selectedCoupon.value = null
-      formData.value = { code: '', name: '', coupon_type: 'percentage', discount_value: 0, max_uses: 100, valid_until: '', is_active: true, is_reward: false, description: '' }
+      openSection.value = 'core'
+      formData.value = { code: '', name: '', coupon_type: 'percentage', discount_value: 0, max_uses: 100, max_uses_per_user: 1, valid_from: '', valid_until: '', is_active: true, is_reward: false, description: '' }
       showFormModal.value = true
     }
     
     const openEditModal = (coupon) => {
       selectedCoupon.value = coupon
-      formData.value = { code: coupon.code || '', name: coupon.name || '', coupon_type: coupon.coupon_type || 'percentage', discount_value: coupon.discount_value || 0, max_uses: coupon.max_uses || 100, valid_until: coupon.valid_until || '', is_active: coupon.is_active || false, is_reward: coupon.is_reward || false, description: coupon.description || '' }
+      openSection.value = 'core'
+      formData.value = { code: coupon.code || '', name: coupon.name || '', coupon_type: coupon.coupon_type || 'percentage', discount_value: coupon.discount_value || 0, max_uses: coupon.max_uses || 100, max_uses_per_user: coupon.max_uses_per_user || 1, valid_from: coupon.valid_from || '', valid_until: coupon.valid_until || '', is_active: coupon.is_active ?? true, is_reward: coupon.is_reward || false, description: coupon.description || '' }
       showFormModal.value = true
     }
     
     const closeFormModal = () => {
       showFormModal.value = false
       selectedCoupon.value = null
-      formData.value = { code: '', name: '', coupon_type: 'percentage', discount_value: 0, max_uses: 100, valid_until: '', is_active: true, is_reward: false, description: '' }
+      formData.value = { code: '', name: '', coupon_type: 'percentage', discount_value: 0, max_uses: 100, max_uses_per_user: 1, valid_from: '', valid_until: '', is_active: true, is_reward: false, description: '' }
     }
 
     const saveCoupon = async () => {
@@ -224,12 +299,29 @@ export default {
     const closeDeleteModal = () => { showDeleteModal.value = false; couponToDelete.value = null }
 
     const confirmDelete = async () => {
+      const id = couponToDelete.value.id
+      optimisticRemove(id)
+      closeDeleteModal()
       try {
-        await makeRequest('delete', `suapi/coupons/${couponToDelete.value.id}/`)
-        await refreshData()
-        closeDeleteModal()
+        await makeRequest('delete', `suapi/coupons/${id}/`)
       } catch (err) {
+        await refreshData()
         alert('Error: ' + (err.response?.data?.error || err.message))
+      }
+    }
+
+    const bulkAction = async (action) => {
+      if (!selectedIds.value.length) return
+      if (action === 'delete' && !confirm(`Delete ${selectedIds.value.length} coupons?`)) return
+      if (action === 'delete') selectedIds.value.forEach(id => optimisticRemove(id))
+      else selectedIds.value.forEach(id => optimisticUpdate(id, { is_active: action === 'activate' }))
+      const ids = [...selectedIds.value]
+      selectedIds.value = []
+      try {
+        await makeRequest('post', 'suapi/coupons/bulk_action/', { action, ids })
+      } catch (err) {
+        await refreshData()
+        console.error(err)
       }
     }
 
@@ -238,7 +330,8 @@ export default {
     return {
       loading, error, coupons, stats, searchTerm, statusFilter, showFormModal, showDeleteModal, selectedCoupon, couponToDelete,
       saveLoading, formData, filteredCoupons, fetchCoupons, refreshData, formatDate, formatDiscount,
-      openAddModal, openEditModal, closeFormModal, saveCoupon, openDeleteModal, closeDeleteModal, confirmDelete
+      openAddModal, openEditModal, closeFormModal, saveCoupon, openDeleteModal, closeDeleteModal, confirmDelete,
+      selectedIds, openSection, toggleSection, toggleSelectAll, bulkAction
     }
   }
 }

@@ -181,6 +181,20 @@ class ClientViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'error': str(e)}, status=500)
     
+    @action(detail=True, methods=['patch'])
+    def upload_photo(self, request, pk=None):
+        """Upload profile photo for client"""
+        try:
+            client = self.get_object()
+            image = request.FILES.get('profile_image')
+            if not image:
+                return Response({'error': 'No image provided'}, status=400)
+            client.user.profile_image = image
+            client.user.save()
+            return Response({'status': 'ok', 'profile_image': client.user.profile_image.url})
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+
     @action(detail=True, methods=['post'])
     def force_logout(self, request, pk=None):
         """Force logout all sessions and delete all devices"""

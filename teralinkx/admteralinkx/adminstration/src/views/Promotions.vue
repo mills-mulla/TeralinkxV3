@@ -6,6 +6,12 @@
         <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Manage featured promotions</p>
       </div>
       <div class="flex items-center gap-2">
+        <template v-if="selectedIds.length">
+          <span class="text-xs text-slate-500 dark:text-slate-400">{{ selectedIds.length }} selected</span>
+          <button @click="bulkAction('activate')" class="px-2 py-1 text-[10px] font-medium rounded bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-200">Activate</button>
+          <button @click="bulkAction('deactivate')" class="px-2 py-1 text-[10px] font-medium rounded bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 hover:bg-amber-200">Deactivate</button>
+          <button @click="bulkAction('delete')" class="px-2 py-1 text-[10px] font-medium rounded bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400 hover:bg-red-200">Delete</button>
+        </template>
         <button @click="openAddModal" class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs flex items-center gap-1.5">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
           Add Promotion
@@ -29,19 +35,24 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 animate-slide-up">
-      <ModernMetricCard title="Total" :value="stats.total_promotions" color="blue">
-        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-      </ModernMetricCard>
-      <ModernMetricCard title="Active" :value="stats.active_promotions" color="emerald">
-        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-      </ModernMetricCard>
-      <ModernMetricCard title="Views" :value="stats.total_views" color="purple">
-        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
-      </ModernMetricCard>
-      <ModernMetricCard title="Conversions" :value="stats.total_conversions" color="amber">
-        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-      </ModernMetricCard>
+    <div class="flex items-center gap-2 flex-wrap">
+      <div class="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl">
+        <span class="text-[10px] text-blue-600 dark:text-blue-400 font-medium">Total</span>
+        <span class="text-sm font-bold text-blue-700 dark:text-blue-300">{{ stats.total_promotions || 0 }}</span>
+      </div>
+      <div class="flex items-center gap-2 px-3 py-2 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl">
+        <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
+        <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">Active</span>
+        <span class="text-sm font-bold text-emerald-700 dark:text-emerald-300">{{ stats.active_promotions || 0 }}</span>
+      </div>
+      <div class="flex items-center gap-2 px-3 py-2 bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/20 rounded-xl">
+        <span class="text-[10px] text-purple-600 dark:text-purple-400 font-medium">👁 Views</span>
+        <span class="text-sm font-bold text-purple-700 dark:text-purple-300">{{ stats.total_views || 0 }}</span>
+      </div>
+      <div class="flex items-center gap-2 px-3 py-2 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl">
+        <span class="text-[10px] text-amber-600 dark:text-amber-400 font-medium">⭐ Conversions</span>
+        <span class="text-sm font-bold text-amber-700 dark:text-amber-300">{{ stats.total_conversions || 0 }}</span>
+      </div>
     </div>
 
     <div class="space-y-3 animate-slide-up" style="animation-delay: 0.1s">
@@ -61,6 +72,7 @@
           <table class="w-full">
             <thead class="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
               <tr>
+                <th class="px-3 py-2 w-6"><input type="checkbox" @change="toggleSelectAll" :checked="selectedIds.length === filteredPromotions.length && filteredPromotions.length > 0" class="rounded" /></th>
                 <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Promotion</th>
                 <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Type</th>
                 <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Package</th>
@@ -72,6 +84,7 @@
             </thead>
             <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
               <tr v-for="promo in filteredPromotions" :key="promo.id" @click="openEditModal(promo)" class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer">
+                <td class="px-3 py-2" @click.stop><input type="checkbox" :value="promo.id" v-model="selectedIds" class="rounded" /></td>
                 <td class="px-3 py-2">
                   <div class="flex items-center gap-2">
                     <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center">
@@ -116,30 +129,87 @@
       </div>
     </div>
 
-    <div v-if="showFormModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" @click.self="closeFormModal">
-      <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
-        <div class="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-700">
-          <h2 class="text-base font-semibold text-slate-900 dark:text-white">{{ selectedPromotion?.id ? 'Edit Promotion' : 'Add Promotion' }}</h2>
-          <button @click="closeFormModal" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+    <div v-if="showFormModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-end" @click.self="closeFormModal">
+      <div class="bg-white dark:bg-slate-900 w-full sm:w-[520px] h-full flex flex-col shadow-2xl">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-700 shrink-0">
+          <div>
+            <h2 class="text-sm font-semibold text-slate-900 dark:text-white">{{ selectedPromotion?.id ? 'Edit Promotion' : 'New Promotion' }}</h2>
+            <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{{ selectedPromotion?.id ? selectedPromotion.name : 'Fill in promotion details' }}</p>
+          </div>
+          <button @click="closeFormModal" class="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
+            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
-        <div class="p-5 overflow-y-auto max-h-[calc(90vh-140px)]">
-          <div class="grid grid-cols-2 gap-4">
-            <div class="col-span-2"><label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Name *</label><input v-model="formData.name" type="text" required class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" /></div>
-            <div><label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Type *</label><select v-model="formData.promotion_type" required class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"><option value="featured_coupon">Featured with Coupon</option><option value="bundle">Bundle</option><option value="seasonal">Seasonal</option><option value="flash_sale">Flash Sale</option><option value="new_arrival">New Arrival</option><option value="best_seller">Best Seller</option></select></div>
-            <div><label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Package ID *</label><input v-model="formData.package" type="number" required class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" /></div>
-            <div class="col-span-2"><label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Headline *</label><input v-model="formData.headline" type="text" required class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" /></div>
-            <div><label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Start Date *</label><input v-model="formData.start_date" type="datetime-local" required class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" /></div>
-            <div><label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">End Date *</label><input v-model="formData.end_date" type="datetime-local" required class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" /></div>
-            <div><label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Display Order</label><input v-model="formData.display_order" type="number" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" /></div>
-            <div class="flex items-center"><label class="flex items-center gap-2 cursor-pointer"><input v-model="formData.is_active" type="checkbox" class="w-4 h-4 text-blue-600 border-slate-300 dark:border-slate-600 rounded" /><span class="text-xs text-slate-700 dark:text-slate-300">Active</span></label></div>
-            <div class="col-span-2"><label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">Description</label><textarea v-model="formData.description" rows="3" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"></textarea></div>
+        <div class="flex-1 overflow-y-auto">
+          <!-- Core -->
+          <div class="border-b border-slate-200 dark:border-slate-700">
+            <button @click="toggleSection('core')" class="w-full flex items-center justify-between px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+              <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Core Details</span>
+              <svg class="w-3.5 h-3.5 text-slate-400 transition-transform" :class="openSection==='core'?'rotate-180':''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            <div v-show="openSection==='core'" class="px-5 pb-4 space-y-3">
+              <div><label class="block text-[10px] font-medium text-slate-600 dark:text-slate-400 mb-1">Name *</label><input v-model="formData.name" type="text" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" /></div>
+              <div><label class="block text-[10px] font-medium text-slate-600 dark:text-slate-400 mb-1">Headline *</label><input v-model="formData.headline" type="text" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" /></div>
+              <div><label class="block text-[10px] font-medium text-slate-600 dark:text-slate-400 mb-1">Description</label><textarea v-model="formData.description" rows="2" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"></textarea></div>
+            </div>
+          </div>
+          <!-- Package & Coupon -->
+          <div class="border-b border-slate-200 dark:border-slate-700">
+            <button @click="toggleSection('package')" class="w-full flex items-center justify-between px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+              <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Package & Coupon</span>
+              <svg class="w-3.5 h-3.5 text-slate-400 transition-transform" :class="openSection==='package'?'rotate-180':''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            <div v-show="openSection==='package'" class="px-5 pb-4 space-y-3">
+              <div><label class="block text-[10px] font-medium text-slate-600 dark:text-slate-400 mb-1">Type *</label>
+                <select v-model="formData.promotion_type" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white">
+                  <option v-for="t in formOptions.promotion_types" :key="t.value" :value="t.value">{{ t.label }}</option>
+                </select>
+              </div>
+              <div><label class="block text-[10px] font-medium text-slate-600 dark:text-slate-400 mb-1">Package *</label>
+                <select v-model="formData.package" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white">
+                  <option value="">Select package...</option>
+                  <option v-for="p in formOptions.packages" :key="p.id" :value="p.id">{{ p.name }} — KSh {{ p.price }}</option>
+                </select>
+              </div>
+              <div><label class="block text-[10px] font-medium text-slate-600 dark:text-slate-400 mb-1">Coupon (optional)</label>
+                <select v-model="formData.coupon" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white">
+                  <option :value="null">None</option>
+                  <option v-for="c in formOptions.coupons" :key="c.id" :value="c.id">{{ c.code }} — {{ c.name }}</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <!-- Schedule -->
+          <div class="border-b border-slate-200 dark:border-slate-700">
+            <button @click="toggleSection('schedule')" class="w-full flex items-center justify-between px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+              <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Schedule</span>
+              <svg class="w-3.5 h-3.5 text-slate-400 transition-transform" :class="openSection==='schedule'?'rotate-180':''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            <div v-show="openSection==='schedule'" class="px-5 pb-4 space-y-3">
+              <div class="grid grid-cols-2 gap-3">
+                <div><label class="block text-[10px] font-medium text-slate-600 dark:text-slate-400 mb-1">Start Date *</label><input v-model="formData.start_date" type="datetime-local" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" /></div>
+                <div><label class="block text-[10px] font-medium text-slate-600 dark:text-slate-400 mb-1">End Date *</label><input v-model="formData.end_date" type="datetime-local" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" /></div>
+              </div>
+            </div>
+          </div>
+          <!-- Settings -->
+          <div class="border-b border-slate-200 dark:border-slate-700">
+            <button @click="toggleSection('settings')" class="w-full flex items-center justify-between px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+              <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Settings</span>
+              <svg class="w-3.5 h-3.5 text-slate-400 transition-transform" :class="openSection==='settings'?'rotate-180':''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            <div v-show="openSection==='settings'" class="px-5 pb-4 space-y-3">
+              <div class="grid grid-cols-2 gap-3">
+                <div><label class="block text-[10px] font-medium text-slate-600 dark:text-slate-400 mb-1">Display Order</label><input v-model="formData.display_order" type="number" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" /></div>
+                <div><label class="block text-[10px] font-medium text-slate-600 dark:text-slate-400 mb-1">Button Text</label><input v-model="formData.button_text" type="text" class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white" /></div>
+              </div>
+              <label class="flex items-center gap-2 cursor-pointer"><input v-model="formData.is_active" type="checkbox" class="w-4 h-4 rounded text-blue-600" /><span class="text-xs text-slate-700 dark:text-slate-300">Active</span></label>
+            </div>
           </div>
         </div>
-        <div class="flex items-center justify-end gap-2 p-5 border-t border-slate-200 dark:border-slate-700">
-          <button @click="closeFormModal" class="px-3 py-2 text-xs bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-900 dark:text-white rounded-lg">Cancel</button>
-          <button @click="savePromotion" :disabled="saveLoading" class="px-3 py-2 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-lg" :class="{ 'opacity-50': saveLoading }">{{ saveLoading ? 'Saving...' : (selectedPromotion?.id ? 'Update' : 'Create') }}</button>
+        <div class="flex items-center justify-end gap-2 px-5 py-4 border-t border-slate-200 dark:border-slate-700 shrink-0">
+          <button @click="closeFormModal" class="px-3 py-2 text-xs bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg">Cancel</button>
+          <button @click="savePromotion" :disabled="saveLoading" class="px-4 py-2 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded-lg disabled:opacity-50">{{ saveLoading ? 'Saving...' : (selectedPromotion?.id ? 'Update' : 'Create') }}</button>
         </div>
       </div>
     </div>
@@ -151,6 +221,7 @@
 <script>
 import { ref, computed, onMounted } from 'vue'
 import { useApi } from '../composables/useApi'
+import { useOptimistic } from '../composables/useOptimistic'
 import ModernMetricCard from '../components/MetricCard.vue'
 import ConfirmDialog from '../components/ConfirmDialog.vue'
 
@@ -158,7 +229,7 @@ export default {
   name: 'Promotions',
   components: { ModernMetricCard, ConfirmDialog },
   setup() {
-    const { loading, error, makeRequest } = useApi()
+    const { loading, error, makeRequest, invalidateCache } = useApi()
     const promotions = ref([])
     const stats = ref({})
     const searchTerm = ref('')
@@ -168,7 +239,10 @@ export default {
     const selectedPromotion = ref(null)
     const promotionToDelete = ref(null)
     const saveLoading = ref(false)
-    const formData = ref({ name: '', promotion_type: 'featured_coupon', package: '', headline: '', start_date: '', end_date: '', display_order: 0, is_active: true, description: '' })
+    const selectedIds = ref([])
+    const openSection = ref('core')
+    const formOptions = ref({ packages: [], coupons: [], promotion_types: [] })
+    const formData = ref({ name: '', promotion_type: 'featured_coupon', package: '', coupon: null, headline: '', start_date: '', end_date: '', display_order: 0, button_text: 'Get Offer', is_active: true, description: '' })
 
     const filteredPromotions = computed(() => {
       let result = promotions.value
@@ -194,24 +268,35 @@ export default {
     }
 
     const refreshData = () => Promise.all([fetchPromotions(), fetchStats()])
+    const { optimisticRemove, optimisticUpdate } = useOptimistic(promotions, fetchPromotions, invalidateCache, 'suapi/promotions')
+    const toggleSection = (s) => { openSection.value = openSection.value === s ? '' : s }
+    const toggleSelectAll = (e) => { selectedIds.value = e.target.checked ? filteredPromotions.value.map(p => p.id) : [] }
+
+    const fetchFormOptions = async () => {
+      try {
+        formOptions.value = await makeRequest('get', 'suapi/promotions/form_options/')
+      } catch (e) { console.error(e) }
+    }
     const formatDate = (date) => date ? new Date(date).toLocaleDateString() : 'N/A'
     
     const openAddModal = () => {
       selectedPromotion.value = null
-      formData.value = { name: '', promotion_type: 'featured_coupon', package: '', headline: '', start_date: '', end_date: '', display_order: 0, is_active: true, description: '' }
+      openSection.value = 'core'
+      formData.value = { name: '', promotion_type: 'featured_coupon', package: '', coupon: null, headline: '', start_date: '', end_date: '', display_order: 0, button_text: 'Get Offer', is_active: true, description: '' }
       showFormModal.value = true
     }
     
     const openEditModal = (promo) => {
       selectedPromotion.value = promo
-      formData.value = { name: promo.name || '', promotion_type: promo.promotion_type || 'featured_coupon', package: promo.package || '', headline: promo.headline || '', start_date: promo.start_date || '', end_date: promo.end_date || '', display_order: promo.display_order || 0, is_active: promo.is_active || false, description: promo.description || '' }
+      openSection.value = 'core'
+      formData.value = { name: promo.name || '', promotion_type: promo.promotion_type || 'featured_coupon', package: promo.package || '', coupon: promo.coupon || null, headline: promo.headline || '', start_date: promo.start_date || '', end_date: promo.end_date || '', display_order: promo.display_order || 0, button_text: promo.button_text || 'Get Offer', is_active: promo.is_active ?? true, description: promo.description || '' }
       showFormModal.value = true
     }
     
     const closeFormModal = () => {
       showFormModal.value = false
       selectedPromotion.value = null
-      formData.value = { name: '', promotion_type: 'featured_coupon', package: '', headline: '', start_date: '', end_date: '', display_order: 0, is_active: true, description: '' }
+      formData.value = { name: '', promotion_type: 'featured_coupon', package: '', coupon: null, headline: '', start_date: '', end_date: '', display_order: 0, button_text: 'Get Offer', is_active: true, description: '' }
     }
 
     const savePromotion = async () => {
@@ -235,21 +320,39 @@ export default {
     const closeDeleteModal = () => { showDeleteModal.value = false; promotionToDelete.value = null }
 
     const confirmDelete = async () => {
+      const id = promotionToDelete.value.id
+      optimisticRemove(id)
+      closeDeleteModal()
       try {
-        await makeRequest('delete', `suapi/promotions/${promotionToDelete.value.id}/`)
-        await refreshData()
-        closeDeleteModal()
+        await makeRequest('delete', `suapi/promotions/${id}/`)
       } catch (err) {
+        await refreshData()
         alert('Error: ' + (err.response?.data?.error || err.message))
       }
     }
 
-    onMounted(refreshData)
+    const bulkAction = async (action) => {
+      if (!selectedIds.value.length) return
+      if (action === 'delete' && !confirm(`Delete ${selectedIds.value.length} promotions?`)) return
+      if (action === 'delete') selectedIds.value.forEach(id => optimisticRemove(id))
+      else selectedIds.value.forEach(id => optimisticUpdate(id, { is_active: action === 'activate' }))
+      const ids = [...selectedIds.value]
+      selectedIds.value = []
+      try {
+        await makeRequest('post', 'suapi/promotions/bulk_action/', { action, ids })
+      } catch (err) {
+        await refreshData()
+        console.error(err)
+      }
+    }
+
+    onMounted(() => { refreshData(); fetchFormOptions() })
 
     return {
       loading, error, promotions, stats, searchTerm, statusFilter, showFormModal, showDeleteModal, selectedPromotion, promotionToDelete,
       saveLoading, formData, filteredPromotions, fetchPromotions, refreshData, formatDate,
-      openAddModal, openEditModal, closeFormModal, savePromotion, openDeleteModal, closeDeleteModal, confirmDelete
+      openAddModal, openEditModal, closeFormModal, savePromotion, openDeleteModal, closeDeleteModal, confirmDelete,
+      selectedIds, openSection, toggleSection, toggleSelectAll, bulkAction, formOptions
     }
   }
 }

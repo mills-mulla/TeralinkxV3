@@ -11,7 +11,19 @@
       </div>
       <div class="flex items-center gap-3">
         <span class="text-[10px] text-slate-400">{{ lastUpdated }}</span>
-        <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400">5s</span>
+        <select v-model="refreshInterval" @change="resetInterval" class="text-[10px] bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-1.5 py-0.5 text-slate-700 dark:text-slate-300">
+          <option value="5000">5s</option>
+          <option value="10000">10s</option>
+          <option value="20000">20s</option>
+          <option value="30000">30s</option>
+          <option value="40000">40s</option>
+          <option value="50000">50s</option>
+          <option value="60000">1m</option>
+          <option value="300000">5m</option>
+          <option value="600000">10m</option>
+          <option value="1800000">30m</option>
+          <option value="3600000">1h</option>
+        </select>
       </div>
     </div>
 
@@ -110,15 +122,16 @@ export default {
       newClientsToday: 0,
       recentActivity: [],
       tickerIndex: 0,
-      hideRevenue: false,
+      hideRevenue: true,
       lastUpdated: 'Loading...',
+      refreshInterval: 5000,
       updateInterval: null,
       tickerInterval: null
     }
   },
   mounted() {
     this.fetchRealTimeData()
-    this.updateInterval = setInterval(() => this.fetchRealTimeData(), 5000)
+    this.updateInterval = setInterval(() => this.fetchRealTimeData(), this.refreshInterval)
     this.tickerInterval = setInterval(() => {
       if (this.recentActivity.length > 1) {
         this.tickerIndex = (this.tickerIndex + 1) % this.recentActivity.length
@@ -130,6 +143,10 @@ export default {
     clearInterval(this.tickerInterval)
   },
   methods: {
+    resetInterval() {
+      clearInterval(this.updateInterval)
+      this.updateInterval = setInterval(() => this.fetchRealTimeData(), parseInt(this.refreshInterval))
+    },
     async fetchRealTimeData() {
       try {
         const startTime = Date.now()

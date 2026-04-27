@@ -88,9 +88,15 @@ export function useApi() {
   }
 
   const clearCache = () => cache.clear()
+  const invalidateCache = (urlPrefix = null) => {
+    if (!urlPrefix) { cache.clear(); return }
+    for (const key of cache.keys()) {
+      if (key.includes(urlPrefix)) cache.delete(key)
+    }
+  }
   const getActiveURL = () => activeBaseURL
 
-  return { loading, error, makeRequest, clearCache, getActiveURL }
+  return { loading, error, makeRequest, clearCache, invalidateCache, getActiveURL }
 }
 
 export const API_BASE_URL = PRIMARY_URL

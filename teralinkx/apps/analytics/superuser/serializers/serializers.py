@@ -11,15 +11,14 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'email', 'first_name', 'last_name']
 
 class ClientSerializer(serializers.ModelSerializer):
-    user = UserSerializer(read_only=True)
-    user_username = serializers.CharField(source='user.username', read_only=True)
-    user_email = serializers.CharField(source='user.email', read_only=True)
+    user_username = serializers.CharField(source='user.username', required=False)
+    user_email = serializers.CharField(source='user.email', required=False)
     profile_image = serializers.SerializerMethodField()
-    
+
     class Meta:
         model = ClientH
         fields = '__all__'
-    
+
     def get_profile_image(self, obj):
         if obj.profile_image:
             request = self.context.get('request')
@@ -28,6 +27,17 @@ class ClientSerializer(serializers.ModelSerializer):
                 return url.replace('http://', 'https://')
             return obj.profile_image.url.replace('http://', 'https://')
         return None
+
+    def update(self, instance, validated_data):
+        user_data = {}
+        if 'user' in validated_data:
+            user_data = validated_data.pop('user')
+        instance = super().update(instance, validated_data)
+        if user_data:
+            for attr, val in user_data.items():
+                setattr(instance.user, attr, val)
+            instance.user.save()
+        return instance
 
 class TransactionSerializer(serializers.ModelSerializer):
     class Meta:

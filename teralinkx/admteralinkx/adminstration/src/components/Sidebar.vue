@@ -1,294 +1,195 @@
 <template>
   <div>
-    <!-- Mobile Overlay -->
-    <div 
-      v-if="isMobileOpen && isMobile" 
-      class="fixed inset-0 bg-black/60 backdrop-blur-sm lg:hidden"
-      style="z-index: 45;"
-      @click="$emit('close-mobile')"
-    ></div>
-    
-    <!-- Sidebar -->
-    <aside 
-      class="bg-white dark:bg-slate-900 shadow-xl flex flex-col h-screen fixed left-0 top-0 border-r border-slate-200 dark:border-slate-800 transition-all duration-300"
-      :class="{
-        '-translate-x-full lg:translate-x-0': !isMobileOpen,
-        'translate-x-0': isMobileOpen,
-        'w-56': !isCollapsed,
-        'w-16': isCollapsed
-      }"
-      style="z-index: 50;"
+    <!-- Mobile overlay -->
+    <div v-if="isMobileOpen && isMobile" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden" @click="$emit('close-mobile')"></div>
+
+    <!-- Floating sidebar -->
+    <aside
+      class="fixed top-3 bottom-3 left-3 flex flex-col rounded-2xl shadow-2xl border border-slate-200/80 dark:border-slate-700/50 overflow-hidden transition-all duration-300 ease-in-out"
+      :class="[
+        isCollapsed ? 'w-[60px]' : 'w-[220px]',
+        isMobileOpen || !isMobile ? 'translate-x-0' : '-translate-x-[calc(100%+12px)]',
+        'lg:translate-x-0'
+      ]"
+      style="z-index:50;"
+      :style="{ background: isDark ? 'rgba(15,23,42,0.95)' : 'rgba(255,255,255,0.95)', backdropFilter: 'blur(20px)', borderColor: isDark ? 'rgba(51,65,85,0.5)' : 'rgba(226,232,240,0.8)' }"
     >
-      <!-- Header -->
-      <div class="p-5 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-blue-500/10 to-purple-600/10">
-        <div v-if="!isCollapsed" class="flex items-center space-x-3">
-          <img src="/src/assets/logo/teralinkx2.png" alt="Teralinkx Logo" class="h-10 w-auto object-contain" />
-          <div>
-            <h1 class="text-base font-bold text-slate-900 dark:text-white">TERALINKX</h1>
-            <p class="text-slate-500 dark:text-slate-400 text-xs font-medium">Admin Panel</p>
+      <!-- Logo -->
+      <div class="flex items-center gap-2.5 px-3 py-3.5 border-b border-slate-200/80 dark:border-slate-700/50 shrink-0">
+        <img src="/src/assets/logo/teralinkx2.png" class="w-8 h-8 rounded-lg shrink-0 object-contain" />
+        <transition name="label">
+          <div v-if="!isCollapsed" class="overflow-hidden">
+            <p class="text-white font-bold text-sm leading-none">TeralinkX</p>
+            <p class="text-slate-400 text-[10px] mt-0.5">Admin Console</p>
           </div>
-        </div>
-        <div v-else class="flex justify-center">
-          <img src="/src/assets/logo/teralinkx2.png" alt="Logo" class="h-10 w-10 object-contain" />
-        </div>
+        </transition>
       </div>
-      
-      <!-- Quick Stats -->
-      <div v-if="!isCollapsed" class="p-4 border-b border-slate-200 dark:border-slate-800">
-        <div class="grid grid-cols-2 gap-2">
-          <div class="bg-blue-50 dark:bg-blue-500/10 rounded-lg p-2">
-            <p class="text-xs text-blue-600 dark:text-blue-400 font-medium">Active Users</p>
-            <p class="text-lg font-bold text-blue-700 dark:text-blue-300">{{ stats.activeUsers }}</p>
-          </div>
-          <div class="bg-emerald-50 dark:bg-emerald-500/10 rounded-lg p-2">
-            <p class="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Sessions</p>
-            <p class="text-lg font-bold text-emerald-700 dark:text-emerald-300">{{ stats.activeSessions }}</p>
-          </div>
-          <div class="bg-purple-50 dark:bg-purple-500/10 rounded-lg p-2">
-            <p class="text-xs text-purple-600 dark:text-purple-400 font-medium">Devices</p>
-            <p class="text-lg font-bold text-purple-700 dark:text-purple-300">{{ stats.activeDevices }}</p>
-          </div>
-          <div class="bg-amber-50 dark:bg-amber-500/10 rounded-lg p-2">
-            <p class="text-xs text-amber-600 dark:text-amber-400 font-medium">Refunds</p>
-            <p class="text-lg font-bold text-amber-700 dark:text-amber-300">{{ stats.pendingRefunds }}</p>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Navigation Menu -->
-      <nav class="flex-1 py-6 overflow-y-auto">
-        <div class="px-4 space-y-1">
-          <!-- Overview Section -->
-          <div v-if="!isCollapsed" class="px-3 py-2">
-            <h3 class="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide">Overview</h3>
-          </div>
-          <button
-            v-for="item in overviewItems"
-            :key="item.id"
-            @click="selectComponent(item.component)"
-            :title="isCollapsed ? item.name : ''"
-            class="w-full flex items-center rounded-xl transition-all duration-200 text-left group text-sm relative overflow-hidden"
-            :class="[
-              isCollapsed ? 'px-2 py-2.5 justify-center' : 'px-3 py-2.5',
-              activeComponent === item.component
-                ? 'font-medium shadow-sm'
-                : 'hover:bg-slate-100 dark:hover:bg-slate-800'
-            ]"
-            :style="activeComponent === item.component ? `background: ${item.color}; color: white;` : ''"
-          >
-            <span :class="isCollapsed ? '' : 'mr-3'" v-html="item.icon" :style="activeComponent === item.component ? 'color: white;' : `color: ${item.color}`"></span>
-            <span v-if="!isCollapsed" class="flex-1">{{ item.name }}</span>
-          </button>
 
-          <!-- User Management Section -->
-          <div v-if="!isCollapsed" class="px-3 py-2 mt-4">
-            <h3 class="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide">User Management</h3>
+      <!-- Live stats pills -->
+      <transition name="label">
+        <div v-if="!isCollapsed" class="px-3 py-2 border-b border-slate-200/80 dark:border-slate-700/50 grid grid-cols-2 gap-1.5 shrink-0">
+          <div class="bg-blue-500/10 border border-blue-500/20 rounded-lg px-2 py-1.5 text-center">
+            <p class="text-[10px] text-blue-400">Users</p>
+            <p class="text-sm font-bold text-blue-300">{{ stats.activeUsers }}</p>
           </div>
-          <div v-else class="border-t border-slate-200 dark:border-slate-700 my-2"></div>
+          <div class="bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-2 py-1.5 text-center">
+            <p class="text-[10px] text-emerald-400">Sessions</p>
+            <p class="text-sm font-bold text-emerald-300">{{ stats.activeSessions }}</p>
+          </div>
+        </div>
+      </transition>
+
+      <!-- Nav -->
+      <nav class="flex-1 overflow-y-auto py-2 px-2 space-y-0.5 sidebar-scroll">
+
+        <template v-for="section in navSections" :key="section.label">
+          <template v-if="section.items.length">
+          <!-- Section label -->
+          <transition name="label">
+            <p v-if="!isCollapsed" class="text-[9px] font-semibold text-slate-500 uppercase tracking-widest px-2 pt-3 pb-1">{{ section.label }}</p>
+          </transition>
+          <div v-if="isCollapsed" class="border-t border-slate-700/40 my-1.5"></div>
+
+          <!-- Nav items -->
           <button
-            v-for="item in userManagementItems"
+            v-for="item in section.items"
             :key="item.id"
-            @click="selectComponent(item.component)"
-            :title="isCollapsed ? item.name : ''"
-            class="w-full flex items-center rounded-xl transition-all duration-200 text-left group text-sm relative overflow-hidden"
+            @click="handleNav(item)"
+            class="nav-btn w-full flex items-center gap-2.5 rounded-xl text-left transition-all duration-200 relative"
             :class="[
-              isCollapsed ? 'px-2 py-2.5 justify-center' : 'px-3 py-2.5',
+              isCollapsed ? 'px-0 py-2 justify-center' : 'px-2 py-2',
               activeComponent === item.component
-                ? 'font-medium shadow-sm'
-                : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+                ? 'nav-active'
+                : 'nav-inactive'
             ]"
-            :style="activeComponent === item.component ? `background: ${item.color}; color: white;` : ''"
+            :style="activeComponent === item.component ? `background: ${item.color}18` : ''"
+            :title="isCollapsed ? item.name : ''"
           >
-            <span :class="isCollapsed ? '' : 'mr-3'" v-html="item.icon" :style="activeComponent === item.component ? 'color: white;' : `color: ${item.color}`"></span>
-            <span v-if="!isCollapsed" class="flex-1">{{ item.name }}</span>
-            <span 
-              v-if="!isCollapsed && getBadgeCount(item.component) > 0"
-              class="text-xs rounded-full px-2 py-0.5 min-w-5 text-center font-bold shadow-sm"
-              :style="activeComponent === item.component ? 'background-color: white; color: ' + item.color : `background-color: ${item.color}; color: white;`"
+            <!-- No absolute glow span needed -->
+
+            <!-- Icon pill - always same bg, never changes -->
+            <span
+              class="relative shrink-0 w-7 h-7 rounded-lg flex items-center justify-center"
+              :style="`background: ${item.color}20`"
             >
-              {{ getBadgeCount(item.component) }}
+              <span v-html="item.icon" :style="`color: ${item.color}`" class="w-4 h-4 block [&>svg]:w-4 [&>svg]:h-4"></span>
             </span>
+
+            <!-- Label + badge -->
+            <transition name="label">
+              <span v-if="!isCollapsed" class="flex-1 flex items-center justify-between overflow-hidden">
+                <span
+                  class="text-xs font-medium truncate transition-colors duration-200"
+                  :class="activeComponent === item.component ? 'text-white' : 'text-slate-600 dark:text-slate-400'"
+                >{{ item.name }}</span>
+                <span
+                  v-if="getBadgeCount(item.component)"
+                  class="text-[9px] font-bold px-1.5 py-0.5 rounded-full ml-1 shrink-0"
+                  :style="`background: ${item.color}30; color: ${item.color}`"
+                >{{ getBadgeCount(item.component) }}</span>
+              </span>
+            </transition>
+
+            <!-- Active left bar -->
+            <span
+              v-if="activeComponent === item.component"
+              class="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full transition-all duration-300"
+              :style="`background: ${item.color}`"
+            ></span>
           </button>
 
-          <!-- Products & Services Section -->
-          <div v-if="!isCollapsed" class="px-3 py-2 mt-4">
-            <h3 class="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide">Products & Services</h3>
-          </div>
-          <div v-else class="border-t border-slate-200 dark:border-slate-700 my-2"></div>
-          <button
-            v-for="item in productsItems"
-            :key="item.id"
-            @click="selectComponent(item.component)"
-            :title="isCollapsed ? item.name : ''"
-            class="w-full flex items-center rounded-xl transition-all duration-200 text-left group text-sm relative overflow-hidden"
-            :class="[
-              isCollapsed ? 'px-2 py-2.5 justify-center' : 'px-3 py-2.5',
-              activeComponent === item.component
-                ? 'font-medium shadow-sm'
-                : 'hover:bg-slate-100 dark:hover:bg-slate-800'
-            ]"
-            :style="activeComponent === item.component ? `background: ${item.color}; color: white;` : ''"
-          >
-            <span :class="isCollapsed ? '' : 'mr-3'" v-html="item.icon" :style="activeComponent === item.component ? 'color: white;' : `color: ${item.color}`"></span>
-            <span v-if="!isCollapsed" class="flex-1">{{ item.name }}</span>
-          </button>
-
-          <!-- Financial Section -->
-          <div v-if="!isCollapsed" class="px-3 py-2 mt-4">
-            <h3 class="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide">Financial</h3>
-          </div>
-          <div v-else class="border-t border-slate-200 dark:border-slate-700 my-2"></div>
-
-          <!-- Finance top-level button -->
-          <button
-            @click="selectComponent('Finance')"
-            :title="isCollapsed ? 'Finance' : ''"
-            class="w-full flex items-center rounded-xl transition-all duration-200 text-left text-sm relative overflow-hidden"
-            :class="[
-              isCollapsed ? 'px-2 py-2.5 justify-center' : 'px-3 py-2.5',
-              activeComponent === 'Finance' ? 'font-medium shadow-sm' : 'hover:bg-slate-100 dark:hover:bg-slate-800'
-            ]"
-            :style="activeComponent === 'Finance' ? 'background: #8b5cf6; color: white;' : ''"
-          >
-            <span :class="isCollapsed ? '' : 'mr-3'" :style="activeComponent === 'Finance' ? 'color:white' : 'color:#8b5cf6'">
-              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
-            </span>
-            <span v-if="!isCollapsed" class="flex-1">Finance</span>
-          </button>
-
-          <!-- Finance sub-groups accordion (only when Finance is active and sidebar is open) -->
-          <template v-if="activeComponent === 'Finance' && !isCollapsed">
-            <div v-for="group in financeGroups" :key="group.id">
-              <button @click="toggleFinanceGroup(group.id)"
-                class="w-full flex items-center gap-2 pl-5 pr-3 py-1.5 text-xs font-semibold transition-colors"
-                :class="activeFinanceGroup === group.id ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'">
-                <span>{{ group.icon }}</span>
-                <span class="flex-1 text-left">{{ group.label }}</span>
-                <svg class="w-3 h-3 transition-transform" :class="activeFinanceGroup === group.id ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              <div v-if="activeFinanceGroup === group.id">
-                <button v-for="item in group.items" :key="item.id" @click="selectFinanceTab(item.id)"
-                  :class="['w-full text-left pl-9 pr-3 py-1.5 text-xs transition-colors border-l-2',
-                    activeFinanceTab === item.id
-                      ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 font-medium'
-                      : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800']">
-                  {{ item.name }}
+          <!-- Finance sub-accordion -->
+          <transition name="accordion">
+            <div v-if="item.hasAccordion && activeComponent === item.component && !isCollapsed" class="mt-0.5 space-y-0.5">
+              <template v-for="group in financeGroups" :key="group.id">
+                <button @click="toggleFinanceGroup(group.id)"
+                  class="w-full flex items-center gap-1.5 pl-4 pr-2 py-1.5 text-[10px] font-semibold rounded-lg transition-colors"
+                  :class="activeFinanceGroup === group.id ? 'text-violet-300 bg-violet-500/10' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-700/30'">
+                  <span>{{ group.icon }}</span>
+                  <span class="flex-1 text-left">{{ group.label }}</span>
+                  <svg class="w-2.5 h-2.5 transition-transform" :class="activeFinanceGroup === group.id ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                 </button>
-              </div>
+                <transition name="accordion">
+                  <div v-if="activeFinanceGroup === group.id" class="space-y-0.5 pl-2">
+                    <button v-for="fi in group.items" :key="fi.id" @click="selectFinanceTab(fi.id)"
+                      class="w-full text-left pl-6 pr-2 py-1 text-[10px] rounded-lg transition-all duration-150"
+                      :class="activeFinanceTab === fi.id ? 'bg-violet-500/20 text-violet-300 font-medium' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-700/20'">
+                      {{ fi.name }}
+                    </button>
+                  </div>
+                </transition>
+              </template>
             </div>
+          </transition>
           </template>
+        </template>
 
-          <!-- Network Section -->
-          <div v-if="!isCollapsed" class="px-3 py-2 mt-4">
-            <h3 class="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide">Network</h3>
-          </div>
-          <div v-else class="border-t border-slate-200 dark:border-slate-700 my-2"></div>
-          <button
-            v-for="item in networkItems"
-            :key="item.id"
-            @click="selectComponent(item.component)"
-            :title="isCollapsed ? item.name : ''"
-            class="w-full flex items-center rounded-xl transition-all duration-200 text-left group text-sm relative overflow-hidden"
-            :class="[
-              isCollapsed ? 'px-2 py-2.5 justify-center' : 'px-3 py-2.5',
-              activeComponent === item.component
-                ? 'font-medium shadow-sm'
-                : 'hover:bg-slate-100 dark:hover:bg-slate-800'
-            ]"
-            :style="activeComponent === item.component ? `background: ${item.color}; color: white;` : ''"
-          >
-            <span :class="isCollapsed ? '' : 'mr-3'" v-html="item.icon" :style="activeComponent === item.component ? 'color: white;' : `color: ${item.color}`"></span>
-            <span v-if="!isCollapsed" class="flex-1">{{ item.name }}</span>
-          </button>
+        <!-- Finance standalone section -->
+        <div class="border-t border-slate-700/40 my-1.5"></div>
+        <transition name="label">
+          <p v-if="!isCollapsed" class="text-[9px] font-semibold text-slate-500 uppercase tracking-widest px-2 pt-2 pb-1">Finance</p>
+        </transition>
 
-          <!-- Support Section -->
-          <div v-if="!isCollapsed" class="px-3 py-2 mt-4">
-            <h3 class="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide">Support</h3>
+        <!-- Finance top-level button -->
+        <button @click="handleNav({component:'Finance'})" :title="isCollapsed ? 'Finance' : ''"
+          class="nav-btn w-full flex items-center gap-2.5 rounded-xl text-left transition-all duration-200 relative"
+          :class="[isCollapsed ? 'px-0 py-2 justify-center' : 'px-2 py-2', activeComponent === 'Finance' ? 'nav-active' : 'nav-inactive']"
+          :style="activeComponent === 'Finance' ? 'background: #8b5cf620' : ''">
+          <span class="relative shrink-0 w-7 h-7 rounded-lg flex items-center justify-center" style="background:#8b5cf620">
+            <svg class="w-4 h-4" fill="currentColor" style="color:#8b5cf6" viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+          </span>
+          <transition name="label">
+            <span v-if="!isCollapsed" class="text-xs font-medium truncate" :class="activeComponent === 'Finance' ? 'text-white' : 'text-slate-600 dark:text-slate-400'">Finance</span>
+          </transition>
+          <span v-if="activeComponent === 'Finance'" class="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full" style="background:#8b5cf6"></span>
+        </button>
+
+        <!-- Finance accordion — exact original style -->
+        <template v-if="activeComponent === 'Finance' && !isCollapsed">
+          <div v-for="group in financeGroups" :key="group.id">
+            <button @click="toggleFinanceGroup(group.id)"
+              class="w-full flex items-center gap-2 pl-5 pr-3 py-1.5 text-xs font-semibold transition-colors"
+              :class="activeFinanceGroup === group.id ? 'text-violet-400' : 'text-slate-500 hover:text-slate-300'">
+              <span>{{ group.icon }}</span>
+              <span class="flex-1 text-left">{{ group.label }}</span>
+              <svg class="w-3 h-3 transition-transform" :class="activeFinanceGroup === group.id ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+            <div v-if="activeFinanceGroup === group.id">
+              <button v-for="fi in group.items" :key="fi.id" @click="selectFinanceTab(fi.id)"
+                class="w-full text-left pl-9 pr-3 py-1.5 text-xs transition-colors border-l-2"
+                :class="activeFinanceTab === fi.id
+                  ? 'border-violet-500 text-violet-400 bg-violet-500/10 font-medium'
+                  : 'border-transparent text-slate-500 hover:text-slate-300 hover:bg-slate-700/30'">
+                {{ fi.name }}
+              </button>
+            </div>
           </div>
-          <div v-else class="border-t border-slate-200 dark:border-slate-700 my-2"></div>
-          <button
-            v-for="item in supportMenuItems"
-            :key="item.id"
-            @click="selectComponent(item.component)"
-            :title="isCollapsed ? item.name : ''"
-            class="w-full flex items-center rounded-xl transition-all duration-200 text-left group text-sm"
-            :class="[
-              isCollapsed ? 'px-2 py-2.5 justify-center' : 'px-3 py-2.5',
-              activeComponent === item.component
-                ? 'bg-gradient-to-r from-slate-500/10 to-slate-600/10 text-slate-700 dark:text-slate-300 font-medium shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-            ]"
-          >
-            <span :class="isCollapsed ? '' : 'mr-3'" v-html="item.icon"></span>
-            <span v-if="!isCollapsed">{{ item.name }}</span>
-          </button>
-        </div>
+        </template>
+
       </nav>
 
-      <!-- Footer Section -->
-      <div class="border-t border-slate-200 dark:border-slate-800">
-        <!-- Collapse Button -->
-        <button @click="toggleSidebar" class="w-full p-2 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center justify-center text-slate-600 dark:text-slate-400 hidden lg:flex border-b border-slate-200 dark:border-slate-800">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="isCollapsed ? 'M13 5l7 7-7 7M5 5l7 7-7 7' : 'M11 19l-7-7 7-7M19 19l-7-7 7-7'" />
-          </svg>
-        </button>
-        
-        <div class="p-4 space-y-3">
-        <!-- Theme Toggle -->
-        <div v-if="!isCollapsed" class="bg-gradient-to-r from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-700 rounded-xl p-3 shadow-sm">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">Theme</span>
-            <button
-              @click="toggleTheme"
-              class="p-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 transition-all shadow-md hover:shadow-lg"
-            >
-              <svg v-if="isDark" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m8.66-12.66l-.71.71M4.05 19.95l-.7-.71M21 12h-1M4 12H3m16.95 7.05l-.7-.71M4.05 4.05l.7.71M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-              </svg>
-              <svg v-else class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M10 2a8 8 0 106.32 12.906 7.5 7.5 0 01-6.32-12.905z" />
-              </svg>
-            </button>
-          </div>
-          <label class="flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              v-model="isAuto"
-              @change="handleAutoThemeChange"
-              class="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500 focus:ring-offset-0"
-            />
-            <span class="ml-2 text-xs text-slate-600 dark:text-slate-400">Auto (6AM-6PM)</span>
-          </label>
-        </div>
-        <div v-else class="flex justify-center">
-          <button
-            @click="toggleTheme"
-            class="p-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 transition-all shadow-md hover:shadow-lg"
-          >
-            <svg v-if="isDark" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m8.66-12.66l-.71.71M4.05 19.95l-.7-.71M21 12h-1M4 12H3m16.95 7.05l-.7-.71M4.05 4.05l.7.71M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
-            <svg v-else class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M10 2a8 8 0 106.32 12.906 7.5 7.5 0 01-6.32-12.905z" />
-            </svg>
+      <!-- Footer -->
+      <div class="shrink-0 border-t border-slate-200/80 dark:border-slate-700/50 px-2 py-2 space-y-1">
+        <!-- Theme + collapse row -->
+        <div class="flex items-center" :class="isCollapsed ? 'justify-center gap-0 flex-col gap-1' : 'justify-between px-1'">
+          <button @click="toggleTheme" class="w-7 h-7 rounded-lg bg-slate-200 dark:bg-slate-700/50 hover:bg-slate-300 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">
+            <svg v-if="isDark" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m8.66-12.66l-.71.71M4.05 19.95l-.7-.71M21 12h-1M4 12H3m16.95 7.05l-.7-.71M4.05 4.05l.7.71M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+            <svg v-else class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a8 8 0 106.32 12.906 7.5 7.5 0 01-6.32-12.905z"/></svg>
+          </button>
+          <button @click="toggleSidebar" class="hidden lg:flex w-7 h-7 rounded-lg bg-slate-200 dark:bg-slate-700/50 hover:bg-slate-300 dark:hover:bg-slate-700 items-center justify-center text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">
+            <svg class="w-3.5 h-3.5 transition-transform duration-300" :class="isCollapsed ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7M19 19l-7-7 7-7"/></svg>
           </button>
         </div>
-
-        <!-- Status -->
-        <div v-if="!isCollapsed" class="flex items-center justify-between text-xs">
-          <div class="flex items-center">
-            <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full mr-1.5 animate-pulse"></div>
-            <span class="text-slate-600 dark:text-slate-400">Online</span>
+        <!-- Online status -->
+        <transition name="label">
+          <div v-if="!isCollapsed" class="flex items-center justify-between px-1">
+            <div class="flex items-center gap-1.5">
+              <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
+              <span class="text-[10px] text-slate-500">Online</span>
+            </div>
+            <span class="text-[10px] text-slate-600 font-mono">v3.1</span>
           </div>
-          <span class="text-slate-500 dark:text-slate-500 font-mono">v2.1.0</span>
-        </div>
-        <div v-else class="flex justify-center">
-          <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-        </div>
-      </div>
+        </transition>
       </div>
     </aside>
   </div>
@@ -300,202 +201,131 @@ import { useTheme } from '../composables/useTheme'
 export default {
   name: 'Sidebar',
   props: {
-    stats: {
-      type: Object,
-      default: () => ({
-        activeUsers: 0,
-        activeSessions: 0,
-        activeDevices: 0,
-        pendingRefunds: 0
-      })
-    },
-    isMobileOpen: {
-      type: Boolean,
-      default: false
-    }
+    stats: { type: Object, default: () => ({ activeUsers: 0, activeSessions: 0, activeDevices: 0, pendingRefunds: 0 }) },
+    isMobileOpen: { type: Boolean, default: false },
+    activeComponent: { type: String, default: 'Dashboard' }
   },
   emits: ['component-selected', 'finance-tab-selected', 'refresh-data', 'close-mobile', 'sidebar-toggle'],
   setup() {
     const { isDark, isAuto, toggleTheme, setAutoTheme } = useTheme()
-    
-    const handleAutoThemeChange = () => {
-      setAutoTheme(isAuto.value)
-    }
-    
-    return { isDark, isAuto, toggleTheme, setAutoTheme, handleAutoThemeChange }
+    return { isDark, isAuto, toggleTheme, setAutoTheme }
   },
   data() {
     return {
-      activeComponent: 'Dashboard',
       isMobile: false,
       isCollapsed: false,
       activeFinanceGroup: 'overview',
       activeFinanceTab: 'analytics',
       financeGroups: [
-        { id: 'overview', icon: '📊', label: 'Overview', items: [
-          { id: 'analytics',    name: 'Analytics' },
-          { id: 'kpi',          name: 'KPI' },
-          { id: 'pl',           name: 'P&L' },
-          { id: 'budget',       name: 'Budget' },
-        ]},
-        { id: 'revenue', icon: '💰', label: 'Revenue', items: [
-          { id: 'invoices',           name: 'Invoices' },
-          { id: 'revenue-streams',    name: 'Revenue Streams' },
-          { id: 'recurring-billing',  name: 'Recurring Billing' },
-          { id: 'ar-collection',      name: 'AR Collection' },
-          { id: 'revenue-at-risk',    name: 'At Risk' },
-          { id: 'reminders',          name: 'Reminders' },
-          { id: 'payment-allocation', name: 'Allocations' },
-          { id: 'clv-cohorts',        name: 'CLV Cohorts' },
-        ]},
-        { id: 'costs', icon: '💸', label: 'Costs', items: [
-          { id: 'expenses',        name: 'Expenses' },
-          { id: 'payroll',         name: 'Payroll' },
-          { id: 'ap',              name: 'Payables' },
-          { id: 'assets',          name: 'Assets' },
-          { id: 'petty-cash',      name: 'Petty Cash' },
-          { id: 'purchase-orders', name: 'Purchase Orders' },
-          { id: 'loan-repayment',  name: 'Loan Schedule' },
-        ]},
-        { id: 'compliance', icon: '📋', label: 'Compliance', items: [
-          { id: 'vat',            name: 'VAT' },
-          { id: 'tax',            name: 'Tax Calendar' },
-          { id: 'credit-notes',   name: 'Credit Notes' },
-          { id: 'financial-year', name: 'Financial Year' },
-          { id: 'audit-trail',    name: 'Audit Trail' },
-          { id: 'dividends',      name: 'Dividends' },
-        ]},
-        { id: 'operations', icon: '🏗️', label: 'Operations', items: [
-          { id: 'bank-import',    name: 'Bank Import' },
-          { id: 'reconciliation', name: 'Reconciliation' },
-          { id: 'branches',       name: 'Branches' },
-          { id: 'insurance',      name: 'Insurance' },
-          { id: 'sla-credits',    name: 'SLA Credits' },
-          { id: 'notifications',  name: 'Notifications' },
-        ]},
-        { id: 'customer', icon: '👥', label: 'Customer', items: [
-          { id: 'transactions',          name: 'Transactions' },
-          { id: 'refunds',               name: 'Refunds' },
-          { id: 'customer-intelligence', name: 'Intelligence' },
-          { id: 'churn',                 name: 'Churn' },
-        ]},
-        { id: 'reports', icon: '📑', label: 'Reports', items: [
-          { id: 'board-reports', name: 'Board Reports' },
-          { id: 'pricing',       name: 'Pricing' },
-          { id: 'vendors',       name: 'Vendors' },
-          { id: 'investments',   name: 'Investments' },
-          { id: 'departments',   name: 'Departments' },
-        ]},
+        { id: 'overview',    icon: '📊', label: 'Overview',    items: [{ id: 'analytics', name: 'Analytics' }, { id: 'kpi', name: 'KPI' }, { id: 'pl', name: 'P&L' }, { id: 'budget', name: 'Budget' }] },
+        { id: 'revenue',     icon: '💰', label: 'Revenue',     items: [{ id: 'invoices', name: 'Invoices' }, { id: 'revenue-streams', name: 'Revenue Streams' }, { id: 'recurring-billing', name: 'Recurring Billing' }, { id: 'ar-collection', name: 'AR Collection' }, { id: 'revenue-at-risk', name: 'At Risk' }, { id: 'reminders', name: 'Reminders' }, { id: 'payment-allocation', name: 'Allocations' }, { id: 'clv-cohorts', name: 'CLV Cohorts' }] },
+        { id: 'costs',       icon: '💸', label: 'Costs',       items: [{ id: 'expenses', name: 'Expenses' }, { id: 'payroll', name: 'Payroll' }, { id: 'ap', name: 'Payables' }, { id: 'assets', name: 'Assets' }, { id: 'petty-cash', name: 'Petty Cash' }, { id: 'purchase-orders', name: 'Purchase Orders' }, { id: 'loan-repayment', name: 'Loan Schedule' }] },
+        { id: 'compliance',  icon: '📋', label: 'Compliance',  items: [{ id: 'vat', name: 'VAT' }, { id: 'tax', name: 'Tax Calendar' }, { id: 'credit-notes', name: 'Credit Notes' }, { id: 'financial-year', name: 'Financial Year' }, { id: 'audit-trail', name: 'Audit Trail' }, { id: 'dividends', name: 'Dividends' }] },
+        { id: 'operations',  icon: '🏗️', label: 'Operations',  items: [{ id: 'bank-import', name: 'Bank Import' }, { id: 'reconciliation', name: 'Reconciliation' }, { id: 'branches', name: 'Branches' }, { id: 'insurance', name: 'Insurance' }, { id: 'sla-credits', name: 'SLA Credits' }, { id: 'notifications', name: 'Notifications' }] },
+        { id: 'customer',    icon: '👥', label: 'Customer',    items: [{ id: 'transactions', name: 'Transactions' }, { id: 'refunds', name: 'Refunds' }, { id: 'customer-intelligence', name: 'Intelligence' }, { id: 'churn', name: 'Churn' }] },
+        { id: 'reports',     icon: '📑', label: 'Reports',     items: [{ id: 'board-reports', name: 'Board Reports' }, { id: 'pricing', name: 'Pricing' }, { id: 'vendors', name: 'Vendors' }, { id: 'investments', name: 'Investments' }, { id: 'departments', name: 'Departments' }] },
       ],
-      overviewItems: [
-        { id: 1, name: 'Dashboard', icon: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>', component: 'Dashboard', color: '#3b82f6' },
-      ],
-      userManagementItems: [
-        { id: 3, name: 'Clients', icon: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>', component: 'Clients', color: '#10b981' },
-        { id: 4, name: 'Users', icon: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>', component: 'Users', color: '#a855f7' },
-        { id: 5, name: 'Devices', icon: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/></svg>', component: 'Devices', color: '#06b6d4' },
-        { id: 6, name: 'Sessions', icon: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>', component: 'Sessions', color: '#f97316' },
-      ],
-      productsItems: [
-        { id: 7, name: 'Packages', icon: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>', component: 'Packages', color: '#6366f1' },
-        { id: 8, name: 'Vouchers', icon: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z"/></svg>', component: 'Vouchers', color: '#ec4899' },
-        { id: 9, name: 'Coupons', icon: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>', component: 'Coupons', color: '#f43f5e' },
-        { id: 10, name: 'Promotions', icon: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5.5-2.5l7.51-3.49L17.5 6.5 9.99 9.99 6.5 17.5zm5.5-6.6c.61 0 1.1.49 1.1 1.1s-.49 1.1-1.1 1.1-1.1-.49-1.1-1.1.49-1.1 1.1-1.1z"/></svg>', component: 'Promotions', color: '#f59e0b' },
-      ],
-      financialItems: [
-        { id: 11, name: 'Finance', icon: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>', component: 'Finance', color: '#8b5cf6' },
-        { id: 11.5, name: 'Customer Intelligence', icon: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>', component: 'CustomerIntelligence', color: '#dc2626' },
-        { id: 12, name: 'Transactions', icon: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>', component: 'Transactions', color: '#14b8a6' },
-        { id: 13, name: 'Refunds', icon: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>', component: 'Refunds', color: '#ef4444' }
-      ],
-      networkItems: [
-        { id: 14, name: 'Locations', icon: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>', component: 'Locations', color: '#22c55e' },
-      ],
-      supportMenuItems: [
-        { id: 15, name: 'Documentation', icon: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>', component: 'Auth' },
-        { id: 16, name: 'Help Center', icon: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>', component: 'Gallery' },
-        { id: 17, name: 'System Info', icon: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M13 2.05v3.03c3.39.49 6 3.39 6 6.92 0 .9-.18 1.75-.48 2.54l2.6 1.53c.56-1.24.88-2.62.88-4.07 0-5.18-3.95-9.45-9-9.95zM12 19c-3.87 0-7-3.13-7-7 0-3.53 2.61-6.43 6-6.92V2.05c-5.06.5-9 4.76-9 9.95 0 5.52 4.47 10 9.99 10 3.31 0 6.24-1.61 8.06-4.09l-2.6-1.53C16.17 17.98 14.21 19 12 19z"/></svg>', component: 'Vision' },
-        { id: 18, name: 'About', icon: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>', component: 'About' }
+      navSections: [
+        {
+          label: 'Overview',
+          items: [
+            { id: 1, name: 'Dashboard', component: 'Dashboard', color: '#3b82f6', icon: '<svg fill="currentColor" viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>' },
+          ]
+        },
+        {
+          label: 'Management',
+          items: [
+            { id: 2, name: 'Clients',   component: 'Clients',   color: '#10b981', icon: '<svg fill="currentColor" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>' },
+            { id: 3, name: 'Users',     component: 'Users',     color: '#a855f7', icon: '<svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>' },
+            { id: 4, name: 'Devices',   component: 'Devices',   color: '#06b6d4', icon: '<svg fill="currentColor" viewBox="0 0 24 24"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/></svg>' },
+            { id: 5, name: 'Sessions',  component: 'Sessions',  color: '#f97316', icon: '<svg fill="currentColor" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>' },
+          ]
+        },
+        {
+          label: 'Products',
+          items: [
+            { id: 6,  name: 'Packages',    component: 'Packages',    color: '#6366f1', icon: '<svg fill="currentColor" viewBox="0 0 24 24"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z"/></svg>' },
+            { id: 7,  name: 'Vouchers',    component: 'Vouchers',    color: '#ec4899', icon: '<svg fill="currentColor" viewBox="0 0 24 24"><path d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42z"/></svg>' },
+            { id: 8,  name: 'Coupons',     component: 'Coupons',     color: '#f43f5e', icon: '<svg fill="currentColor" viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>' },
+            { id: 9,  name: 'Promotions',  component: 'Promotions',  color: '#f59e0b', icon: '<svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>' },
+            { id: 14, name: 'Points',       component: 'PointTransactions', color: '#eab308', icon: '<svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>' },
+          ]
+        },
+        {
+          label: 'Finance',
+          items: []
+        },
+        {
+          label: 'Network',
+          items: [
+            { id: 13, name: 'Locations', component: 'Locations', color: '#22c55e', icon: '<svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>' },
+          ]
+        },
       ]
     }
   },
   methods: {
-    selectComponent(componentName) {
-      this.activeComponent = componentName;
-      this.$emit('component-selected', componentName);
-      if (this.isMobile) this.$emit('close-mobile');
+    handleNav(item) {
+      this.$emit('component-selected', item.component)
+      if (this.isMobile) this.$emit('close-mobile')
     },
     toggleFinanceGroup(id) {
       this.activeFinanceGroup = this.activeFinanceGroup === id ? null : id
     },
     selectFinanceTab(tabId) {
       this.activeFinanceTab = tabId
-      // auto-open the group containing this tab
       const group = this.financeGroups.find(g => g.items.some(i => i.id === tabId))
       if (group) this.activeFinanceGroup = group.id
       this.$emit('finance-tab-selected', tabId)
       if (this.isMobile) this.$emit('close-mobile')
     },
-    
     toggleSidebar() {
-      this.isCollapsed = !this.isCollapsed;
-      this.$emit('sidebar-toggle', this.isCollapsed);
+      this.isCollapsed = !this.isCollapsed
+      this.$emit('sidebar-toggle', this.isCollapsed)
     },
-    
     getBadgeCount(component) {
-      const badges = {
-        'Users': this.stats.activeUsers,
-        'Sessions': this.stats.activeSessions,
-        'Devices': this.stats.activeDevices,
-        'Refunds': this.stats.pendingRefunds
-      }
-      return badges[component] || 0
+      return { Users: this.stats.activeUsers, Sessions: this.stats.activeSessions, Devices: this.stats.activeDevices, Refunds: this.stats.pendingRefunds }[component] || 0
     },
-    
-    checkMobile() {
-      this.isMobile = window.innerWidth < 1024;
-    }
+    checkMobile() { this.isMobile = window.innerWidth < 1024 }
   },
   mounted() {
-    this.$emit('component-selected', this.activeComponent);
-    this.checkMobile();
-    window.addEventListener('resize', this.checkMobile);
+    this.checkMobile()
+    window.addEventListener('resize', this.checkMobile)
   },
   beforeUnmount() {
-    window.removeEventListener('resize', this.checkMobile);
+    window.removeEventListener('resize', this.checkMobile)
   }
 }
 </script>
 
 <style scoped>
-aside nav::-webkit-scrollbar {
-  width: 3px;
-}
+.sidebar-scroll::-webkit-scrollbar { width: 2px; }
+.sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+.sidebar-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
 
-aside nav::-webkit-scrollbar-track {
-  background: transparent;
-}
+/* Label slide transition */
+.label-enter-active { transition: all 0.2s ease; }
+.label-leave-active { transition: all 0.15s ease; }
+.label-enter-from, .label-leave-to { opacity: 0; transform: translateX(-6px); }
 
-aside nav::-webkit-scrollbar-thumb {
-  background: linear-gradient(to bottom, #3b82f6, #8b5cf6);
-  border-radius: 2px;
-  transition: background 0.3s ease;
-}
+/* Accordion transition */
+.accordion-enter-active { transition: all 0.25s ease; max-height: 500px; }
+.accordion-leave-active { transition: all 0.2s ease; }
+.accordion-enter-from, .accordion-leave-to { opacity: 0; max-height: 0; transform: translateY(-4px); }
 
-aside nav::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(to bottom, #2563eb, #7c3aed);
-}
+/* Nav button states */
+.nav-btn { min-height: 36px; }
+.nav-inactive { color: #64748b; }
+.nav-inactive:hover { background: rgba(0,0,0,0.05); color: #1e293b; }
+:global(.dark) .nav-inactive { color: #94a3b8; }
+:global(.dark) .nav-inactive:hover { background: rgba(255,255,255,0.05); color: #e2e8f0; }
+.nav-active { color: #1e293b; }
+:global(.dark) .nav-active { color: white; }
 
-button {
-  transition: all 0.2s ease;
-}
-
-/* Smooth animations */
-aside {
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-aside * {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+/* Icon pill glow pulse on active */
+.nav-active .icon-pill { animation: iconPulse 2s ease-in-out infinite; }
+@keyframes iconPulse {
+  0%, 100% { box-shadow: 0 0 8px currentColor; }
+  50% { box-shadow: 0 0 16px currentColor; }
 }
 </style>

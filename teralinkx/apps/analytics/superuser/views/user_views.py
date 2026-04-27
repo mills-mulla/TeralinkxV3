@@ -3,7 +3,7 @@ from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group, Permission
 from django.db.models import Q, Count
 from users.models import ClientH, UserDevice, UserSession
 from ..serializers.user_serializers import (
@@ -45,6 +45,41 @@ class DjangoUserViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.error(f"Error fetching user stats: {e}")
             return Response({'error': str(e)}, status=500)
+
+    @action(detail=False, methods=['get'])
+    def all_groups(self, request):
+        """List all available groups"""
+        groups = Group.objects.all().values('id', 'name')
+        return Response(list(groups))
+
+    @action(detail=False, methods=['get'])
+    def all_permissions(self, request):
+        """List all permissions grouped by app"""
+        key_apps = ['finance', 'users', 'packages', 'locations', 'analytics']
+        perms = Permission.objects.filter(
+            content_type__app_label__in=key_apps
+        ).values(
+            'id', 'codename', 'content_type__app_label', 'content_type__model'
+        ).order_by('content_type__app_label', 'content_type__model', 'codename')
+        # Group by app
+        grouped = {}
+        for p in perms:
+            app = p['content_type__app_label']
+            if app not in grouped:
+                grouped[app] = []
+            grouped[app].append(p)
+        return Response(grouped)
+
+    @action(detail=True, methods=['post'])
+    def reset_password(self, request, pk=None):
+        """Reset user password"""
+        user = self.get_object()
+        new_password = request.data.get('password')
+        if not new_password:
+            return Response({'error': 'Password required'}, status=400)
+        user.set_password(new_password)
+        user.save()
+        return Response({'status': 'password reset successfully'})
 
 
 class UserDeviceViewSet(viewsets.ModelViewSet):
@@ -192,10 +227,35 @@ class UserSessionViewSet(viewsets.ModelViewSet):
         """Terminate a session"""
         session = self.get_object()
         reason = request.data.get('reason', 'Admin action')
-        
         try:
             session.terminate(reason=reason)
             return Response({'message': 'Session terminated successfully'})
         except Exception as e:
             logger.error(f"Error terminating session: {e}")
             return Response({'error': str(e)}, status=500)
+
+    @action(detail=False, methods=['post'])
+    def bulk_action(self, request):
+        action = request.data.get('action')
+        ids = request.data.get('ids', [])
+        sessions = UserSession.objects.filter(id__in=ids)
+        if action == 'terminate':
+            for s in sessions:
+                try: s.terminate(reason='Bulk admin action')
+                except: s.is_active = False; s.save(update_fields=['is_active'])
+        elif action == 'deactivate_vouchers':
+            sessions.update(active_voucher=None)
+        elif action == 'extend_voucher':
+            from django.utils import timezone
+            from datetime import timedelta
+            from packages.models import DispatchVoucher
+            for s in sessions:
+                if s.active_voucher:
+                    try:
+                        v = DispatchVoucher.objects.get(voucher_code=s.active_voucher)
+                        v.expires_at += timedelta(hours=1)
+                        v.save(update_fields=['expires_at'])
+                    except: pass
+        else:
+            return Response({'error': 'Invalid action'}, status=400)
+        return Response({'updated': len(ids)})

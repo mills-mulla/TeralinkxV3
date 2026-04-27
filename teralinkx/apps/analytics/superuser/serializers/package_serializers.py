@@ -1,6 +1,7 @@
 # serializers/package_serializers.py
 from rest_framework import serializers
 from packages.models import PackageType, DispatchVoucher, Coupon, FeaturedPromotion, PointTransaction
+from locations.models import Location
 
 class PackageTypeSerializer(serializers.ModelSerializer):
     """Serializer for PackageType model"""
@@ -16,12 +17,17 @@ class DispatchVoucherSerializer(serializers.ModelSerializer):
     user_username = serializers.CharField(source='user.username', read_only=True)
     package_name = serializers.CharField(source='package.name', read_only=True)
     total_usage_mb = serializers.SerializerMethodField()
-    
+    voucher_code = serializers.CharField(required=False, allow_blank=True)
+    home_location = serializers.PrimaryKeyRelatedField(
+        queryset=Location.objects.all(),
+        required=False, allow_null=True
+    )
+
     class Meta:
         model = DispatchVoucher
         fields = '__all__'
         read_only_fields = ['created_at', 'updated_at']
-    
+
     def get_total_usage_mb(self, obj):
         total_bytes = (obj.download_bytes or 0) + (obj.upload_bytes or 0)
         return round(total_bytes / (1024 * 1024), 2)
