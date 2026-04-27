@@ -6,15 +6,45 @@
         <h1 class="text-2xl font-semibold text-slate-900 dark:text-white">Dashboard</h1>
         <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Welcome back, here's your overview</p>
       </div>
-      <button 
-        @click="refreshData" 
-        class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-        :class="{ 'animate-spin': loading }"
-      >
-        <svg class="w-5 h-5 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-        </svg>
-      </button>
+      <div class="flex items-center gap-2">
+        <!-- Quick Links -->
+        <div class="relative">
+          <button @click="showQuickLinks = !showQuickLinks" class="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg transition-colors">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            Quick Links
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+          <div v-if="showQuickLinks" class="absolute right-0 top-full mt-1 w-52 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 z-50 py-1">
+            <router-link to="/transactions" @click="showQuickLinks=false" class="flex items-center gap-2.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50">
+              <span class="w-5 h-5 rounded-md bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 text-[10px]">⏳</span>
+              Pending Transactions
+              <span class="ml-auto text-[10px] font-bold text-amber-600 dark:text-amber-400">{{ kpi.pending_transactions || 0 }}</span>
+            </router-link>
+            <router-link to="/transactions" @click="showQuickLinks=false" class="flex items-center gap-2.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50">
+              <span class="w-5 h-5 rounded-md bg-rose-100 dark:bg-rose-500/20 flex items-center justify-center text-rose-600 dark:text-rose-400 text-[10px]">❌</span>
+              Failed (24h)
+              <span class="ml-auto text-[10px] font-bold text-rose-600 dark:text-rose-400">{{ kpi.failed_transactions_24h || 0 }}</span>
+            </router-link>
+            <router-link to="/vouchers" @click="showQuickLinks=false" class="flex items-center gap-2.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50">
+              <span class="w-5 h-5 rounded-md bg-orange-100 dark:bg-orange-500/20 flex items-center justify-center text-orange-600 dark:text-orange-400 text-[10px]">⚠️</span>
+              Expiring Vouchers
+            </router-link>
+            <router-link to="/clients" @click="showQuickLinks=false" class="flex items-center gap-2.5 px-3 py-2 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50">
+              <span class="w-5 h-5 rounded-md bg-red-100 dark:bg-red-500/20 flex items-center justify-center text-red-600 dark:text-red-400 text-[10px]">🔴</span>
+              At-Risk Clients
+            </router-link>
+          </div>
+        </div>
+        <button 
+          @click="refreshData" 
+          class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+          :class="{ 'animate-spin': loading }"
+        >
+          <svg class="w-5 h-5 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </button>
+      </div>
     </div>
 
     <!-- System Health - Always visible at top -->

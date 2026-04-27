@@ -99,6 +99,10 @@
           <option value="true">2FA On</option>
           <option value="false">2FA Off</option>
         </select>
+        <select v-model="homeLocationFilter" class="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs">
+          <option value="">All Locations</option>
+          <option v-for="loc in locationOptions" :key="loc.id" :value="String(loc.id)">{{ loc.name }}</option>
+        </select>
       </div>
 
       <!-- Bulk Actions -->
@@ -302,6 +306,8 @@ export default {
     const churnFilter = ref('')
     const rewardTierFilter = ref('')
     const twoFactorFilter = ref('')
+    const homeLocationFilter = ref('')
+    const locationOptions = ref([])
     const selectedIds = ref([])
     const showAddModal = ref(false)
     const showDetailModal = ref(false)
@@ -338,6 +344,7 @@ export default {
       else if (churnFilter.value === 'low') result = result.filter(c => (c.churn_score || 0) <= 0.3)
       if (rewardTierFilter.value) result = result.filter(c => c.reward_tier === rewardTierFilter.value)
       if (twoFactorFilter.value !== '') result = result.filter(c => String(c.two_factor_enabled) === twoFactorFilter.value)
+      if (homeLocationFilter.value) result = result.filter(c => String(c.home_location) === homeLocationFilter.value)
       return result
     })
 
@@ -360,6 +367,13 @@ export default {
     }
 
     const refreshData = () => Promise.all([fetchClients(), fetchStats()])
+
+    const fetchLocationOptions = async () => {
+      try {
+        const data = await makeRequest('get', 'suapi/locations/')
+        locationOptions.value = (data.results || data).map(l => ({ id: l.id, name: l.name }))
+      } catch (e) { console.error(e) }
+    }
     const { optimisticRemove, optimisticUpdate } = useOptimistic(clients, fetchClients, invalidateCache, 'suapi/clients')
     
     const viewClient = (client) => {
@@ -487,10 +501,10 @@ export default {
       a.click()
     }
 
-    onMounted(refreshData)
+    onMounted(() => { refreshData(); fetchLocationOptions() })
 
     return {
-      loading, error, clients, stats, searchTerm, statusFilter, tierFilter, churnFilter, rewardTierFilter, twoFactorFilter, selectedIds,
+      loading, error, clients, stats, searchTerm, statusFilter, tierFilter, churnFilter, rewardTierFilter, twoFactorFilter, homeLocationFilter, locationOptions, selectedIds,
       filteredClients, fetchClients, refreshData,
       showAddModal, showDetailModal, selectedClient, formData,
       viewClient, deleteClient, saveClient, closeFormModal,

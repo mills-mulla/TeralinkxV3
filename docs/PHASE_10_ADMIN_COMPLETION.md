@@ -37,7 +37,7 @@
 - [x] Add `2FA enabled` column to table
 - [x] Add `reward_tier` filter to filter bar
 - [x] Add `two_factor_enabled` filter to filter bar
-- [ ] Add `home_location` filter to filter bar
+- [x] Add `home_location` filter to filter bar
 - [x] Bulk action: Suspend selected — done
 - [x] Bulk action: Activate selected — done
 - [x] Bulk action: Reset failed logins — done
@@ -291,7 +291,7 @@
 |---------|---------|----------|--------|
 | 10.0.1 Analytics Delete | N/A | ✅ | Complete |
 | 10.0.2 Dashboard Sections | ✅ | ⬜ | Not Started |
-| 10.0.3 Clients Columns | ✅ | 🔄 | Partial (home_location filter remaining) |
+| 10.0.3 Clients Columns | ✅ | ✅ | Complete |
 | 10.1.1 Notifications Backend | ⬜ | N/A | Not Started |
 | 10.1.2 Notifications Page | ⬜ | ⬜ | Not Started |
 | 10.1.3 Notification Templates | ⬜ | ⬜ | Not Started |
