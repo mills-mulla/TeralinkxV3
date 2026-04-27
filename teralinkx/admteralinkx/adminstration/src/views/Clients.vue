@@ -87,6 +87,18 @@
           <option value="medium">Medium Risk</option>
           <option value="low">Low Risk</option>
         </select>
+        <select v-model="rewardTierFilter" class="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs">
+          <option value="">All Rewards</option>
+          <option value="bronze">Bronze</option>
+          <option value="silver">Silver</option>
+          <option value="gold">Gold</option>
+          <option value="platinum">Platinum</option>
+        </select>
+        <select v-model="twoFactorFilter" class="px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white text-xs">
+          <option value="">All 2FA</option>
+          <option value="true">2FA On</option>
+          <option value="false">2FA Off</option>
+        </select>
       </div>
 
       <!-- Bulk Actions -->
@@ -95,6 +107,9 @@
         <button @click="bulkAction('suspend')" class="px-2 py-1 text-[10px] font-medium rounded bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 hover:bg-amber-200">Suspend</button>
         <button @click="bulkAction('activate')" class="px-2 py-1 text-[10px] font-medium rounded bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-200">Activate</button>
         <button @click="bulkAction('reset_logins')" class="px-2 py-1 text-[10px] font-medium rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200">Reset Logins</button>
+        <button @click="bulkAction('terminate_sessions')" class="px-2 py-1 text-[10px] font-medium rounded bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400 hover:bg-red-200">Terminate Sessions</button>
+        <button @click="bulkAction('upgrade_premium')" class="px-2 py-1 text-[10px] font-medium rounded bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-400 hover:bg-purple-200">⬆ Premium</button>
+        <button @click="bulkAction('downgrade_basic')" class="px-2 py-1 text-[10px] font-medium rounded bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200">⬇ Basic</button>
         <button @click="exportSelected" class="px-2 py-1 text-[10px] font-medium rounded bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 hover:bg-blue-200">Export CSV</button>
         <button @click="selectedIds = []" class="ml-auto text-[10px] text-slate-500 hover:text-slate-700">Clear</button>
       </div>
@@ -110,6 +125,11 @@
                 <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Contact</th>
                 <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Tier</th>
                 <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Balance</th>
+                <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Credit</th>
+                <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Reward</th>
+                <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Devices</th>
+                <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Sessions</th>
+                <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">2FA</th>
                 <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Voucher</th>
                 <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Status</th>
                 <th class="px-3 py-2 text-left text-[10px] font-medium text-slate-600 dark:text-slate-400">Last Seen</th>
@@ -147,6 +167,24 @@
                 </td>
                 <td class="px-3 py-2">
                   <p class="text-xs font-semibold text-slate-900 dark:text-white">KSh {{ formatNumber(client.balance) }}</p>
+                </td>
+                <td class="px-3 py-2">
+                  <p class="text-xs text-slate-900 dark:text-white">KSh {{ formatNumber(client.credit_limit || 0) }}</p>
+                </td>
+                <td class="px-3 py-2">
+                  <span class="px-1.5 py-0.5 text-[10px] font-medium rounded-full capitalize"
+                    :class="client.reward_tier==='gold'?'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400':client.reward_tier==='silver'?'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300':client.reward_tier==='platinum'?'bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-400':'bg-orange-100 dark:bg-orange-500/20 text-orange-700 dark:text-orange-400'">
+                    {{ client.reward_tier || 'bronze' }}
+                  </span>
+                </td>
+                <td class="px-3 py-2">
+                  <span class="text-xs font-medium" :class="(client.active_devices_count||0) > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'">{{ client.active_devices_count || 0 }}</span>
+                </td>
+                <td class="px-3 py-2">
+                  <span class="text-xs font-medium" :class="(client.active_sessions_count||0) > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'">{{ client.active_sessions_count || 0 }}</span>
+                </td>
+                <td class="px-3 py-2">
+                  <span class="text-[10px] font-medium" :class="client.two_factor_enabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'">{{ client.two_factor_enabled ? '✓ On' : 'Off' }}</span>
                 </td>
                 <td class="px-3 py-2">
                   <span v-if="client.active_voucher" class="px-1.5 py-0.5 text-[10px] font-medium rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400" :title="client.active_voucher">Active</span>
@@ -262,6 +300,8 @@ export default {
     const statusFilter = ref('')
     const tierFilter = ref('')
     const churnFilter = ref('')
+    const rewardTierFilter = ref('')
+    const twoFactorFilter = ref('')
     const selectedIds = ref([])
     const showAddModal = ref(false)
     const showDetailModal = ref(false)
@@ -296,6 +336,8 @@ export default {
       if (churnFilter.value === 'high') result = result.filter(c => (c.churn_score || 0) > 0.7)
       else if (churnFilter.value === 'medium') result = result.filter(c => (c.churn_score || 0) > 0.3 && (c.churn_score || 0) <= 0.7)
       else if (churnFilter.value === 'low') result = result.filter(c => (c.churn_score || 0) <= 0.3)
+      if (rewardTierFilter.value) result = result.filter(c => c.reward_tier === rewardTierFilter.value)
+      if (twoFactorFilter.value !== '') result = result.filter(c => String(c.two_factor_enabled) === twoFactorFilter.value)
       return result
     })
 
@@ -448,7 +490,7 @@ export default {
     onMounted(refreshData)
 
     return {
-      loading, error, clients, stats, searchTerm, statusFilter, tierFilter, churnFilter, selectedIds,
+      loading, error, clients, stats, searchTerm, statusFilter, tierFilter, churnFilter, rewardTierFilter, twoFactorFilter, selectedIds,
       filteredClients, fetchClients, refreshData,
       showAddModal, showDetailModal, selectedClient, formData,
       viewClient, deleteClient, saveClient, closeFormModal,

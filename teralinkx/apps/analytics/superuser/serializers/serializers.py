@@ -14,6 +14,9 @@ class ClientSerializer(serializers.ModelSerializer):
     user_username = serializers.CharField(source='user.username', required=False)
     user_email = serializers.CharField(source='user.email', required=False)
     profile_image = serializers.SerializerMethodField()
+    active_devices_count = serializers.SerializerMethodField()
+    active_sessions_count = serializers.SerializerMethodField()
+    home_location_name = serializers.CharField(source='home_location.name', read_only=True, allow_null=True)
 
     class Meta:
         model = ClientH
@@ -27,6 +30,15 @@ class ClientSerializer(serializers.ModelSerializer):
                 return url.replace('http://', 'https://')
             return obj.profile_image.url.replace('http://', 'https://')
         return None
+
+    def get_active_devices_count(self, obj):
+        return obj.devices.filter(status='active').count()
+
+    def get_active_sessions_count(self, obj):
+        try:
+            return obj.active_sessions.count()
+        except Exception:
+            return 0
 
     def update(self, instance, validated_data):
         user_data = {}

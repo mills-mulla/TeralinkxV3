@@ -29,17 +29,21 @@
 - [ ] Add Redis memory usage to System Health bar
 
 ### 10.0.3 Clients Page — Missing Columns & Actions
-- [ ] Add `credit_limit` column to table
-- [ ] Add `reward_tier` column to table
-- [ ] Add `active_devices` column to table
-- [ ] Add `active_sessions` column to table
-- [ ] Add `2FA enabled` column to table
-- [ ] Add `reward_tier` filter to filter bar
-- [ ] Add `two_factor_enabled` filter to filter bar
+- [x] `credit_limit` in modal form — present
+- [x] Add `credit_limit` column to table
+- [x] Add `reward_tier` column to table
+- [x] Add `active_devices` column to table
+- [x] Add `active_sessions` column to table
+- [x] Add `2FA enabled` column to table
+- [x] Add `reward_tier` filter to filter bar
+- [x] Add `two_factor_enabled` filter to filter bar
 - [ ] Add `home_location` filter to filter bar
-- [ ] Add bulk action: Terminate all sessions for selected
-- [ ] Add bulk action: Upgrade to Premium tier
-- [ ] Add bulk action: Downgrade to Basic tier
+- [x] Bulk action: Suspend selected — done
+- [x] Bulk action: Activate selected — done
+- [x] Bulk action: Reset failed logins — done
+- [x] Add bulk action: Terminate all sessions for selected
+- [x] Add bulk action: Upgrade to Premium tier
+- [x] Add bulk action: Downgrade to Basic tier
 
 ---
 
@@ -92,23 +96,43 @@
 - [ ] Add serializer with all Advertisement + AdMedia fields
 
 ### 10.2.2 Ads Management Page — Frontend
-- [ ] Audit existing `AdsManagement.vue` — document what works vs what's stub
-- [ ] Stats pills: Total | Active | Impressions | Clicks | CTR
-- [ ] Search + filters: status | ad_type | location | date range
-- [ ] Compact table: title | type | location | status | impressions | clicks | CTR | start | end | Actions
-- [ ] Sidebar modal sections: Core (title, type, content), Targeting (locations, packages), Schedule (start_date, end_date, display_order), Media (image upload), Settings (is_active, priority)
-- [ ] Row actions: Activate/Deactivate toggle, Delete
-- [ ] Bulk actions: Activate, Deactivate, Delete
-- [ ] Optimistic updates
-- [ ] AdMedia upload in modal (image preview)
+- [x] Stats cards exist (total, impressions, clicks, CTR, budget)
+- [x] Table with edit/delete row actions exists
+- [x] Create/Edit modal exists (flat form)
+- [ ] Migrate stats cards → compact pills row
+- [ ] Replace flat modal → sidebar collapsible modal
+- [ ] Add bulk actions (activate, deactivate, delete)
+- [ ] Add checkbox column + select-all
+- [ ] Add search bar
+- [ ] Add status/type filter
+- [ ] Add optimistic updates
+- [ ] Add to Sidebar nav if missing
 
 ---
 
 ## 10.3 — Finance Page Completion
 
 ### 10.3.1 Audit Current Finance.vue
-- [ ] Document which tabs are complete vs stub vs missing
-- [ ] List all Finance backend endpoints available
+- [x] Analytics tab — exists
+- [x] KPI tab — exists
+- [x] P&L tab — exists
+- [x] Budget tab — exists
+- [x] Invoices tab — exists
+- [x] Revenue Streams tab — exists
+- [x] Recurring Billing tab — exists
+- [x] AR Collection tab — exists
+- [x] Revenue at Risk tab — exists
+- [x] Payment Reminders tab — exists
+- [x] Payment Allocation tab — exists
+- [x] CLV Cohorts tab — exists
+- [x] Expenses tab — exists
+- [x] Payroll tab — exists
+- [x] Accounts Payable tab — exists
+- [x] Asset Register tab — exists
+- [x] Petty Cash tab — exists
+- [x] Purchase Orders tab — exists
+- [x] Loan Repayment tab — exists
+- [ ] Audit each tab component for completeness vs stub
 
 ### 10.3.2 Payment Gateways Tab
 - [ ] Table: name | provider | is_active | environment | success_rate | last_used | Actions
@@ -144,7 +168,12 @@
 ## 10.4 — Customer Intelligence Page
 
 ### 10.4.1 Audit Current CustomerIntelligence.vue
-- [ ] Document what's implemented vs stub
+- [x] Churn Prediction tab — exists (ChurnDashboard component)
+- [x] Retention tab — exists (RetentionDashboard component)
+- [x] Revenue at Risk tab — exists (RevenueAtRisk component)
+- [ ] RFM Segmentation tab — missing
+- [ ] Cohort Analysis tab — missing
+- [ ] LTV Distribution tab — missing
 
 ### 10.4.2 RFM Segmentation Section
 - [ ] Table: client | recency_score | frequency_score | monetary_score | segment | Actions
@@ -174,18 +203,21 @@
 ## 10.5 — Refunds Page Completion
 
 ### 10.5.1 Backend — Verify & Extend
-- [ ] Audit `RefundViewSet` — list all existing actions
-- [ ] Add `approve` detail action if missing
-- [ ] Add `reject` detail action if missing
-- [ ] Add `bulk_action` (approve, reject, delete) if missing
-- [ ] Add `stats` action if missing (total, pending, approved, rejected, total_amount)
+- [x] `RefundViewSet` exists at `suapi/refunds/`
+- [x] `stats` action exists
+- [x] `eligible_clients` action exists
+- [x] `process_individual` action exists
+- [x] `batch_refund` action exists
+- [x] `history` action exists
+- [ ] Add `approve` / `reject` detail actions (individual refund approve/reject)
+- [ ] Add `bulk_action` (approve, reject)
 
 ### 10.5.2 Refunds Page — Frontend
-- [ ] Audit existing `Refunds.vue` — document what works
+- [ ] Audit existing `Refunds.vue` (324 lines — check what's complete)
 - [ ] Stats pills: Total | Pending | Approved | Rejected | Total Amount (blurred)
 - [ ] Search + filters: status | payment_method | date range | amount range
 - [ ] Compact table: ref | client | amount | reason | status | requested_at | processed_at | Actions
-- [ ] Sidebar modal sections: Core (ref, client, amount, reason), Transaction (original_txn, payment_method), Processing (status, processed_by, notes), Timeline (requested_at, processed_at)
+- [ ] Sidebar modal sections: Core, Transaction, Processing, Timeline
 - [ ] Row actions: Approve, Reject, View transaction
 - [ ] Bulk actions: Approve selected, Reject selected
 - [ ] Optimistic status updates
@@ -259,26 +291,26 @@
 |---------|---------|----------|--------|
 | 10.0.1 Analytics Delete | N/A | ✅ | Complete |
 | 10.0.2 Dashboard Sections | ✅ | ⬜ | Not Started |
-| 10.0.3 Clients Columns | ✅ | ⬜ | Not Started |
+| 10.0.3 Clients Columns | ✅ | 🔄 | Partial (home_location filter remaining) |
 | 10.1.1 Notifications Backend | ⬜ | N/A | Not Started |
 | 10.1.2 Notifications Page | ⬜ | ⬜ | Not Started |
 | 10.1.3 Notification Templates | ⬜ | ⬜ | Not Started |
 | 10.2.1 Ads Backend | ⬜ | N/A | Not Started |
-| 10.2.2 Ads Page | ⬜ | ⬜ | Not Started |
-| 10.3.1 Finance Audit | N/A | ⬜ | Not Started |
+| 10.2.2 Ads Page | ⬜ | 🔄 | Partial (stats+table+modal exist, needs overhaul) |
+| 10.3.1 Finance Audit | N/A | 🔄 | Partial (all tabs exist, need depth audit) |
 | 10.3.2 Payment Gateways Tab | ✅ | ⬜ | Not Started |
-| 10.3.3 Budget Tab | ✅ | ⬜ | Not Started |
+| 10.3.3 Budget Tab | ✅ | ✅ | Exists |
 | 10.3.4 Investments Tab | ✅ | ⬜ | Not Started |
-| 10.3.5 Revenue Streams Tab | ✅ | ⬜ | Not Started |
+| 10.3.5 Revenue Streams Tab | ✅ | ✅ | Exists |
 | 10.3.6 Board Report Tab | ✅ | ⬜ | Not Started |
-| 10.4.1 Intelligence Audit | N/A | ⬜ | Not Started |
+| 10.4.1 Intelligence Audit | N/A | 🔄 | Partial (churn+retention+RAR exist, RFM/cohort/LTV missing) |
 | 10.4.2 RFM Segmentation | ✅ | ⬜ | Not Started |
 | 10.4.3 Cohort Analysis | ✅ | ⬜ | Not Started |
-| 10.4.4 Churn Prediction | ✅ | ⬜ | Not Started |
+| 10.4.4 Churn Prediction | ✅ | ✅ | Exists |
 | 10.4.5 LTV Distribution | ✅ | ⬜ | Not Started |
-| 10.5.1 Refunds Backend | ⬜ | N/A | Not Started |
-| 10.5.2 Refunds Page | ⬜ | ⬜ | Not Started |
+| 10.5.1 Refunds Backend | 🔄 | N/A | Partial (needs approve/reject/bulk) |
+| 10.5.2 Refunds Page | 🔄 | 🔄 | Partial (324 lines — needs audit) |
 | 10.6.1 Settings Backend | ⬜ | N/A | Not Started |
 | 10.6.2 Settings Page | ⬜ | ⬜ | Not Started |
-| 10.7.1 Audit Log Backend | ⬜ | N/A | Not Started |
-| 10.7.2 Audit Log Page | ⬜ | ⬜ | Not Started |
+| 10.7.1 Audit Log Backend | ✅ | N/A | Exists (AuditLogView) |
+| 10.7.2 Audit Log Page | ✅ | ⬜ | Not Started |
