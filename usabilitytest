@@ -1,0 +1,181 @@
+Dashboard
+1.live monitor fetch interval >30s default not 5s
+
+clients
+1.update the addclient modal
+2.crud operations
+	imediate update of values on change  is not functional i stil see stale data when i do changes we need a way for the frontedn to update its sate   imediately  since also the backend changes
+	the refresh button only works once  it should be clickable all time and the function shuould be runnable all time not jus once
+	Adjust balance and award points ned  a bit of work  we should int have the 0 as the default value or change the input box type  and add aplace holder with example types of input witha + or - like 1000 or +1000 is valid also - 1000  is valid to deduct balnce or points also data validation  to ensure  amount and reason or description are inputed before confirmind also before completing the step i think we need anothe confirmation lke  adjuct client x balance from y to z  and vice versa also the points
+	i have noticed their is a big problem with stale data the frontend we need to find a cleaner way of having fresh acurate data at all times and cache should be used  if we are offline like witht he pwd  or what your take what is theprofessional way how doing it
+	what does force logout do (terminate all sessions and revove related devices?)id their a better way to do this like can we rethink how sesions devices clients vouchers  all relate
+	w ehave voucher  information  and active voucher and voucher expiry can we rethink on how to utilize them and if not needed we drop them 
+	
+users
+1.crud operstions
+	dates is empty in add user modal tab 
+	i am geting 172.18.0.21 - - [27/Apr/2026:14:03:19 +0300] "GET /suapi/devices/stats/ HTTP/1.0" 200 133 "https://accounts.teralinkxwaves.uk/" "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0" 200868
+	172.18.0.21 - - [27/Apr/2026:14:03:19 +0300] "GET /suapi/users/stats/ HTTP/1.0" 200 88 "https://accounts.teralinkxwaves.uk/" "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0" 102737
+	172.18.0.5 - - [27/Apr/2026:14:03:25 +0300] "GET /metrics HTTP/1.1" 200 2638 "-" "Prometheus/3.10.0" 3062
+	172.18.0.5 - - [27/Apr/2026:14:03:40 +0300] "GET /metrics HTTP/1.1" 200 2650 "-" "Prometheus/3.10.0" 2578
+	172.18.0.21 - - [27/Apr/2026:14:03:49 +0300] "GET /suapi/sessions/stats/ HTTP/1.0" 200 83 "https://accounts.teralinkxwaves.uk/" "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0" 35583
+	WARNING:  database "teralinkx" has no actual collation version, but a version was recorded
+	172.18.0.21 - - [27/Apr/2026:14:03:49 +0300] "GET /suapi/devices/stats/ HTTP/1.0" 200 133 "https://accounts.teralinkxwaves.uk/" "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0" 88952
+	172.18.0.21 - - [27/Apr/2026:14:03:49 +0300] "GET /suapi/users/stats/ HTTP/1.0" 200 88 "https://accounts.teralinkxwaves.uk/" "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0" 133460
+	172.18.0.5 - - [27/Apr/2026:14:03:55 +0300] "GET /metrics HTTP/1.1" 200 2650 "-" "Prometheus/3.10.0" 1771
+	172.18.0.5 - - [27/Apr/2026:14:04:10 +0300] "GET /metrics HTTP/1.1" 200 2638 "-" "Prometheus/3.10.0" 2967
+	WARNING:  database "teralinkx" has no actual collation version, but a version was recorded
+	Exception in /suapi/users/: Direct assignment to the forward side of a many-to-many set is prohibited. Use groups.set() instead.
+	Traceback (most recent call last):
+	File "/usr/local/lib/python3.11/site-packages/django/core/handlers/base.py", line 197, in _get_response
+	response = wrapped_callback(request, *callback_args, **callback_kwargs)
+	^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	File "/usr/local/lib/python3.11/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
+	return view_func(request, *args, **kwargs)
+	^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	File "/usr/local/lib/python3.11/site-packages/rest_framework/viewsets.py", line 125, in view
+	return self.dispatch(request, *args, **kwargs)
+	^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	File "/usr/local/lib/python3.11/site-packages/rest_framework/views.py", line 515, in dispatch
+	response = self.handle_exception(exc)
+	^^^^^^^^^^^^^^^^^^^^^^^^^^
+	File "/usr/local/lib/python3.11/site-packages/rest_framework/views.py", line 475, in handle_exception
+	self.raise_uncaught_exception(exc)
+	File "/usr/local/lib/python3.11/site-packages/rest_framework/views.py", line 486, in raise_uncaught_exception
+	raise exc
+	File "/usr/local/lib/python3.11/site-packages/rest_framework/views.py", line 512, in dispatch
+	response = handler(request, *args, **kwargs)
+	^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	File "/usr/local/lib/python3.11/site-packages/rest_framework/mixins.py", line 19, in create
+	self.perform_create(serializer)
+	File "/usr/local/lib/python3.11/site-packages/rest_framework/mixins.py", line 24, in perform_create
+	serializer.save()
+	File "/usr/local/lib/python3.11/site-packages/rest_framework/serializers.py", line 210, in save
+	self.instance = self.create(validated_data)
+	^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	File "/app/apps/analytics/superuser/serializers/user_serializers.py", line 35, in create
+	user = User(**validated_data)
+	^^^^^^^^^^^^^^^^^^^^^^
+	File "/usr/local/lib/python3.11/site-packages/django/db/models/base.py", line 566, in __init__
+	_setattr(self, prop, value)
+	File "/usr/local/lib/python3.11/site-packages/django/db/models/fields/related_descriptors.py", line 668, in __set__
+	raise TypeError(
+		TypeError: Direct assignment to the forward side of a many-to-many set is prohibited. Use groups.set() instead.
+		Internal Server Error: /suapi/users/
+		172.18.0.21 - - [27/Apr/2026:14:04:12 +0300] "POST /suapi/users/ HTTP/1.0" 500 161 "https://accounts.teralinkxwaves.uk/su/" "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0" 1002014
+		WARNING:  database "teralinkx" has no actual collation version, but a version was recorded
+		WARNING:  database "teralinkx" has no actual collation version, but a version was recorded
+		WARNING:  database "teralinkx" has no actual collation version, but a version was recorded
+		172.18.0.21 - - [27/Apr/2026:14:04:20 +0300] "GET /suapi/users/stats/ HTTP/1.0" 200 88 "https://accounts.teralinkxwaves.uk/" "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0" 194188
+		172.18.0.21 - - [27/Apr/2026:14:04:20 +0300] "GET /suapi/sessions/stats/ HTTP/1.0" 200 83 "https://accounts.teralinkxwaves.uk/" "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0" 206139
+		172.18.0.21 - - [27/Apr/2026:14:04:20 +0300] "GET /suapi/devices/stats/ HTTP/1.0" 200 133 "https://accounts.teralinkxwaves.uk/" "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0" 283989
+		WARNING:  database "teralinkx" has no actual collation version, but a version was recorded
+		Exception in /suapi/users/: Direct assignment to the forward side of a many-to-many set is prohibited. Use groups.set() instead.
+		Traceback (most recent call last):
+		File "/usr/local/lib/python3.11/site-packages/django/core/handlers/base.py", line 197, in _get_response
+		response = wrapped_callback(request, *callback_args, **callback_kwargs)
+		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+		File "/usr/local/lib/python3.11/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
+		return view_func(request, *args, **kwargs)
+		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+		File "/usr/local/lib/python3.11/site-packages/rest_framework/viewsets.py", line 125, in view
+		return self.dispatch(request, *args, **kwargs)
+		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+		File "/usr/local/lib/python3.11/site-packages/rest_framework/views.py", line 515, in dispatch
+		response = self.handle_exception(exc)
+		^^^^^^^^^^^^^^^^^^^^^^^^^^
+		File "/usr/local/lib/python3.11/site-packages/rest_framework/views.py", line 475, in handle_exception
+		self.raise_uncaught_exception(exc)
+		File "/usr/local/lib/python3.11/site-packages/rest_framework/views.py", line 486, in raise_uncaught_exception
+		raise exc
+		File "/usr/local/lib/python3.11/site-packages/rest_framework/views.py", line 512, in dispatch
+		response = handler(request, *args, **kwargs)
+		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+		File "/usr/local/lib/python3.11/site-packages/rest_framework/mixins.py", line 19, in create
+		self.perform_create(serializer)
+		File "/usr/local/lib/python3.11/site-packages/rest_framework/mixins.py", line 24, in perform_create
+		serializer.save()
+		File "/usr/local/lib/python3.11/site-packages/rest_framework/serializers.py", line 210, in save
+		self.instance = self.create(validated_data)
+		^^^^^^^^^^^^^^^^^^^^^^^^^^^
+		File "/app/apps/analytics/superuser/serializers/user_serializers.py", line 35, in create
+		user = User(**validated_data)
+		^^^^^^^^^^^^^^^^^^^^^^
+		File "/usr/local/lib/python3.11/site-packages/django/db/models/base.py", line 566, in __init__
+		_setattr(self, prop, value)
+		File "/usr/local/lib/python3.11/site-packages/django/db/models/fields/related_descriptors.py", line 668, in __set__
+		raise TypeError(
+			TypeError: Direct assignment to the forward side of a many-to-many set is prohibited. Use groups.set() instead.
+			Internal Server Error: /suapi/users/
+			172.18.0.21 - - [27/Apr/2026:14:04:22 +0300] "POST /suapi/users/ HTTP/1.0" 500 161 "https://accounts.teralinkxwaves.uk/su/" "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0" 1063580
+			
+			when adding a user
+			
+devices
+	the modal has a problem i cant uncolapse a tab until i move to a previous tab  can you rredisign the modal maybe resemble the clients modal where all thne colapsables are in one scrollable view also chek on the add device modal too
+
+	does the block button work?
+
+sessions
+sessions also has the same problem as devices  chek on it 
+
+Packages
+i can add a package without a color code i thought that field is null= true?
+also cant add a package without promotion dates Error: {"promotion_start":["Datetime has wrong format. Use one of these formats instead: YYYY-MM-DDThh:mm[:ss[.uuuuuu]][+HH:MM|-HH:MM|Z]."],"promotion_end":["Datetime has wrong format. Use one of these formats instead: YYYY-MM-DDThh:mm[:ss[.uuuuuu]][+Hallowed etcH:MM|-HH:MM|Z]."]}  chek on that i also think that should be null true  or blank true  since only packages for promotion purpose are required to have that
+
+vouchers
+in device management tab we should have both sesion count and concurrent sessions  and should be fully editable  so i can change the  numbers  allowed etc
+i cant add avoucher i am geting {"user":["Invalid pk \"120\" - object does not exist."]}
+72.18.0.21 - - [27/Apr/2026:14:53:25 +0300] "POST /suapi/vouchers/ HTTP/1.0" 400 56 "https://accounts.teralinkxwaves.uk/su/" "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0" 74251
+172.18.0.5 - - [27/Apr/2026:14:53:40 +0300] "GET /metrics HTTP/1.1" 200 2634 "-" "Prometheus/3.10.0" 1561
+172.18.0.5 - - [27/Apr/2026:14:53:55 +0300] "GET /metrics HTTP/1.1" 200 2638 "-" "Prometheus/3.10.0" 1403
+172.18.0.5 - - [27/Apr/2026:14:54:10 +0300] "GET /metrics HTTP/1.1" 200 2650 "-" "Prometheus/3.10.0" 1419
+WARNING:  database "teralinkx" has no actual collation version, but a version was recorded
+WARNING:  database "teralinkx" has no actual collation version, but a version was recorded
+Bad Request: /suapi/vouchers/
+172.18.0.21 - - [27/Apr/2026:14:54:22 +0300] "POST /suapi/vouchers/ HTTP/1.0" 400 56 "https://accounts.teralinkxwaves.uk/su/" "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0" 65640
+172.18.0.21 - - [27/Apr/2026:14:54:22 +0300] "GET /suapi/devices/stats/ HTTP/1.0" 200 133 "https://accounts.teralinkxwaves.uk/" "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0" 53524
+WARNING:  database "teralinkx" has no actual collation version, but a version was recorded
+WARNING:  database "teralinkx" has no actual collation version, but a version was recorded
+172.18.0.21 - - [27/Apr/2026:14:54:22 +0300] "GET /suapi/sessions/stats/ HTTP/1.0" 200 83 "https://accounts.teralinkxwaves.uk/" "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0" 101207
+172.18.0.21 - - [27/Apr/2026:14:54:22 +0300] "GET /suapi/users/stats/ HTTP/1.0" 200 88 "https://accounts.teralinkxwaves.uk/" "Mozilla/5.0 (X11; Linux x86_64; rv:149.0) Gecko/20100101 Firefox/149.0" 149336
+172.18.0.5 - - [27/Apr/2026:14:54:25 +0300] "GET /metrics HTTP/1.1" 200 2637 "-" "Prometheus/3.10.0" 1940
+172.18.0.5 - - [27/Apr/2026:14:54:40 +0300] "GET /metrics HTTP/1.1" 200 2638 "-" "Prometheus/3.10.0" 1081
+172.18.0.5 - - [27/Apr/2026:14:54:55 +0300] "GET /metrics HTTP/1.1" 200 2635 "-" "Prometheus/3.10.0" 3240
+
+coupons
+is their a better way to reward users ??
+why is the add coupon modal to the right and not centereed like the erest of the othe rpages moadals
+i am geting Error: {"valid_until":["Datetime has wrong format. Use one of these formats instead: YYYY-MM-DDThh:mm[:ss[.uuuuuu]][+HH:MM|-HH:MM|Z]."]} when tryingt o add a coupon
+
+promotions 
+how does promotions work i am confused between packages promotions etc 
+ also its modal is to the right and not centereed like the rest
+ 
+points
+..remove  it we allready have pointtransactionsin finance>customer >transactions>poit trans tab
+locations 
+ has ame problem as the devices and sessons the modal has a problem i cant uncolapse a tab until i move to a previous tab  
+ 
+ finance
+ we hVW THE GROWTH RATE CALCULATION should intt we also have a graphical way to visualise growth more in detail etc
+ based on the current data inthe system 
+ Package Performance & Margins
+ Package	Sales	Revenue	Profit	Margin
+ Enterprise 100Mbps	7	KSh 69,993	KSh 48,995.1	70%
+ Business 50Mbps	9	KSh 44,991	KSh 31,493.7	70%
+ Premium 20Mbps	13	KSh 32,487	KSh 22,740.9	70%
+ Basic 5Mbps	16	KSh 15,984	KSh 11,188.8	70%
+ Standard 10Mbps	4	KSh 5,996	KSh 4,197.2	70% 
+ are the above  corect details or just stubs?
+ 
+ in finance analytics w eneed a comparison feature like the one in packages sales inteligence  section so i can be able to compare peromance across multiple time periods fro more business management info and insights
+ inthe revenue>invoice tab
+ are the invoces for the company to customers or from  company supliers to the business i need to undersnd ahow invoicing works onthis sytem
+ 
+ in recurring billing are this bills for the business to pay or customers who have like credit and have auto renew onpackages or othe product my company my provide?
+ actually finance is seriously built i need to learn how to run it since it isthe companys only bms system since curently no workforce is avaiabe and the vcompany nedd to run with or without the workforce
+ 
+ in all of our checks ensure what the vbackend expects t recieve is what the frontend sends and vice versa  this will hepl alot in data quality and  reduce inconsistencies
+ 
+ 
