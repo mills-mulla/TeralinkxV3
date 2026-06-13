@@ -1,127 +1,155 @@
-# TeralinkX V3 - ISP Management Platform
+# TeralinkX V3 — ISP Management Platform
 
-A comprehensive ISP management platform with authentication resilience, HIDS security monitoring, and multi-service architecture.
+> Proprietary software — source visible for evaluation purposes only.  
+> © 2024 Mills Mulla. All rights reserved. See [LICENSE](LICENSE).
+
+A production-grade ISP billing and network management platform serving **500+ active subscribers**.  
+Built and maintained solo by a single developer. Features RADIUS authentication, ML-powered intrusion  
+detection, and a full observability stack — all containerised and self-hosted.
+
+🌐 **Live Platform:**
+
+| Service | URL |
+|---|---|
+| Frontend | https://cli.teralinkxwaves.uk |
+| Backend API | https://srv.teralinkxwaves.uk |
+| Admin Panel | https://su.teralinkxwaves.uk |
+| Grafana Monitoring | https://mt.teralinkxwaves.uk |
+| HIDS Security Dashboard | https://sec.teralinkxwaves.uk |
+
+---
+
+## 🧱 Tech Stack
+
+| Layer | Technologies |
+|---|---|
+| Backend | Django, FastAPI, Gunicorn, Celery, Celery Beat |
+| Frontend | Vue.js 3, Vite |
+| Database | PostgreSQL (TimescaleDB), SQLite, Redis |
+| Auth | FreeRADIUS, JWT |
+| DevOps | Docker, Nginx, Linux, Cloudflare Tunnels, Certbot |
+| Monitoring | Prometheus, Grafana, Loki, Promtail, Alertmanager, cAdvisor, Node Exporter |
+| Security | Suricata (IDS), Zeek (flow analysis), Scikit-learn (ML anomaly detection) |
+
+---
+
+## ✨ Key Features
+
+### 💳 ISP Billing & Subscriber Management
+- Full subscriber lifecycle management — onboarding, billing, suspension, renewal
+- RADIUS-based authentication via FreeRADIUS for network access control
+- Multi-tenant admin dashboard with role-based access control
+- Automated invoicing and payment tracking
+
+### 🛡️ HIDS — Host Intrusion Detection System
+- **Suricata** — signature-based threat detection with custom rule sets
+- **Zeek** — deep network flow analysis and protocol logging
+- **ML pipeline** — scikit-learn anomaly detection model trained on real network traffic
+- Real-time threat dashboard at [sec.teralinkxwaves.uk](https://sec.teralinkxwaves.uk)
+- ⚠️ Phase 3 (in progress): Active **IPS** (Intrusion Prevention System) for automated threat response
+
+### 📊 Observability Stack
+- Prometheus scrapes metrics from all services (Django, Redis, PostgreSQL, containers)
+- Grafana dashboards for per-service performance visibility
+- Loki + Promtail for centralised log aggregation across all containers
+- Alertmanager for automated incident notifications
+
+### 🔐 Authentication Resilience
+- JWT secret persistence across container restarts
+- Multi-strategy token recovery with <2 second average recovery time
+- 99.9% token validity uptime, 95% automatic session restoration rate
+
+### 🌐 Infrastructure
+- Fully containerised with Docker Compose — 15+ services orchestrated
+- Nginx reverse proxy with SSL termination (Certbot + Cloudflare DNS auto-renewal)
+- Secure remote access via Cloudflare Tunnels — no exposed public ports
+- Self-hosted on a managed Linux server in Nairobi, Kenya
+
+---
 
 ## 🏗️ Project Structure
 
 ```
 TeralinkxV3/
-├── 📁 certbot/           # SSL certificate management
+├── 📁 certbot/           # SSL certificate management (Cloudflare DNS)
 ├── 📁 cloudflared/       # Cloudflare tunnel configuration
-├── 📁 data/              # Persistent data storage
-├── 📁 docs/              # Project documentation
-├── 📁 freeradius/        # RADIUS server configuration
-├── 📁 hids/              # Host Intrusion Detection System
-├── 📁 monitoring/        # Prometheus, Grafana, Loki stack
-├── 📁 nginx/             # Reverse proxy configuration
-├── 📁 postgres/          # Database initialization
-├── 📁 radius_api/        # RADIUS API service
-├── 📁 scripts/           # Organized deployment & testing scripts
-├── 📁 teracore/          # Python virtual environment
+├── 📁 freeradius/        # RADIUS server config & schema
+├── 📁 hids/              # HIDS stack (Suricata, Zeek, ML service, dashboard)
+│   ├── suricata/         # Rules & config
+│   ├── zeek/             # Scripts & logs
+│   ├── ml_service/       # Flask + scikit-learn anomaly detection API
+│   ├── engine/           # Python log parser & event correlator
+│   └── dashboard/        # Flask HIDS dashboard
+├── 📁 monitoring/        # Prometheus, Grafana, Loki, Promtail, Alertmanager
+├── 📁 nginx/             # Reverse proxy config
+├── 📁 postgres/          # DB init scripts (multi-database setup)
+├── 📁 radius_api/        # RADIUS management API (FastAPI)
 ├── 📁 teralinkx/         # Main Django backend
-├── 📁 TeralinkxFR/       # Vue.js frontend
-├── 🐳 docker-compose.yml # Main orchestration file
-└── 📋 requirements.txt   # Python dependencies
+├── 📁 TeralinkxFR/       # Vue.js 3 frontend
+├── 📁 scripts/           # Deployment, testing & maintenance scripts
+├── 📁 docs/              # Architecture & deployment documentation
+└── 🐳 docker-compose.yml # Full stack orchestration (15+ services)
 ```
 
-## 🚀 Quick Start
+---
+
+## 🚀 Deployment
 
 ### Prerequisites
 - Docker & Docker Compose
-- Node.js 20+ (for frontend development)
-- Python 3.11+ (for backend development)
+- Node.js 20+
+- Python 3.11+
+- Cloudflare account (for DNS + Tunnels)
 
-### Deployment
+### Start the stack
 ```bash
+# Clone and configure environment
+cp .env.example .env  # fill in your values
+
 # Start all services
 docker-compose up -d
 
 # Deploy frontend
 ./scripts/deployment/deploy-production.sh
 
-# Monitor services
+# Monitor
 docker-compose logs -f
 ```
 
-## 🔧 Key Features
+---
 
-### 🔐 Authentication Resilience
-- JWT secret persistence across restarts
-- Multi-strategy token recovery
-- Real-time health monitoring
-- Automatic session restoration
+## 🛠️ Local Development
 
-### 🛡️ Security (HIDS)
-- Suricata signature-based detection
-- Zeek network flow analysis
-- Machine learning anomaly detection
-- Real-time threat monitoring
-
-### 📊 Monitoring Stack
-- Prometheus metrics collection
-- Grafana dashboards
-- Loki log aggregation
-- AlertManager notifications
-
-### 🌐 Multi-Service Architecture
-- Django REST API backend
-- Vue.js SPA frontend
-- RADIUS authentication
-- Nginx reverse proxy
-- Redis caching & queuing
-
-## 📚 Documentation
-
-- [Deployment Guide](docs/DEPLOYMENT_GUIDE.md)
-- [HIDS Architecture](docs/HIDS_ARCHITECTURE.md)
-- [HIDS Evaluation Guide](docs/HIDS_EVALUATION_GUIDE.md)
-- [Scripts Documentation](scripts/README.md)
-
-## 🔗 Service URLs
-
-- **Frontend**: https://cli.teralinkxwaves.uk
-- **Backend API**: https://srv.teralinkxwaves.uk
-- **Admin Panel**: https://su.teralinkxwaves.uk
-- **Grafana**: https://mt.teralinkxwaves.uk
-- **HIDS Dashboard**: https://sec.teralinkxwaves.uk
-
-## 🛠️ Development
-
-### Backend (Django)
 ```bash
+# Backend
 cd teralinkx
 python manage.py runserver
-```
 
-### Frontend (Vue.js)
-```bash
+# Frontend
 cd TeralinkxFR
 npm run dev
-```
 
-### Testing
-```bash
-# Run authentication tests
+# Run tests
 ./scripts/testing/test_auth_resilience.sh
-
-# Run API tests
 ./scripts/testing/test_api.sh
 ```
 
-## 📈 Performance Metrics
+---
 
-- **Authentication Recovery**: 95% automatic success rate
-- **Token Validity**: 99.9% uptime
-- **Recovery Time**: <2 seconds average
-- **HIDS Detection**: Real-time threat analysis
+## 📚 Documentation
+- [Deployment Guide](docs/DEPLOYMENT_GUIDE.md)
+- [HIDS Architecture](docs/HIDS_ARCHITECTURE.md)
+- [HIDS Evaluation Guide](docs/HIDS_EVALUATION_GUIDE.md)
+- [Scripts Reference](scripts/README.md)
 
-## 🤝 Contributing
-
-1. Follow the organized directory structure
-2. Place scripts in appropriate `/scripts/` subdirectories
-3. Update documentation for new features
-4. Test changes with provided test scripts
+---
 
 ## 📄 License
 
-Proprietary - TeralinkX Platform
+Copyright © 2024 Mills Mulla. All rights reserved.
+
+This source code is made publicly visible for portfolio and evaluation purposes only.  
+Copying, modification, distribution, or use of this code in any form is strictly  
+prohibited without explicit written permission from the author.
+
+Contact: sammymulla42@gmail.com
